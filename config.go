@@ -5,10 +5,10 @@ import (
 	"os"
 )
 
-// Load builds a struct representation of the
+// LoadConfig builds a struct representation of the
 // configuration file located at @path
 // The structure checks for most format errors
-func Load(path string) (*controller, error) {
+func LoadConfig(path string) (*controller, error) {
 
 	/* (1) Extract data
 	---------------------------------------------------------*/
@@ -20,7 +20,7 @@ func Load(path string) (*controller, error) {
 	defer configFile.Close()
 
 	/* (2) Init receiving dataset */
-	var receiver *controller
+	receiver := &controller{}
 
 	/* (3) Decode JSON */
 	decoder := json.NewDecoder(configFile)
