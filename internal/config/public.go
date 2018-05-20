@@ -1,14 +1,14 @@
-package gfw
+package config
 
 import (
 	"encoding/json"
 	"os"
 )
 
-// LoadConfig builds a structured representation of the
+// Load builds a structured representation of the
 // configuration file located at @path
 // The struct definition checks for most format errors
-func LoadConfig(path string) (*controller, error) {
+func Load(path string) (*Controller, error) {
 
 	/* (1) Extract data
 	---------------------------------------------------------*/
@@ -20,7 +20,7 @@ func LoadConfig(path string) (*controller, error) {
 	defer configFile.Close()
 
 	/* (2) Init receiving dataset */
-	receiver := &controller{}
+	receiver := &Controller{}
 
 	/* (3) Decode JSON */
 	decoder := json.NewDecoder(configFile)
@@ -30,4 +30,5 @@ func LoadConfig(path string) (*controller, error) {
 	}
 
 	return receiver, nil
+
 }
