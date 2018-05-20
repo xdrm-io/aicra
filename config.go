@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-// LoadConfig builds a struct representation of the
+// LoadConfig builds a structured representation of the
 // configuration file located at @path
-// The structure checks for most format errors
+// The struct definition checks for most format errors
 func LoadConfig(path string) (*controller, error) {
 
 	/* (1) Extract data
