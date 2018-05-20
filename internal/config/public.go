@@ -29,6 +29,12 @@ func Load(path string) (*Controller, error) {
 		return nil, err
 	}
 
+	/* (4) Format result */
+	err = receiver.format("/")
+	if err != nil {
+		return nil, err
+	}
+
 	return receiver, nil
 
 }
