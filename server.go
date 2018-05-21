@@ -9,7 +9,7 @@ import (
 func (s *Server) Launch(port uint16) error {
 
 	/* (1) Bind router */
-	http.HandleFunc("/", route)
+	http.HandleFunc("/", s.route)
 
 	/* (2) Bind listener */
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)

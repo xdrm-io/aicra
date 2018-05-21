@@ -11,7 +11,9 @@ type Server struct {
 }
 
 type Request struct {
-	Uri      []string
-	FormData map[string]interface{}
-	GetData  map[string]interface{}
+	Uri           []string
+	ControllerUri []string
+	FormData      map[string]interface{}
+	GetData       map[string]interface{}
+	Data          map[string]interface{}
 }

@@ -2,12 +2,15 @@ package gfw
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"strings"
+	"time"
 )
 
+// buildRequest builds an interface request
+// from a http.Request
 func buildRequest(req *http.Request) (*Request, error) {
 
 	/* (1) Init request */
@@ -16,7 +19,9 @@ func buildRequest(req *http.Request) (*Request, error) {
 		Uri:      strings.Split(uri, "/"),
 		GetData:  FetchGetData(req),
 		FormData: FetchFormData(req),
+		Data:     make(map[string]interface{}),
 	}
+	inst.ControllerUri = make([]string, 0, len(inst.Uri))
 
 	return inst, nil
 }
@@ -91,8 +96,9 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 
 	} else { // form-data or anything
 
+		startn := time.Now().UnixNano()
 		// 1. Parse form-data
-		if err := req.ParseMultipartForm(math.MaxInt32); err != nil {
+		if err := req.ParseMultipartForm(req.ContentLength + 1); err != nil {
 			log.Printf("[read.multipart] %s\n", err)
 			return res
 		}
@@ -101,6 +107,7 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 		for name, value := range req.PostForm {
 			res[name] = value
 		}
+		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 
 	}
 

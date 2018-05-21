@@ -23,5 +23,5 @@ type Controller struct {
 	PUT    *Method `json:"PUT"`
 	DELETE *Method `json:"DELETE"`
 
-	Children map[string]Controller `json:"/"`
+	Children map[string]*Controller `json:"/"`
 }
