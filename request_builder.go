@@ -24,11 +24,30 @@ func buildRequest(req *http.Request) (*Request, error) {
 	}
 	inst.ControllerUri = make([]string, 0, len(inst.Uri))
 
-	/* (2) Fill 'Data' with all data */
+	/* (2) Fill 'Data' with GET data */
 	for name, data := range inst.GetData {
-		inst.Data[fmt.Sprintf("GET_%s", name)] = data
+		// prevent injections
+		if isParameterNameInjection(name) {
+			log.Printf("get.name_injection:  '%s'\n", name)
+			delete(inst.GetData, name)
+			continue
+		}
+
+		// add into data
+		inst.Data[fmt.Sprintf("GET@%s", name)] = data
 	}
+
+	/* (3) Fill 'Data' with POST data */
 	for name, data := range inst.FormData {
+
+		// prevent injections
+		if isParameterNameInjection(name) {
+			log.Printf("post.name_injection: '%s'\n", name)
+			delete(inst.FormData, name)
+			continue
+		}
+
+		// add into data
 		inst.Data[name] = data
 	}
 
@@ -121,4 +140,12 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 	}
 
 	return res
+}
+
+// isParameterNameInjection returns whether there is
+// a parameter name injection:
+// - inferred GET parameters
+// - inferred URL parameters
+func isParameterNameInjection(pName string) bool {
+	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
 }

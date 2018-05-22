@@ -51,7 +51,7 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 	/* (4) Store them as Data */
 	for i, data := range uriParams {
 		request.UrlData[i] = data
-		request.Data[fmt.Sprintf("URL%d", i)] = data
+		request.Data[fmt.Sprintf("URL#%d", i)] = data
 	}
 
 	/* (3) Check method
@@ -94,6 +94,11 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 
 	/* (4) Check arguments
 	---------------------------------------------------------*/
+	for name, data := range request.Data {
+		fmt.Printf("- %s: %v\n", name, data)
+	}
+	fmt.Printf("\n")
+
 	fmt.Printf("OK\nplugin: '%si.so'\n", strings.Join(request.ControllerUri, "/"))
 	return
 }
