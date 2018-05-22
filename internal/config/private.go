@@ -34,12 +34,13 @@ func (c *Controller) format(controllerName string) error {
 		}
 
 		/* (3) stop if no parameter */
-		if method.Ptr.Parameters == nil || len(*method.Ptr.Parameters) < 1 {
+		if method.Ptr.Parameters == nil || len(method.Ptr.Parameters) < 1 {
+			method.Ptr.Parameters = make(map[string]MethodParameter, 0)
 			continue
 		}
 
 		/* check parameters */
-		for pName, pData := range *method.Ptr.Parameters {
+		for pName, pData := range method.Ptr.Parameters {
 
 			/* (4) Fail on invalid rename (set but empty) */
 			if pData.Rename != nil && len(*pData.Rename) < 1 {
@@ -47,7 +48,7 @@ func (c *Controller) format(controllerName string) error {
 			}
 
 			/* (5) Check for name/rename conflict */
-			for paramName, param := range *method.Ptr.Parameters {
+			for paramName, param := range method.Ptr.Parameters {
 
 				// ignore self
 				if pName == paramName {

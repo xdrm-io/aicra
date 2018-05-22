@@ -19,9 +19,18 @@ func buildRequest(req *http.Request) (*Request, error) {
 		Uri:      strings.Split(uri, "/"),
 		GetData:  FetchGetData(req),
 		FormData: FetchFormData(req),
-		Data:     make(map[string]interface{}),
+		UrlData:  make(map[int]interface{}, 0),
+		Data:     make(map[string]interface{}, 0),
 	}
 	inst.ControllerUri = make([]string, 0, len(inst.Uri))
+
+	/* (2) Fill 'Data' with all data */
+	for name, data := range inst.GetData {
+		inst.Data[fmt.Sprintf("GET_%s", name)] = data
+	}
+	for name, data := range inst.FormData {
+		inst.Data[name] = data
+	}
 
 	return inst, nil
 }

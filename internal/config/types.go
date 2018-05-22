@@ -11,10 +11,10 @@ type MethodParameter struct {
 	Default     *interface{} `json:"def"`
 }
 type Method struct {
-	Description string                      `json:"des"`
-	Permission  [][]string                  `json:"per"`
-	Parameters  *map[string]MethodParameter `json:"par"`
-	Options     *map[string]interface{}     `json:"opt"`
+	Description string                     `json:"des"`
+	Permission  [][]string                 `json:"per"`
+	Parameters  map[string]MethodParameter `json:"par"`
+	Options     map[string]interface{}     `json:"opt"`
 }
 
 type Controller struct {
