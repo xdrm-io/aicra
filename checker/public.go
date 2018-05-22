@@ -8,7 +8,7 @@ import (
 
 // CreateRegistry creates an empty type registry
 // if TRUE is given, it will use default Types
-// see ./default_types.go
+// see ./default/ folder
 func CreateRegistry(useDefaultTypes bool) *TypeRegistry {
 	return &TypeRegistry{
 		Types: make([]Type, 0),
@@ -67,7 +67,7 @@ func (tr *TypeRegistry) Add(pluginName string) error {
 }
 
 // Checks the 'value' which must be of type 'name'
-func (tr TypeRegistry) Run(name string, value interface{}) bool {
+func (tr TypeRegistry) Run(name string, value interface{}) error {
 
 	var T *Type = nil
 
@@ -79,18 +79,18 @@ func (tr TypeRegistry) Run(name string, value interface{}) bool {
 			T = &t
 			break
 		}
-
-		// else log
-		fmt.Printf("does not match\n")
 	}
 
 	/* (2) Abort if no matching type */
 	if T == nil {
-		return false
+		return fmt.Errorf("No matching type")
 	}
 
 	/* (3) Check */
-	fmt.Printf("Check is %t\n", T.Check(value))
-	return T.Check(value)
+	if !T.Check(value) {
+		return fmt.Errorf("Does not match")
+	}
+
+	return nil
 
 }
