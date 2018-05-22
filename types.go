@@ -15,6 +15,6 @@ type Request struct {
 	ControllerUri []string
 	FormData      map[string]interface{}
 	GetData       map[string]interface{}
-	UrlData       map[int]interface{}
+	UrlData       []interface{}
 	Data          map[string]interface{}
 }

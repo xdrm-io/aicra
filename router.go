@@ -18,10 +18,6 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 		log.Fatal(req)
 	}
 
-	// fmt.Printf("Uri:    %v\n", request.Uri)
-	// fmt.Printf("GET:    %v\n", request.GetData)
-	// fmt.Printf("POST:   %v\n", request.FormData)
-
 	/* (2) Find a controller
 	---------------------------------------------------------*/
 	/* (1) Init browsing cursors */
@@ -50,7 +46,7 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 
 	/* (4) Store them as Data */
 	for i, data := range uriParams {
-		request.UrlData[i] = data
+		request.UrlData = append(request.UrlData, data)
 		request.Data[fmt.Sprintf("URL#%d", i)] = data
 	}
 

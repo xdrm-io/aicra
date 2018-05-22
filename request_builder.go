@@ -19,7 +19,7 @@ func buildRequest(req *http.Request) (*Request, error) {
 		Uri:      strings.Split(uri, "/"),
 		GetData:  FetchGetData(req),
 		FormData: FetchFormData(req),
-		UrlData:  make(map[int]interface{}, 0),
+		UrlData:  make([]interface{}, 0),
 		Data:     make(map[string]interface{}, 0),
 	}
 	inst.ControllerUri = make([]string, 0, len(inst.Uri))
