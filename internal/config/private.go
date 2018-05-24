@@ -35,7 +35,7 @@ func (c *Controller) format(controllerName string) error {
 
 		/* (3) stop if no parameter */
 		if method.Ptr.Parameters == nil || len(method.Ptr.Parameters) < 1 {
-			method.Ptr.Parameters = make(map[string]MethodParameter, 0)
+			method.Ptr.Parameters = make(map[string]*MethodParameter, 0)
 			continue
 		}
 
@@ -109,5 +109,55 @@ func (c *Controller) format(controllerName string) error {
 	}
 
 	return nil
+
+}
+
+// setDefaults sets the defaults for optional configuration fields
+func (c *Controller) setDefaults() {
+
+	/* (1) Get methods */
+	methods := []*Method{
+		c.GET,
+		c.POST,
+		c.PUT,
+		c.DELETE,
+	}
+
+	/* (2) Browse methods */
+	for _, m := range methods {
+
+		// ignore if not set
+		if m == nil {
+			continue
+		}
+
+		/* (3) Browse parameters */
+		for name, param := range m.Parameters {
+
+			// 1. Default 'opt': required //
+			if param.Optional == nil {
+				param.Optional = new(bool)
+			}
+
+			// 2. Default 'rename': same as name
+			if param.Rename == nil {
+				param.Rename = &name
+			}
+
+		}
+
+	}
+
+	/* (4) Stop here if no children */
+	if c.Children == nil || len(c.Children) < 1 {
+		return
+	}
+
+	/* (5) Iterate over children */
+	for _, child := range c.Children {
+		child.setDefaults()
+	}
+
+	return
 
 }

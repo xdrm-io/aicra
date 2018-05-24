@@ -36,6 +36,9 @@ func Load(path string) (*Controller, error) {
 		return nil, err
 	}
 
+	/* (5) Set default optional fields */
+	receiver.setDefaults()
+
 	return receiver, nil
 
 }
