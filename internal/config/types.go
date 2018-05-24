@@ -25,3 +25,5 @@ type Controller struct {
 
 	Children map[string]*Controller `json:"/"`
 }
+
+var AvailableMethods = []string{"GET", "POST", "PUT", "DELETE"}

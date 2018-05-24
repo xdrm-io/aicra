@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 // Load builds a structured representation of the
@@ -36,5 +37,39 @@ func Load(path string) (*Controller, error) {
 	}
 
 	return receiver, nil
+
+}
+
+// IsMethodAvailable returns whether a given
+// method is available (case insensitive)
+func IsMethodAvailable(method string) bool {
+	for _, m := range AvailableMethods {
+		if strings.ToUpper(method) == m {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasMethod returns whether the controller has a given
+// method (case insensitive)
+func (c Controller) HasMethod(method string) bool {
+	method = strings.ToUpper(method)
+
+	switch method {
+
+	case "GET":
+		return c.GET != nil
+	case "POST":
+		return c.POST != nil
+	case "PUT":
+		return c.PUT != nil
+	case "DELETE":
+		return c.DELETE != nil
+	default:
+		return false
+
+	}
 
 }
