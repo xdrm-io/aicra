@@ -52,23 +52,24 @@ func IsMethodAvailable(method string) bool {
 	return false
 }
 
-// HasMethod returns whether the controller has a given
-// method (case insensitive)
-func (c Controller) HasMethod(method string) bool {
+// Method returns whether the controller has a given
+// method by name (case insensitive)
+// NIL is returned if no method is found
+func (c Controller) Method(method string) *Method {
 	method = strings.ToUpper(method)
 
 	switch method {
 
 	case "GET":
-		return c.GET != nil
+		return c.GET
 	case "POST":
-		return c.POST != nil
+		return c.POST
 	case "PUT":
-		return c.PUT != nil
+		return c.PUT
 	case "DELETE":
-		return c.DELETE != nil
+		return c.DELETE
 	default:
-		return false
+		return nil
 
 	}
 

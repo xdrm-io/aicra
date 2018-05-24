@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (s Server) route(res http.ResponseWriter, req *http.Request) {
+func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 	/* (1) Build request
 	---------------------------------------------------------*/
@@ -53,10 +53,7 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 	/* (3) Check method
 	---------------------------------------------------------*/
 	/* (1) Unavailable method */
-	if req.Method == "GET" && ctl.GET == nil ||
-		req.Method == "POST" && ctl.POST == nil ||
-		req.Method == "PUT" && ctl.PUT == nil ||
-		req.Method == "DELETE" && ctl.DELETE == nil {
+	if !config.IsMethodAvailable(req.Method) {
 
 		Json, _ := ErrUnknownMethod.MarshalJSON()
 		res.Header().Add("Content-Type", "application/json")
@@ -67,17 +64,7 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 	}
 
 	/* (2) Extract method cursor */
-	var method *config.Method
-
-	if req.Method == "GET" {
-		method = ctl.GET
-	} else if req.Method == "POST" {
-		method = ctl.POST
-	} else if req.Method == "PUT" {
-		method = ctl.PUT
-	} else if req.Method == "DELETE" {
-		method = ctl.DELETE
-	}
+	var method = ctl.Method(req.Method)
 
 	/* (3) Unmanaged HTTP method */
 	if method == nil { // unknown method
@@ -90,7 +77,7 @@ func (s Server) route(res http.ResponseWriter, req *http.Request) {
 
 	/* (4) Check arguments
 	---------------------------------------------------------*/
-	for name, data := range request.Data {
+	for name, data := range s.Params {
 		fmt.Printf("- %s: %v\n", name, data)
 	}
 	fmt.Printf("\n")
