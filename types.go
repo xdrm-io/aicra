@@ -1,13 +1,15 @@
 package gfw
 
 import (
+	"git.xdrm.io/gfw/checker"
 	"git.xdrm.io/gfw/internal/config"
 )
 
 type Server struct {
-	config *config.Controller
-	Params map[string]interface{}
-	err    Err
+	config  *config.Controller
+	Params  map[string]interface{}
+	Checker *checker.TypeRegistry // type check
+	err     Err
 }
 
 type Request struct {
