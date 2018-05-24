@@ -2,21 +2,54 @@ package checker
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"plugin"
 	"strings"
 )
 
 // CreateRegistry creates an empty type registry
-// if TRUE is given, it will use default Types
-// see ./default/ folder
-func CreateRegistry(useDefaultTypes bool) *TypeRegistry {
-	return &TypeRegistry{
+// - if loadDir is TruE if will load all available types
+//   inside the local ./types folder
+func CreateRegistry(loadDir bool) *TypeRegistry {
+
+	/* (1) Create registry */
+	reg := &TypeRegistry{
 		Types: make([]Type, 0),
 	}
+
+	/* (2) If no default to use -> empty registry */
+	if !loadDir {
+		return reg
+	}
+
+	/* (3) List types */
+	plugins, err := ioutil.ReadDir("./types")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	/* (4) Else try to load each given default */
+	for _, file := range plugins {
+
+		// ignore non .so files
+		if !strings.HasSuffix(file.Name(), ".so") {
+			continue
+		}
+
+		err := reg.Add(file.Name())
+		if err != nil {
+			log.Fatalf("Cannot load plugin '%s'", file.Name())
+		}
+
+	}
+
+	return reg
 }
 
 // Add adds a type to the registry; it must be a
-// valid and existing plugin name without the .so extension
+// valid and existing plugin name with or without the .so extension
+// it must be located in the relative directory ./types
 func (tr *TypeRegistry) Add(pluginName string) error {
 
 	/* (1) Check plugin name */
@@ -24,18 +57,23 @@ func (tr *TypeRegistry) Add(pluginName string) error {
 		return fmt.Errorf("Plugin name must not be empty")
 	}
 
-	/* (2) Check plugin extension */
-	if strings.HasSuffix(pluginName, ".so") {
-		return fmt.Errorf("Plugin name must be provided without extension: '%s'", pluginName[0:len(pluginName)-3])
+	/* (2) Check if valid plugin name */
+	if strings.ContainsAny(pluginName, "/") {
+		return fmt.Errorf("'%s' can only be a name, not a path", pluginName)
 	}
 
-	/* (3) Try to load the plugin */
-	p, err := plugin.Open(fmt.Sprintf("%s.so", pluginName))
+	/* (3) Check plugin extension */
+	if !strings.HasSuffix(pluginName, ".so") {
+		pluginName = fmt.Sprintf("%s.so", pluginName)
+	}
+
+	/* (4) Try to load the plugin */
+	p, err := plugin.Open(fmt.Sprintf("./types/%s", pluginName))
 	if err != nil {
 		return err
 	}
 
-	/* (4) Export wanted properties */
+	/* (5) Export wanted properties */
 	matcher, err := p.Lookup("Match")
 	if err != nil {
 		return fmt.Errorf("Missing method 'Match()'; %s", err)
@@ -46,7 +84,7 @@ func (tr *TypeRegistry) Add(pluginName string) error {
 		return fmt.Errorf("Missing method 'Check()'; %s", err)
 	}
 
-	/* (5) Cast Match+Check */
+	/* (6) Cast Match+Check */
 	matcherCast, ok := matcher.(func(string) bool)
 	if !ok {
 		return fmt.Errorf("Match() is malformed")
@@ -57,7 +95,7 @@ func (tr *TypeRegistry) Add(pluginName string) error {
 		return fmt.Errorf("Check() is malformed")
 	}
 
-	/* (6) Add type to registry */
+	/* (7) Add type to registry */
 	tr.Types = append(tr.Types, Type{
 		Match: matcherCast,
 		Check: checkerCast,
