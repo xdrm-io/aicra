@@ -96,6 +96,11 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 
 	res := make(map[string]interface{})
 
+	// Abort if GET request
+	if req.Method == "GET" {
+		return res
+	}
+
 	ct := req.Header.Get("Content-Type")
 
 	if strings.HasPrefix(ct, "application/json") {
