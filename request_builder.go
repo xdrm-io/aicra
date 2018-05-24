@@ -66,7 +66,7 @@ func NormaliseUri(uri string) string {
 		uri = uri[1:]
 	}
 
-	if uri[len(uri)-1] == '/' {
+	if len(uri) > 1 && uri[len(uri)-1] == '/' {
 		uri = uri[0 : len(uri)-1]
 	}
 
