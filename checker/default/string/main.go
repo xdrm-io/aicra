@@ -1,11 +1,17 @@
 package main
 
+import (
+	"reflect"
+)
+
 func Match(name string) bool {
 	return name == "string"
 }
 
 func Check(value interface{}) bool {
-	_, OK := value.(string)
 
-	return OK
+	kind := reflect.TypeOf(value).Kind()
+
+	return kind == reflect.String
+
 }

@@ -77,10 +77,56 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 	/* (4) Check arguments
 	---------------------------------------------------------*/
-	for name, data := range s.Params {
-		fmt.Printf("- %s: %v\n", name, data)
+	var paramError Err = ErrSuccess
+	for name, param := range method.Parameters {
+		fmt.Printf("- %s: %v | '%v'\n", name, *param.Optional, *param.Rename)
+
+		/* (1) Extract value */
+		value, isset := request.Data[name]
+
+		/* (2) OPTIONAL ? */
+		if !isset {
+
+			// fail if required
+			if !*param.Optional {
+				paramError = ErrMissingParam
+				paramError.BindArgument(name)
+				break
+
+				// error if default param is nil
+			} else if param.Default == nil {
+				paramError = ErrInvalidDefaultParam
+				paramError.BindArgument(name)
+				break
+
+				// set default value if optional
+			} else {
+				value = *param.Default
+			}
+
+		}
+
+		/* (3) Check type */
+		isValid := s.Checker.Run(param.Type, value)
+		if isValid != nil {
+			paramError = ErrInvalidParam
+			paramError.BindArgument(name)
+			paramError.BindArgument(param.Type)
+			paramError.BindArgument(value)
+			break
+		}
+
 	}
 	fmt.Printf("\n")
+
+	// Fail if argument check failed
+	if paramError.Code != ErrSuccess.Code {
+		Json, _ := paramError.MarshalJSON()
+		res.Header().Add("Content-Type", "application/json")
+		res.Write(Json)
+		log.Printf("[err] %s\n", paramError.Reason)
+		return
+	}
 
 	fmt.Printf("OK\nplugin: '%si.so'\n", strings.Join(request.ControllerUri, "/"))
 	return

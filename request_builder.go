@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -15,40 +16,59 @@ func buildRequest(req *http.Request) (*Request, error) {
 
 	/* (1) Init request */
 	uri := NormaliseUri(req.URL.Path)
+	rawpost := FetchFormData(req)
+	rawget := FetchGetData(req)
 	inst := &Request{
 		Uri:      strings.Split(uri, "/"),
-		GetData:  FetchGetData(req),
-		FormData: FetchFormData(req),
+		GetData:  make(map[string]interface{}, 0),
+		FormData: make(map[string]interface{}, 0),
 		UrlData:  make([]interface{}, 0),
 		Data:     make(map[string]interface{}, 0),
 	}
 	inst.ControllerUri = make([]string, 0, len(inst.Uri))
 
 	/* (2) Fill 'Data' with GET data */
-	for name, data := range inst.GetData {
-		// prevent injections
+	for name, rawdata := range rawget {
+
+		// 1. Parse arguments
+		data := parseHttpData(rawdata)
+
+		if data == nil {
+			continue
+		}
+
+		// 2. prevent injections
 		if isParameterNameInjection(name) {
 			log.Printf("get.name_injection:  '%s'\n", name)
 			delete(inst.GetData, name)
 			continue
 		}
 
-		// add into data
+		// 3. add into data
+		inst.GetData[name] = data
 		inst.Data[fmt.Sprintf("GET@%s", name)] = data
 	}
 
 	/* (3) Fill 'Data' with POST data */
-	for name, data := range inst.FormData {
+	for name, rawdata := range rawpost {
 
-		// prevent injections
+		// 1. Parse arguments
+		data := parseHttpData(rawdata)
+
+		if data == nil {
+			continue
+		}
+
+		// 2. prevent injections
 		if isParameterNameInjection(name) {
 			log.Printf("post.name_injection: '%s'\n", name)
 			delete(inst.FormData, name)
 			continue
 		}
 
-		// add into data
+		// 3. add into data
 		inst.Data[name] = data
+		inst.FormData[name] = data
 	}
 
 	return inst, nil
@@ -153,4 +173,85 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 // - inferred URL parameters
 func isParameterNameInjection(pName string) bool {
 	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
+}
+
+// parseHttpData parses http GET/POST data
+// - []string of 1 element : return json of element 0
+// - string : return json if valid, else return raw string
+func parseHttpData(data interface{}) interface{} {
+	dtype := reflect.TypeOf(data)
+	dvalue := reflect.ValueOf(data)
+
+	switch dtype.Kind() {
+
+	/* (1) []string -> recursive */
+	case reflect.Slice:
+
+		// 1. Return nothing if empty
+		if dvalue.Len() == 0 {
+			return nil
+		}
+
+		// 2. only return first element if alone
+		if dvalue.Len() == 1 {
+
+			element := dvalue.Index(0)
+			if element.Kind() != reflect.String {
+				return nil
+			}
+			return parseHttpData(element.String())
+
+			// 3. Return all elements if more than 1
+		} else {
+
+			result := make([]interface{}, dvalue.Len())
+
+			for i, l := 0, dvalue.Len(); i < l; i++ {
+				element := dvalue.Index(i)
+
+				// ignore non-string
+				if element.Kind() != reflect.String {
+					continue
+				}
+
+				result[i] = parseHttpData(element.String())
+			}
+			return result
+
+		}
+
+	/* (2) string -> parse */
+	case reflect.String:
+
+		// build json wrapper
+		wrapper := fmt.Sprintf("{\"wrapped\":%s}", dvalue.String())
+
+		// try to parse as json
+		var result interface{}
+		err := json.Unmarshal([]byte(wrapper), &result)
+
+		// return if success
+		if err == nil {
+
+			mapval, ok := result.(map[string]interface{})
+			if !ok {
+				return dvalue.String()
+			}
+
+			wrapped, ok := mapval["wrapped"]
+			if !ok {
+				return dvalue.String()
+			}
+
+			return wrapped
+		}
+
+		// else return as string
+		return dvalue.String()
+
+	}
+
+	/* (3) NIL if unknown type */
+	return nil
+
 }
