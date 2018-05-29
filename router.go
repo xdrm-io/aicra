@@ -73,7 +73,7 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 	---------------------------------------------------------*/
 	var paramError Err = ErrSuccess
 	for name, param := range method.Parameters {
-		fmt.Printf("- %s: %v | '%v'\n", name, *param.Optional, *param.Rename)
+		fmt.Printf("- parameter '%s'\n", name)
 
 		/* (1) Extract value */
 		p, isset := request.Data.Set[name]
@@ -83,18 +83,21 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 			// fail if required
 			if !*param.Optional {
+				fmt.Printf("  - required and missing\n")
 				paramError = ErrMissingParam
 				paramError.BindArgument(name)
 				break
 
 				// error if default param is nil
 			} else if param.Default == nil {
+				fmt.Printf("  - required and no default\n")
 				paramError = ErrInvalidDefaultParam
 				paramError.BindArgument(name)
 				break
 
 				// set default p if optional
 			} else {
+				fmt.Printf("  - default value: '%v'\n", *param.Default)
 				p = &RequestParameter{
 					Parsed: true,
 					Value:  *param.Default,
@@ -103,8 +106,14 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 		}
 
-		/* (3) Check type */
+		/* (3) Parse parameter variable */
+		if !p.Parsed && !p.File {
+			p.Value = parseHttpData(p.Value)
+		}
+
+		/* (4) Check type */
 		isValid := s.Checker.Run(param.Type, p.Value)
+		fmt.Printf("  - valid: %t\n", isValid == nil)
 		if isValid != nil {
 			paramError = ErrInvalidParam
 			paramError.BindArgument(name)
