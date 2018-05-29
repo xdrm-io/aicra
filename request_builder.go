@@ -14,61 +14,15 @@ import (
 // from a http.Request
 func buildRequest(req *http.Request) (*Request, error) {
 
-	/* (1) Init request */
+	/* (1) Get useful data */
 	uri := NormaliseUri(req.URL.Path)
-	rawpost := FetchFormData(req)
-	rawget := FetchGetData(req)
+	uriparts := strings.Split(uri, "/")
+
+	/* (2) Init request */
 	inst := &Request{
-		Uri:      strings.Split(uri, "/"),
-		GetData:  make(map[string]interface{}, 0),
-		FormData: make(map[string]interface{}, 0),
-		UrlData:  make([]interface{}, 0),
-		Data:     make(map[string]interface{}, 0),
-	}
-	inst.ControllerUri = make([]string, 0, len(inst.Uri))
-
-	/* (2) Fill 'Data' with GET data */
-	for name, rawdata := range rawget {
-
-		// 1. Parse arguments
-		data := parseHttpData(rawdata)
-
-		if data == nil {
-			continue
-		}
-
-		// 2. prevent injections
-		if isParameterNameInjection(name) {
-			log.Printf("get.name_injection:  '%s'\n", name)
-			delete(inst.GetData, name)
-			continue
-		}
-
-		// 3. add into data
-		inst.GetData[name] = data
-		inst.Data[fmt.Sprintf("GET@%s", name)] = data
-	}
-
-	/* (3) Fill 'Data' with POST data */
-	for name, rawdata := range rawpost {
-
-		// 1. Parse arguments
-		data := parseHttpData(rawdata)
-
-		if data == nil {
-			continue
-		}
-
-		// 2. prevent injections
-		if isParameterNameInjection(name) {
-			log.Printf("post.name_injection: '%s'\n", name)
-			delete(inst.FormData, name)
-			continue
-		}
-
-		// 3. add into data
-		inst.Data[name] = data
-		inst.FormData[name] = data
+		Uri:           uriparts,
+		ControllerUri: make([]string, 0, len(uriparts)),
+		Data:          buildRequestDataFromRequest(req),
 	}
 
 	return inst, nil
@@ -91,20 +45,6 @@ func NormaliseUri(uri string) string {
 	}
 
 	return uri
-}
-
-// FetchGetData extracts the GET data
-// from an HTTP request
-func FetchGetData(req *http.Request) map[string]interface{} {
-
-	res := make(map[string]interface{})
-
-	for name, value := range req.URL.Query() {
-		res[name] = value
-	}
-
-	return res
-
 }
 
 // FetchFormData extracts FORM data
@@ -167,16 +107,10 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 	return res
 }
 
-// isParameterNameInjection returns whether there is
-// a parameter name injection:
-// - inferred GET parameters
-// - inferred URL parameters
-func isParameterNameInjection(pName string) bool {
-	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
-}
-
 // parseHttpData parses http GET/POST data
-// - []string of 1 element : return json of element 0
+// - []string
+//		- size = 1 : return json of first element
+//		- size > 1 : return array of json elements
 // - string : return json if valid, else return raw string
 func parseHttpData(data interface{}) interface{} {
 	dtype := reflect.TypeOf(data)
@@ -252,6 +186,6 @@ func parseHttpData(data interface{}) interface{} {
 	}
 
 	/* (3) NIL if unknown type */
-	return nil
+	return dvalue
 
 }

@@ -41,14 +41,8 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 	}
 
-	/* (3) Extract URI params */
-	uriParams := request.Uri[uriIndex:]
-
-	/* (4) Store them as Data */
-	for i, data := range uriParams {
-		request.UrlData = append(request.UrlData, data)
-		request.Data[fmt.Sprintf("URL#%d", i)] = data
-	}
+	/* (3) Extract & store URI params */
+	request.Data.fillUrl(request.Uri[uriIndex:])
 
 	/* (3) Check method
 	---------------------------------------------------------*/
@@ -82,7 +76,7 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 		fmt.Printf("- %s: %v | '%v'\n", name, *param.Optional, *param.Rename)
 
 		/* (1) Extract value */
-		value, isset := request.Data[name]
+		p, isset := request.Data.Set[name]
 
 		/* (2) OPTIONAL ? */
 		if !isset {
@@ -99,20 +93,23 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 				paramError.BindArgument(name)
 				break
 
-				// set default value if optional
+				// set default p if optional
 			} else {
-				value = *param.Default
+				p = &RequestParameter{
+					Parsed: true,
+					Value:  *param.Default,
+				}
 			}
 
 		}
 
 		/* (3) Check type */
-		isValid := s.Checker.Run(param.Type, value)
+		isValid := s.Checker.Run(param.Type, p.Value)
 		if isValid != nil {
 			paramError = ErrInvalidParam
 			paramError.BindArgument(name)
 			paramError.BindArgument(param.Type)
-			paramError.BindArgument(value)
+			paramError.BindArgument(p.Value)
 			break
 		}
 
