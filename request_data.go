@@ -3,7 +3,7 @@ package gfw
 import (
 	"encoding/json"
 	"fmt"
-	"git.xdrm.io/gfw/internal/multipart"
+	"git.xdrm.io/xdrm-brackets/gfw/internal/multipart"
 	"log"
 	"net/http"
 	"strings"
