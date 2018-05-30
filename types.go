@@ -2,7 +2,7 @@ package gfw
 
 import (
 	"git.xdrm.io/xdrm-brackets/gfw/checker"
-	"git.xdrm.io/xdrm-brackets/gfw/internal/config"
+	"git.xdrm.io/xdrm-brackets/gfw/config"
 )
 
 type Server struct {

@@ -2,7 +2,7 @@ package gfw
 
 import (
 	"fmt"
-	"git.xdrm.io/xdrm-brackets/gfw/internal/config"
+	"git.xdrm.io/xdrm-brackets/gfw/config"
 	"log"
 	"net/http"
 	"strings"
