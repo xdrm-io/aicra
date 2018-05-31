@@ -10,6 +10,10 @@ func Match(name string) bool {
 
 func Check(value interface{}) bool {
 
+	if value == nil {
+		return false
+	}
+
 	kind := reflect.TypeOf(value).Kind()
 
 	return kind == reflect.String
