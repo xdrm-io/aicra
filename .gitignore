@@ -1,3 +1,4 @@
 *.so
 /types
+/controllers
 /test
