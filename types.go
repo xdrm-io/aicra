@@ -3,13 +3,14 @@ package gfw
 import (
 	"git.xdrm.io/xdrm-brackets/gfw/checker"
 	"git.xdrm.io/xdrm-brackets/gfw/config"
+	"git.xdrm.io/xdrm-brackets/gfw/err"
 )
 
 type Server struct {
 	config  *config.Controller
 	Params  map[string]interface{}
 	Checker *checker.TypeRegistry // type check
-	err     Err
+	err     err.Error
 }
 
 type Request struct {
@@ -21,21 +22,21 @@ type Request struct {
 	ControllerUri []string
 
 	// contains all data from URL, GET, and FORM
-	Data *RequestData
+	Data *requestData
 }
 
-type RequestData struct {
+type requestData struct {
 
 	// ordered values from the URI
 	//  catches all after the controller path
 	//
 	// points to Request.Data
-	Url []*RequestParameter
+	Url []*requestParameter
 
 	// uri parameters following the QUERY format
 	//
 	// points to Request.Data
-	Get map[string]*RequestParameter
+	Get map[string]*requestParameter
 
 	// form data depending on the Content-Type:
 	//  'application/json'                  => key-value pair is parsed as json into the map
@@ -43,18 +44,18 @@ type RequestData struct {
 	//  'multipart/form-data'               => parse form-data format
 	//
 	// points to Request.Data
-	Form map[string]*RequestParameter
+	Form map[string]*requestParameter
 
 	// contains URL+GET+FORM data with prefixes:
 	// - FORM: no prefix
 	// - URL:  'URL#' followed by the index in Uri
 	// - GET:  'GET@' followed by the key in GET
-	Set map[string]*RequestParameter
+	Set map[string]*requestParameter
 }
 
-// RequestParameter represents an http request parameter
+// requestParameter represents an http request parameter
 // that can be of type URL, GET, or FORM (multipart, json, urlencoded)
-type RequestParameter struct {
+type requestParameter struct {
 	// whether the value has been json-parsed
 	// for optimisation purpose, parameters are only parsed
 	// if they are required by the current controller

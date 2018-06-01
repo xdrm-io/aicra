@@ -3,8 +3,10 @@ package gfw
 import (
 	"encoding/json"
 	"fmt"
+	"git.xdrm.io/xdrm-brackets/gfw/err"
 	"log"
 	"net/http"
+	"plugin"
 	"reflect"
 	"strings"
 	"time"
@@ -187,5 +189,42 @@ func parseHttpData(data interface{}) interface{} {
 
 	/* (3) NIL if unknown type */
 	return dvalue
+
+}
+
+// loadController tries to load a controller from its uri
+// checks for its given method ('Get', 'Post', 'Put', or 'Delete')
+func (i *Request) loadController(method string) (func(map[string]interface{}) (map[string]interface{}, err.Error), error) {
+
+	/* (1) Build controller path */
+	path := fmt.Sprintf("%si.so", i.ControllerUri)
+
+	/* (2) Format url */
+	tmp := []byte(strings.ToLower(method))
+	tmp[0] = tmp[0] - ('a' - 'A')
+	method = string(tmp)
+
+	fmt.Printf("method is '%s'\n", method)
+	return nil, nil
+
+	/* (2) Try to load plugin */
+	p, err2 := plugin.Open(path)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	/* (3) Try to extract method */
+	m, err2 := p.Lookup(method)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	/* (4) Check signature */
+	callable, validSignature := m.(func(map[string]interface{}) (map[string]interface{}, err.Error))
+	if !validSignature {
+		return nil, fmt.Errorf("Invalid signature for method %s", method)
+	}
+
+	return callable, nil
 
 }

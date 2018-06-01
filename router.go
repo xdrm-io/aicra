@@ -3,6 +3,7 @@ package gfw
 import (
 	"fmt"
 	"git.xdrm.io/xdrm-brackets/gfw/config"
+	"git.xdrm.io/xdrm-brackets/gfw/err"
 	"log"
 	"net/http"
 	"strings"
@@ -13,65 +14,30 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 	/* (1) Build request
 	---------------------------------------------------------*/
 	/* (1) Try to build request */
-	request, err := buildRequest(req)
-	if err != nil {
+	request, err2 := buildRequest(req)
+	if err2 != nil {
 		log.Fatal(req)
 	}
 
 	/* (2) Find a controller
 	---------------------------------------------------------*/
-	/* (1) Init browsing cursors */
-	ctl := s.config
-	uriIndex := 0
-
-	/* (2) Browse while there is uri parts */
-	for uriIndex < len(request.Uri) {
-		uri := request.Uri[uriIndex]
-
-		child, hasKey := ctl.Children[uri]
-
-		// stop if no matchind child
-		if !hasKey {
-			break
-		}
-
-		request.ControllerUri = append(request.ControllerUri, uri)
-		ctl = child
-		uriIndex++
-
-	}
-
-	/* (3) Extract & store URI params */
-	request.Data.fillUrl(request.Uri[uriIndex:])
+	controller := s.findController(request)
 
 	/* (3) Check method
 	---------------------------------------------------------*/
-	/* (1) Unavailable method */
-	if !config.IsMethodAvailable(req.Method) {
+	method := s.getMethod(controller, req.Method)
 
-		Json, _ := ErrUnknownMethod.MarshalJSON()
+	if method == nil {
+		Json, _ := err.UnknownMethod.MarshalJSON()
 		res.Header().Add("Content-Type", "application/json")
 		res.Write(Json)
-		log.Printf("[err] %s\n", ErrUnknownMethod.Reason)
-		return
-
-	}
-
-	/* (2) Extract method cursor */
-	var method = ctl.Method(req.Method)
-
-	/* (3) Unmanaged HTTP method */
-	if method == nil { // unknown method
-		Json, _ := ErrUnknownMethod.MarshalJSON()
-		res.Header().Add("Content-Type", "application/json")
-		res.Write(Json)
-		log.Printf("[err] %s\n", ErrUnknownMethod.Reason)
+		log.Printf("[err] %s\n", err.UnknownMethod.Reason)
 		return
 	}
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
-	var paramError Err = ErrSuccess
+	var paramError err.Error = err.Success
 	parameters := make(map[string]interface{})
 	for name, param := range method.Parameters {
 
@@ -80,14 +46,14 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 		/* (2) Required & missing */
 		if !isset && !*param.Optional {
-			paramError = ErrMissingParam
+			paramError = err.MissingParam
 			paramError.BindArgument(name)
 			break
 		}
 
 		/* (3) Optional & missing: set default value */
 		if !isset {
-			p = &RequestParameter{
+			p = &requestParameter{
 				Parsed: true,
 				File:   param.Type == "FILE",
 				Value:  nil,
@@ -105,7 +71,7 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 		/* (4) Fail on unexpected multipart file */
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
-			paramError = ErrInvalidParam
+			paramError = err.InvalidParam
 			paramError.BindArgument(name)
 			paramError.BindArgument("FILE")
 			break
@@ -120,7 +86,7 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 		/* (6) Check type */
 		if s.Checker.Run(param.Type, p.Value) != nil {
 
-			paramError = ErrInvalidParam
+			paramError = err.InvalidParam
 			paramError.BindArgument(name)
 			paramError.BindArgument(param.Type)
 			paramError.BindArgument(p.Value)
@@ -131,10 +97,9 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 		parameters[name] = p.Value
 
 	}
-	fmt.Printf("\n")
 
 	// Fail if argument check failed
-	if paramError.Code != ErrSuccess.Code {
+	if paramError.Code != err.Success.Code {
 		Json, _ := paramError.MarshalJSON()
 		res.Header().Add("Content-Type", "application/json")
 		res.Write(Json)
@@ -142,9 +107,69 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	/* (5) Load controller
+	---------------------------------------------------------*/
+	callable, err := request.loadController(req.Method)
+	if err != nil {
+		log.Printf("[err] %s\n", err)
+		return
+	}
 	fmt.Printf("OK\nplugin: '%si.so'\n", strings.Join(request.ControllerUri, "/"))
 	for name, value := range parameters {
 		fmt.Printf("  $%s = %v\n", name, value)
 	}
+
+	/* (6) Execute and get response
+	---------------------------------------------------------*/
+	out, _ := callable(parameters)
+	fmt.Printf("-- OUT --\n")
+	for name, value := range out {
+		fmt.Printf("  $%s = %v\n", name, value)
+	}
 	return
+}
+
+func (s *Server) findController(req *Request) *config.Controller {
+	/* (1) Init browsing cursors */
+	ctl := s.config
+	uriIndex := 0
+
+	/* (2) Browse while there is uri parts */
+	for uriIndex < len(req.Uri) {
+		uri := req.Uri[uriIndex]
+
+		child, hasKey := ctl.Children[uri]
+
+		// stop if no matchind child
+		if !hasKey {
+			break
+		}
+
+		req.ControllerUri = append(req.ControllerUri, uri)
+		ctl = child
+		uriIndex++
+
+	}
+
+	/* (3) Extract & store URI params */
+	req.Data.fillUrl(req.Uri[uriIndex:])
+
+	/* (4) Return controller */
+	return ctl
+
+}
+
+func (s *Server) getMethod(controller *config.Controller, method string) *config.Method {
+
+	/* (1) Unavailable method */
+	if !config.IsMethodAvailable(method) {
+		return nil
+	}
+
+	/* (2) Extract method cursor */
+	var foundMethod = controller.Method(method)
+
+	/* (3) Return method | nil on error */
+	return foundMethod
+
 }
