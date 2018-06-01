@@ -33,5 +33,5 @@ It is based on the *all-in-config* idea, where you only have a configuration fi
 	- [x] `varchar(min, max)` - any string with a length between `min` and `max`
 	- [ ] `<a>` - array containing **only** elements matching `a` type
 	- [ ] `<a:b>` - map containing **only** keys of type `a` and values of type `b` (*a or b can be ommited*)
-- [ ] generic controllers implementation (shared objects)
-- [ ] response interface
+- [x] generic controllers implementation (shared objects)
+- [x] response interface
