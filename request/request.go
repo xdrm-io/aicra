@@ -93,10 +93,10 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 
 // LoadController tries to load a controller from its uri
 // checks for its given method ('Get', 'Post', 'Put', or 'Delete')
-func (i *Request) LoadController(method string) (implement.Controller, error) {
+func (i *Request) LoadController(method string) (func(implement.Arguments, *implement.Response) implement.Response, error) {
 
 	/* (1) Build controller path */
-	path := fmt.Sprintf("%si.so", i.Path)
+	path := fmt.Sprintf("./controllers/%si.so", strings.Join(i.Path, "/"))
 
 	/* (2) Format url */
 	tmp := []byte(strings.ToLower(method))
@@ -104,7 +104,6 @@ func (i *Request) LoadController(method string) (implement.Controller, error) {
 	method = string(tmp)
 
 	fmt.Printf("method is '%s'\n", method)
-	return nil, nil
 
 	/* (2) Try to load plugin */
 	p, err2 := plugin.Open(path)
@@ -119,10 +118,11 @@ func (i *Request) LoadController(method string) (implement.Controller, error) {
 	}
 
 	/* (4) Check signature */
-	callable, validSignature := m.(implement.Controller)
+	callable, validSignature := m.(func(implement.Arguments, *implement.Response) implement.Response)
 	if !validSignature {
 		return nil, fmt.Errorf("Invalid signature for method %s", method)
 	}
+	fmt.Printf("callable is %v\n", callable)
 
 	return callable, nil
 

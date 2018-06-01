@@ -1,9 +1,11 @@
 package gfw
 
 import (
+	"encoding/json"
 	"fmt"
 	"git.xdrm.io/xdrm-brackets/gfw/config"
 	"git.xdrm.io/xdrm-brackets/gfw/err"
+	"git.xdrm.io/xdrm-brackets/gfw/implement"
 	"git.xdrm.io/xdrm-brackets/gfw/request"
 	"log"
 	"net/http"
@@ -121,15 +123,21 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (6) Execute and get response
 	---------------------------------------------------------*/
-	resp := callable(parameters)
-	if resp != nil {
-		fmt.Printf("-- OUT --\n")
-		for name, value := range resp.Dump() {
-			fmt.Printf("  $%s = %v\n", name, value)
-		}
-		eJSON, _ := resp.Err.MarshalJSON()
-		fmt.Printf("-- ERR --\n%s\n", eJSON)
+	/* (1) Execute */
+	responseBarebone := implement.NewResponse()
+	response := callable(parameters, responseBarebone)
+
+	/* (2) Build JSON response */
+	formattedResponse := response.Dump()
+	formattedResponse["error"] = response.Err.Code
+	formattedResponse["reason"] = response.Err.Reason
+	if response.Err.Arguments != nil && len(response.Err.Arguments) > 0 {
+		formattedResponse["args"] = response.Err.Arguments
 	}
+	jsonResponse, _ := json.Marshal(formattedResponse)
+
+	res.Header().Add("Content-Type", "application/json")
+	res.Write(jsonResponse)
 	return
 }
 
