@@ -1,9 +1,115 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 )
+
+// Load builds a representation of the configuration
+// The struct definition checks for most format errors
+//
+// path<string>					The path to the configuration
+//
+// @return<controller>			The parsed configuration root controller
+// @return<err>					The error if occured
+//
+func Load(path string) (*Controller, error) {
+
+	/* (1) Extract data
+	---------------------------------------------------------*/
+	/* (1) Open file */
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	/* (2) Init receiver dataset */
+	receiver := &Controller{}
+
+	/* (3) Decode json */
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(receiver)
+	if err != nil {
+		return nil, err
+	}
+
+	/* (4) Format result */
+	err = receiver.format("/")
+	if err != nil {
+		return nil, err
+	}
+
+	/* (5) Set default optional fields */
+	receiver.setDefaults()
+
+	return receiver, nil
+
+}
+
+// Method returns a controller's method if exists
+//
+// @method<string>					The wanted method (case insensitive)
+//
+// @return<*Method>					The requested method
+//									NIL if not found
+//
+func (c Controller) Method(method string) *Method {
+	method = strings.ToUpper(method)
+
+	switch method {
+
+	case "GET":
+		return c.GET
+	case "POST":
+		return c.POST
+	case "PUT":
+		return c.PUT
+	case "DELETE":
+		return c.DELETE
+	default:
+		return nil
+
+	}
+
+}
+
+// Browses tries to browse the controller childtree and
+// returns the farthest matching child
+//
+// @path					the path to browse
+//
+// @return<int>				The index in 'path' used to find the controller
+// @return<*Controller>		The farthest match
+func (c *Controller) Browse(path []string) (int, *Controller) {
+
+	/* (1) initialise cursors */
+	current := c
+	i := 0 // index in path
+
+	/* (2) Browse while there is uri parts */
+	for i < len(path) {
+
+		// 1. Try to get child for this name
+		child, exists := current.Children[path[i]]
+
+		// 2. Stop if no matching child
+		if !exists {
+			break
+		}
+
+		// 3. Increment cursors
+		current = child
+		i++
+
+	}
+
+	/* (3) Return matches */
+	return i, current
+
+}
 
 // format checks for format errors and missing required fields
 // it also sets default values to optional fields
@@ -35,7 +141,7 @@ func (c *Controller) format(controllerName string) error {
 
 		/* (3) stop if no parameter */
 		if method.Ptr.Parameters == nil || len(method.Ptr.Parameters) < 1 {
-			method.Ptr.Parameters = make(map[string]*MethodParameter, 0)
+			method.Ptr.Parameters = make(map[string]*Parameter, 0)
 			continue
 		}
 

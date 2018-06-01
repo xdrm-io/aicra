@@ -3,7 +3,7 @@ package config
 /* (1) Configuration
 ---------------------------------------------------------*/
 
-type MethodParameter struct {
+type Parameter struct {
 	Description string       `json:"des"`
 	Type        string       `json:"typ"`
 	Rename      *string      `json:"ren"`
@@ -11,10 +11,10 @@ type MethodParameter struct {
 	Default     *interface{} `json:"def"`
 }
 type Method struct {
-	Description string                      `json:"des"`
-	Permission  [][]string                  `json:"per"`
-	Parameters  map[string]*MethodParameter `json:"par"`
-	Options     map[string]interface{}      `json:"opt"`
+	Description string                 `json:"des"`
+	Permission  [][]string             `json:"per"`
+	Parameters  map[string]*Parameter  `json:"par"`
+	Options     map[string]interface{} `json:"opt"`
 }
 
 type Controller struct {
@@ -25,5 +25,3 @@ type Controller struct {
 
 	Children map[string]*Controller `json:"/"`
 }
-
-var AvailableMethods = []string{"GET", "POST", "PUT", "DELETE"}

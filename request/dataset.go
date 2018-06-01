@@ -1,4 +1,4 @@
-package gfw
+package request
 
 import (
 	"encoding/json"
@@ -7,37 +7,37 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
-// buildRequestDataFromRequest builds a 'requestData'
-// from an http request
-func buildRequestDataFromRequest(req *http.Request) *requestData {
-
-	i := &requestData{
-		Url:  make([]*requestParameter, 0),
-		Get:  make(map[string]*requestParameter),
-		Form: make(map[string]*requestParameter),
-		Set:  make(map[string]*requestParameter),
+func NewDataset() *DataSet {
+	return &DataSet{
+		Uri:  make([]*Parameter, 0),
+		Get:  make(map[string]*Parameter),
+		Form: make(map[string]*Parameter),
+		Set:  make(map[string]*Parameter),
 	}
+}
 
-	// GET (query) data
+// Build builds a 'DataSet' from an http request
+func (i *DataSet) Build(req *http.Request) {
+
+	/* (1) GET (query) data */
 	i.fetchGet(req)
 
-	// no Form if GET
+	/* (2) We are done if GET method */
 	if req.Method == "GET" {
-		return i
+		return
 	}
 
-	// POST (body) data
+	/* (3) POST (body) data */
 	i.fetchForm(req)
-
-	return i
 
 }
 
-// bindUrl stores URL data and fills 'Set'
+// setUriData stores URL data and fills 'Set'
 // with creating pointers inside 'Url'
-func (i *requestData) fillUrl(data []string) {
+func (i *DataSet) SetUri(data []string) {
 
 	for index, value := range data {
 
@@ -45,25 +45,25 @@ func (i *requestData) fillUrl(data []string) {
 		setindex := fmt.Sprintf("URL#%d", index)
 
 		// store value in 'Set'
-		i.Set[setindex] = &requestParameter{
+		i.Set[setindex] = &Parameter{
 			Parsed: false,
 			Value:  value,
 		}
 
 		// create link in 'Url'
-		i.Url = append(i.Url, i.Set[setindex])
+		i.Uri = append(i.Uri, i.Set[setindex])
 
 	}
 
 }
 
 // fetchGet stores data from the QUERY (in url parameters)
-func (i *requestData) fetchGet(req *http.Request) {
+func (i *DataSet) fetchGet(req *http.Request) {
 
 	for name, value := range req.URL.Query() {
 
 		// prevent injections
-		if isParameterNameInjection(name) {
+		if nameInjection(name) {
 			log.Printf("get.injection: '%s'\n", name)
 			continue
 		}
@@ -72,7 +72,7 @@ func (i *requestData) fetchGet(req *http.Request) {
 		setindex := fmt.Sprintf("GET@%s", name)
 
 		// store value in 'Set'
-		i.Set[setindex] = &requestParameter{
+		i.Set[setindex] = &Parameter{
 			Parsed: false,
 			Value:  value,
 		}
@@ -89,34 +89,44 @@ func (i *requestData) fetchGet(req *http.Request) {
 // - parse 'form-data' if not supported (not POST requests)
 // - parse 'x-www-form-urlencoded'
 // - parse 'application/json'
-func (i *requestData) fetchForm(req *http.Request) {
+func (i *DataSet) fetchForm(req *http.Request) {
+
+	fmt.Printf("Parsing FORM...")
+	startn := time.Now().UnixNano()
 
 	contentType := req.Header.Get("Content-Type")
 
 	// parse json
 	if strings.HasPrefix(contentType, "application/json") {
-		i.parseJsonForm(req)
+		i.parseJson(req)
+
+		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 		return
 	}
 
 	// parse urlencoded
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
-		i.parseUrlencodedForm(req)
+		i.parseUrlencoded(req)
+
+		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 		return
 	}
 
 	// parse multipart
 	if strings.HasPrefix(contentType, "multipart/form-data; boundary=") {
-		i.parseMultipartForm(req)
+		i.parseMultipart(req)
+
+		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 		return
 	}
 
 	// if unknown type store nothing
+	fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 }
 
-// parseJsonForm parses JSON from the request body inside 'Form'
+// parseJson parses JSON from the request body inside 'Form'
 // and 'Set'
-func (i *requestData) parseJsonForm(req *http.Request) {
+func (i *DataSet) parseJson(req *http.Request) {
 
 	parsed := make(map[string]interface{}, 0)
 
@@ -131,13 +141,13 @@ func (i *requestData) parseJsonForm(req *http.Request) {
 	for name, value := range parsed {
 
 		// prevent injections
-		if isParameterNameInjection(name) {
+		if nameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
 			continue
 		}
 
 		// store value in 'Set'
-		i.Set[name] = &requestParameter{
+		i.Set[name] = &Parameter{
 			Parsed: true,
 			Value:  value,
 		}
@@ -149,9 +159,9 @@ func (i *requestData) parseJsonForm(req *http.Request) {
 
 }
 
-// parseUrlencodedForm parses urlencoded from the request body inside 'Form'
+// parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
-func (i *requestData) parseUrlencodedForm(req *http.Request) {
+func (i *DataSet) parseUrlencoded(req *http.Request) {
 
 	// use http.Request interface
 	req.ParseForm()
@@ -159,13 +169,13 @@ func (i *requestData) parseUrlencodedForm(req *http.Request) {
 	for name, value := range req.PostForm {
 
 		// prevent injections
-		if isParameterNameInjection(name) {
+		if nameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
 			continue
 		}
 
 		// store value in 'Set'
-		i.Set[name] = &requestParameter{
+		i.Set[name] = &Parameter{
 			Parsed: false,
 			Value:  value,
 		}
@@ -176,9 +186,9 @@ func (i *requestData) parseUrlencodedForm(req *http.Request) {
 
 }
 
-// parseMultipartForm parses multi-part from the request body inside 'Form'
+// parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func (i *requestData) parseMultipartForm(req *http.Request) {
+func (i *DataSet) parseMultipart(req *http.Request) {
 
 	/* (1) Create reader */
 	mpr := multipart.CreateReader(req)
@@ -190,13 +200,13 @@ func (i *requestData) parseMultipartForm(req *http.Request) {
 	for name, component := range mpr.Components {
 
 		// prevent injections
-		if isParameterNameInjection(name) {
+		if nameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
 			continue
 		}
 
 		// store value in 'Set'
-		i.Set[name] = &requestParameter{
+		i.Set[name] = &Parameter{
 			Parsed: false,
 			File:   component.File,
 			Value:  component.Data,
@@ -209,12 +219,4 @@ func (i *requestData) parseMultipartForm(req *http.Request) {
 
 	return
 
-}
-
-// isParameterNameInjection returns whether there is
-// a parameter name injection:
-// - inferred GET parameters
-// - inferred URL parameters
-func isParameterNameInjection(pName string) bool {
-	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
 }

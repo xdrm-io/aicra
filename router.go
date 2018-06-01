@@ -4,30 +4,30 @@ import (
 	"fmt"
 	"git.xdrm.io/xdrm-brackets/gfw/config"
 	"git.xdrm.io/xdrm-brackets/gfw/err"
+	"git.xdrm.io/xdrm-brackets/gfw/request"
 	"log"
 	"net/http"
 	"strings"
 )
 
-func (s *Server) route(res http.ResponseWriter, req *http.Request) {
+func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (1) Build request
 	---------------------------------------------------------*/
 	/* (1) Try to build request */
-	request, err2 := buildRequest(req)
+	req, err2 := request.Build(httpReq)
 	if err2 != nil {
-		log.Fatal(req)
+		log.Fatal(err2)
 	}
 
 	/* (2) Find a controller
 	---------------------------------------------------------*/
-	controller := s.findController(request)
+	controller := s.findController(req)
 
 	/* (3) Check method
 	---------------------------------------------------------*/
-	method := s.getMethod(controller, req.Method)
-
-	if method == nil {
+	var method *config.Method
+	if method = controller.Method(httpReq.Method); method == nil {
 		Json, _ := err.UnknownMethod.MarshalJSON()
 		res.Header().Add("Content-Type", "application/json")
 		res.Write(Json)
@@ -42,7 +42,7 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 	for name, param := range method.Parameters {
 
 		/* (1) Extract value */
-		p, isset := request.Data.Set[name]
+		p, isset := req.Data.Set[name]
 
 		/* (2) Required & missing */
 		if !isset && !*param.Optional {
@@ -53,7 +53,7 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 		/* (3) Optional & missing: set default value */
 		if !isset {
-			p = &requestParameter{
+			p = &request.Parameter{
 				Parsed: true,
 				File:   param.Type == "FILE",
 				Value:  nil,
@@ -64,8 +64,8 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 		}
 
 		/* (4) Parse parameter if not file */
-		if !p.Parsed && !p.File {
-			p.Value = parseHttpData(p.Value)
+		if !p.File {
+			p.Parse()
 		}
 
 		/* (4) Fail on unexpected multipart file */
@@ -109,67 +109,43 @@ func (s *Server) route(res http.ResponseWriter, req *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	callable, err := request.loadController(req.Method)
+	callable, err := req.LoadController(httpReq.Method)
 	if err != nil {
 		log.Printf("[err] %s\n", err)
 		return
 	}
-	fmt.Printf("OK\nplugin: '%si.so'\n", strings.Join(request.ControllerUri, "/"))
+	fmt.Printf("OK\nplugin: '%si.so'\n", strings.Join(req.Path, "/"))
 	for name, value := range parameters {
 		fmt.Printf("  $%s = %v\n", name, value)
 	}
 
 	/* (6) Execute and get response
 	---------------------------------------------------------*/
-	out, _ := callable(parameters)
-	fmt.Printf("-- OUT --\n")
-	for name, value := range out {
-		fmt.Printf("  $%s = %v\n", name, value)
+	resp := callable(parameters)
+	if resp != nil {
+		fmt.Printf("-- OUT --\n")
+		for name, value := range resp.Dump() {
+			fmt.Printf("  $%s = %v\n", name, value)
+		}
+		eJSON, _ := resp.Err.MarshalJSON()
+		fmt.Printf("-- ERR --\n%s\n", eJSON)
 	}
 	return
 }
 
-func (s *Server) findController(req *Request) *config.Controller {
-	/* (1) Init browsing cursors */
-	ctl := s.config
-	uriIndex := 0
+func (s *Server) findController(req *request.Request) *config.Controller {
 
-	/* (2) Browse while there is uri parts */
-	for uriIndex < len(req.Uri) {
-		uri := req.Uri[uriIndex]
+	/* (1) Try to browse by URI */
+	pathi, ctl := s.config.Browse(req.Uri)
 
-		child, hasKey := ctl.Children[uri]
-
-		// stop if no matchind child
-		if !hasKey {
-			break
-		}
-
-		req.ControllerUri = append(req.ControllerUri, uri)
-		ctl = child
-		uriIndex++
-
-	}
+	/* (2) Set controller uri */
+	req.Path = make([]string, 0, pathi)
+	req.Path = append(req.Path, req.Uri[:pathi]...)
 
 	/* (3) Extract & store URI params */
-	req.Data.fillUrl(req.Uri[uriIndex:])
+	req.Data.SetUri(req.Uri[pathi:])
 
 	/* (4) Return controller */
 	return ctl
-
-}
-
-func (s *Server) getMethod(controller *config.Controller, method string) *config.Method {
-
-	/* (1) Unavailable method */
-	if !config.IsMethodAvailable(method) {
-		return nil
-	}
-
-	/* (2) Extract method cursor */
-	var foundMethod = controller.Method(method)
-
-	/* (3) Return method | nil on error */
-	return foundMethod
 
 }
