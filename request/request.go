@@ -103,8 +103,6 @@ func (i *Request) LoadController(method string) (func(implement.Arguments, *impl
 	tmp[0] = tmp[0] - ('a' - 'A')
 	method = string(tmp)
 
-	fmt.Printf("method is '%s'\n", method)
-
 	/* (2) Try to load plugin */
 	p, err2 := plugin.Open(path)
 	if err2 != nil {
@@ -122,7 +120,6 @@ func (i *Request) LoadController(method string) (func(implement.Arguments, *impl
 	if !validSignature {
 		return nil, fmt.Errorf("Invalid signature for method %s", method)
 	}
-	fmt.Printf("callable is %v\n", callable)
 
 	return callable, nil
 

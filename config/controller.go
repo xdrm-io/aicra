@@ -247,7 +247,8 @@ func (c *Controller) setDefaults() {
 
 			// 2. Default 'rename': same as name
 			if param.Rename == nil {
-				param.Rename = &name
+				param.Rename = new(string)
+				*param.Rename = name
 			}
 
 		}

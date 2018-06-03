@@ -2,14 +2,12 @@ package gfw
 
 import (
 	"encoding/json"
-	"fmt"
 	"git.xdrm.io/xdrm-brackets/gfw/config"
 	"git.xdrm.io/xdrm-brackets/gfw/err"
 	"git.xdrm.io/xdrm-brackets/gfw/implement"
 	"git.xdrm.io/xdrm-brackets/gfw/request"
 	"log"
 	"net/http"
-	"strings"
 )
 
 func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
@@ -43,17 +41,20 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 	parameters := make(map[string]interface{})
 	for name, param := range method.Parameters {
 
-		/* (1) Extract value */
+		/* (1) Rename */
+		rename := *param.Rename
+
+		/* (2) Extract value */
 		p, isset := req.Data.Set[name]
 
-		/* (2) Required & missing */
+		/* (3) Required & missing */
 		if !isset && !*param.Optional {
 			paramError = err.MissingParam
 			paramError.BindArgument(name)
 			break
 		}
 
-		/* (3) Optional & missing: set default value */
+		/* (4) Optional & missing: set default value */
 		if !isset {
 			p = &request.Parameter{
 				Parsed: true,
@@ -63,40 +64,44 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 			if param.Default != nil {
 				p.Value = *param.Default
 			}
+
+			// we are done
+			parameters[rename] = p.Value
+			continue
 		}
 
-		/* (4) Parse parameter if not file */
+		/* (5) Parse parameter if not file */
 		if !p.File {
 			p.Parse()
 		}
 
-		/* (4) Fail on unexpected multipart file */
+		/* (6) Fail on unexpected multipart file */
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
 			paramError = err.InvalidParam
-			paramError.BindArgument(name)
+			paramError.BindArgument(rename)
 			paramError.BindArgument("FILE")
 			break
 		}
 
-		/* (5) Do not check if file */
+		/* (7) Do not check if file */
 		if gotFile {
-			parameters[name] = p.Value
+			parameters[rename] = p.Value
 			continue
 		}
 
-		/* (6) Check type */
+		/* (8) Check type */
 		if s.Checker.Run(param.Type, p.Value) != nil {
 
 			paramError = err.InvalidParam
-			paramError.BindArgument(name)
+			paramError.BindArgument(rename)
 			paramError.BindArgument(param.Type)
 			paramError.BindArgument(p.Value)
 			break
 
 		}
 
-		parameters[name] = p.Value
+		parameters[rename] = p.Value
 
 	}
 
@@ -115,10 +120,6 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 	if err != nil {
 		log.Printf("[err] %s\n", err)
 		return
-	}
-	fmt.Printf("OK\nplugin: '%si.so'\n", strings.Join(req.Path, "/"))
-	for name, value := range parameters {
-		fmt.Printf("  $%s = %v\n", name, value)
 	}
 
 	/* (6) Execute and get response
