@@ -4,17 +4,17 @@ package config
 ---------------------------------------------------------*/
 
 type Parameter struct {
-	Description string       `json:"des"`
-	Type        string       `json:"typ"`
-	Rename      *string      `json:"ren"`
-	Optional    *bool        `json:"opt"`
-	Default     *interface{} `json:"def"`
+	Description string `json:"info"`
+	Type        string `json:"type"`
+	Rename      string `json:"name,omitempty"`
+	Optional    bool
+	Default     *interface{} `json:"default"`
 }
 type Method struct {
-	Description string                 `json:"des"`
-	Permission  [][]string             `json:"per"`
-	Parameters  map[string]*Parameter  `json:"par"`
-	Options     map[string]interface{} `json:"opt"`
+	Description string                `json:"info"`
+	Permission  [][]string            `json:"scope"`
+	Parameters  map[string]*Parameter `json:"in"`
+	Download    *bool                 `json:"download"`
 }
 
 type Controller struct {

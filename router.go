@@ -41,20 +41,17 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 	parameters := make(map[string]interface{})
 	for name, param := range method.Parameters {
 
-		/* (1) Rename */
-		rename := *param.Rename
-
-		/* (2) Extract value */
+		/* (1) Extract value */
 		p, isset := req.Data.Set[name]
 
-		/* (3) Required & missing */
-		if !isset && !*param.Optional {
+		/* (2) Required & missing */
+		if !isset && !param.Optional {
 			paramError = err.MissingParam
 			paramError.BindArgument(name)
 			break
 		}
 
-		/* (4) Optional & missing: set default value */
+		/* (3) Optional & missing: set default value */
 		if !isset {
 			p = &request.Parameter{
 				Parsed: true,
@@ -66,42 +63,42 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 			}
 
 			// we are done
-			parameters[rename] = p.Value
+			parameters[param.Rename] = p.Value
 			continue
 		}
 
-		/* (5) Parse parameter if not file */
+		/* (4) Parse parameter if not file */
 		if !p.File {
 			p.Parse()
 		}
 
-		/* (6) Fail on unexpected multipart file */
+		/* (5) Fail on unexpected multipart file */
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
 			paramError = err.InvalidParam
-			paramError.BindArgument(rename)
+			paramError.BindArgument(param.Rename)
 			paramError.BindArgument("FILE")
 			break
 		}
 
-		/* (7) Do not check if file */
+		/* (6) Do not check if file */
 		if gotFile {
-			parameters[rename] = p.Value
+			parameters[param.Rename] = p.Value
 			continue
 		}
 
-		/* (8) Check type */
+		/* (7) Check type */
 		if s.Checker.Run(param.Type, p.Value) != nil {
 
 			paramError = err.InvalidParam
-			paramError.BindArgument(rename)
+			paramError.BindArgument(param.Rename)
 			paramError.BindArgument(param.Type)
 			paramError.BindArgument(p.Value)
 			break
 
 		}
 
-		parameters[rename] = p.Value
+		parameters[param.Rename] = p.Value
 
 	}
 

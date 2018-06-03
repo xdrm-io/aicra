@@ -42,9 +42,6 @@ func Load(path string) (*Controller, error) {
 		return nil, err
 	}
 
-	/* (5) Set default optional fields */
-	receiver.setDefaults()
-
 	return receiver, nil
 
 }
@@ -148,9 +145,8 @@ func (c *Controller) format(controllerName string) error {
 		/* check parameters */
 		for pName, pData := range method.Ptr.Parameters {
 
-			/* (4) Fail on invalid rename (set but empty) */
-			if pData.Rename != nil && len(*pData.Rename) < 1 {
-				return fmt.Errorf("Empty rename for %s.%s parameter '%s'", controllerName, method.Name, pName)
+			if len(pData.Rename) < 1 {
+				pData.Rename = pName
 			}
 
 			/* (5) Check for name/rename conflict */
@@ -162,31 +158,43 @@ func (c *Controller) format(controllerName string) error {
 				}
 
 				// 1. Same rename field
-				if pData.Rename != nil && param.Rename != nil && *pData.Rename == *param.Rename {
-					return fmt.Errorf("Rename conflict for %s.%s parameter '%s'", controllerName, method.Name, *pData.Rename)
+				if pData.Rename == param.Rename {
+					return fmt.Errorf("Rename conflict for %s.%s parameter '%s'", controllerName, method.Name, pData.Rename)
 				}
 
 				// 2. Not-renamed field matches a renamed field
-				if pData.Rename == nil && param.Rename != nil && pName == *param.Rename {
+				if pName == param.Rename {
 					return fmt.Errorf("Name conflict for %s.%s parameter '%s'", controllerName, method.Name, pName)
 				}
 
 				// 3. Renamed field matches name
-				if pData.Rename != nil && param.Rename == nil && *pData.Rename == paramName {
+				if pData.Rename == paramName {
 					return fmt.Errorf("Name conflict for %s.%s parameter '%s'", controllerName, method.Name, pName)
 				}
 
 			}
 
-			/* (6) Fail on missing description */
+			/* (6) Manage invalid type */
+			if len(pData.Type) < 1 {
+				return fmt.Errorf("Invalid type for %s.%s parameter '%s'", controllerName, method.Name, pName)
+			}
+
+			/* (7) Fail on missing description */
 			if len(pData.Description) < 1 {
 				return fmt.Errorf("Missing description for %s.%s parameter '%s'", controllerName, method.Name, pName)
 			}
 
-			/* (7) Fail on missing type */
+			/* (8) Fail on missing type */
 			if len(pData.Type) < 1 {
 				return fmt.Errorf("Missing type for %s.%s parameter '%s'", controllerName, method.Name, pName)
 			}
+
+			/* (9) Set optional + type */
+			if pData.Type[0] == '?' {
+				pData.Optional = true
+				pData.Type = pData.Type[1:]
+			}
+
 		}
 
 	}
@@ -215,56 +223,5 @@ func (c *Controller) format(controllerName string) error {
 	}
 
 	return nil
-
-}
-
-// setDefaults sets the defaults for optional configuration fields
-func (c *Controller) setDefaults() {
-
-	/* (1) Get methods */
-	methods := []*Method{
-		c.GET,
-		c.POST,
-		c.PUT,
-		c.DELETE,
-	}
-
-	/* (2) Browse methods */
-	for _, m := range methods {
-
-		// ignore if not set
-		if m == nil {
-			continue
-		}
-
-		/* (3) Browse parameters */
-		for name, param := range m.Parameters {
-
-			// 1. Default 'opt': required //
-			if param.Optional == nil {
-				param.Optional = new(bool)
-			}
-
-			// 2. Default 'rename': same as name
-			if param.Rename == nil {
-				param.Rename = new(string)
-				*param.Rename = name
-			}
-
-		}
-
-	}
-
-	/* (4) Stop here if no children */
-	if c.Children == nil || len(c.Children) < 1 {
-		return
-	}
-
-	/* (5) Iterate over children */
-	for _, child := range c.Children {
-		child.setDefaults()
-	}
-
-	return
 
 }
