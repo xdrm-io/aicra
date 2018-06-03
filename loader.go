@@ -3,7 +3,6 @@ package gfw
 import (
 	"git.xdrm.io/xdrm-brackets/gfw/checker"
 	"git.xdrm.io/xdrm-brackets/gfw/config"
-	"git.xdrm.io/xdrm-brackets/gfw/err"
 )
 
 // Init initilises a new framework instance
@@ -19,7 +18,6 @@ func Init(path string, typeChecker *checker.TypeRegistry) (*Server, error) {
 	inst := &Server{
 		config: nil,
 		Params: make(map[string]interface{}),
-		err:    err.Success,
 	}
 
 	/* (2) Load configuration */
