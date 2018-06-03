@@ -6,7 +6,7 @@ import (
 )
 
 type Arguments map[string]interface{}
-type Controller func(map[string]interface{}, *Response) Response
+type Controller func(Arguments, *Response) Response
 
 type Response struct {
 	data map[string]interface{}
