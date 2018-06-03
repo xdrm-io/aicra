@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 )
 
 func NewDataset() *DataSet {
@@ -91,37 +90,27 @@ func (i *DataSet) fetchGet(req *http.Request) {
 // - parse 'application/json'
 func (i *DataSet) fetchForm(req *http.Request) {
 
-	fmt.Printf("Parsing FORM...")
-	startn := time.Now().UnixNano()
-
 	contentType := req.Header.Get("Content-Type")
 
 	// parse json
 	if strings.HasPrefix(contentType, "application/json") {
 		i.parseJson(req)
-
-		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 		return
 	}
 
 	// parse urlencoded
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
 		i.parseUrlencoded(req)
-
-		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 		return
 	}
 
 	// parse multipart
 	if strings.HasPrefix(contentType, "multipart/form-data; boundary=") {
 		i.parseMultipart(req)
-
-		fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 		return
 	}
 
 	// if unknown type store nothing
-	fmt.Printf("* %.3f us\n", float64(time.Now().UnixNano()-startn)/1e3)
 }
 
 // parseJson parses JSON from the request body inside 'Form'
