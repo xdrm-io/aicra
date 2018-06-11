@@ -10,7 +10,7 @@
 It is based on the *all-in-config* idea, where you only have a configuration file, and your implementation and it works without no further work.
 
 
-> a working example is available [here](https://git.xdrm.io/xdrm-brackets/gfw-example)
+> a working example is available [here](https://git.xdrm.io/example/gfw)
 
 
 ##### changelog
