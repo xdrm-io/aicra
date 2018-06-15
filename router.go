@@ -2,10 +2,10 @@ package gfw
 
 import (
 	"encoding/json"
-	"git.xdrm.io/xdrm-brackets/gfw/config"
-	"git.xdrm.io/xdrm-brackets/gfw/err"
-	"git.xdrm.io/xdrm-brackets/gfw/implement"
-	"git.xdrm.io/xdrm-brackets/gfw/request"
+	"git.xdrm.io/go/xb-api/config"
+	"git.xdrm.io/go/xb-api/err"
+	"git.xdrm.io/go/xb-api/implement"
+	"git.xdrm.io/go/xb-api/request"
 	"log"
 	"net/http"
 )

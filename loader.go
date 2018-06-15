@@ -1,8 +1,8 @@
 package gfw
 
 import (
-	"git.xdrm.io/xdrm-brackets/gfw/checker"
-	"git.xdrm.io/xdrm-brackets/gfw/config"
+	"git.xdrm.io/go/xb-api/checker"
+	"git.xdrm.io/go/xb-api/config"
 )
 
 // Init initilises a new framework instance

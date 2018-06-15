@@ -1,7 +1,7 @@
 package implement
 
 import (
-	"git.xdrm.io/xdrm-brackets/gfw/err"
+	"git.xdrm.io/go/xb-api/err"
 )
 
 func NewResponse() *Response {

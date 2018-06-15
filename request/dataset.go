@@ -3,7 +3,7 @@ package request
 import (
 	"encoding/json"
 	"fmt"
-	"git.xdrm.io/xdrm-brackets/gfw/multipart"
+	"git.xdrm.io/go/xb-api/multipart"
 	"log"
 	"net/http"
 	"strings"
