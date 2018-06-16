@@ -121,11 +121,17 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (6) Execute and get response
 	---------------------------------------------------------*/
-	/* (1) Execute */
+	/* (1) Add optional Authorization header */
+	authHeader := httpReq.Header.Get("Authorization")
+	if len(authHeader) > 0 {
+		parameters["_AUTHORIZATION_"] = authHeader
+	}
+
+	/* (2) Execute */
 	responseBarebone := implement.NewResponse()
 	response := callable(parameters, responseBarebone)
 
-	/* (2) Extract http headers */
+	/* (3) Extract http headers */
 	for k, v := range response.Dump() {
 		if k == "_REDIRECT_" {
 			redir, ok := v.(string)
@@ -138,7 +144,7 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 		}
 	}
 
-	/* (3) Build JSON response */
+	/* (4) Build JSON response */
 	formattedResponse := response.Dump()
 	formattedResponse["error"] = response.Err.Code
 	formattedResponse["reason"] = response.Err.Reason
