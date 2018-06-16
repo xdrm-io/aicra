@@ -125,7 +125,20 @@ func (s *Server) route(res http.ResponseWriter, httpReq *http.Request) {
 	responseBarebone := implement.NewResponse()
 	response := callable(parameters, responseBarebone)
 
-	/* (2) Build JSON response */
+	/* (2) Extract http headers */
+	for k, v := range response.Dump() {
+		if k == "_REDIRECT_" {
+			redir, ok := v.(string)
+			if !ok {
+				continue
+			}
+			res.Header().Add("Location", redir)
+			res.WriteHeader(308) // permanent redirect
+			return
+		}
+	}
+
+	/* (3) Build JSON response */
 	formattedResponse := response.Dump()
 	formattedResponse["error"] = response.Err.Code
 	formattedResponse["reason"] = response.Err.Reason
