@@ -16,7 +16,7 @@ CTL_PATH="`realpath $1`";
 
 # (2) List go files #
 cd $CTL_PATH
-GO_FILES="`ls *.go **/*.go`"
+GO_FILES="`ls *i.go **/*i.go 2>/dev/null`"
 
 # (3) Create target directory in execution dir #
 mkdir -p $BASE_DIR/controllers;
