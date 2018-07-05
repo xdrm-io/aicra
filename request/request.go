@@ -3,7 +3,7 @@ package request
 import (
 	"encoding/json"
 	"fmt"
-	"git.xdrm.io/go/xb-api/implement"
+	"git.xdrm.io/go/aicra/implement"
 	"log"
 	"net/http"
 	"plugin"

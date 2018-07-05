@@ -1,7 +1,7 @@
 package implement
 
 import (
-	"git.xdrm.io/go/xb-api/err"
+	"git.xdrm.io/go/aicra/err"
 	"sync"
 )
 

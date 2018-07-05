@@ -1,8 +1,8 @@
 package gfw
 
 import (
-	"git.xdrm.io/go/xb-api/checker"
-	"git.xdrm.io/go/xb-api/config"
+	"git.xdrm.io/go/aicra/checker"
+	"git.xdrm.io/go/aicra/config"
 )
 
 type Server struct {

@@ -2,10 +2,10 @@ package gfw
 
 import (
 	"encoding/json"
-	"git.xdrm.io/go/xb-api/config"
-	"git.xdrm.io/go/xb-api/err"
-	"git.xdrm.io/go/xb-api/implement"
-	"git.xdrm.io/go/xb-api/request"
+	"git.xdrm.io/go/aicra/config"
+	"git.xdrm.io/go/aicra/err"
+	"git.xdrm.io/go/aicra/implement"
+	"git.xdrm.io/go/aicra/request"
 	"log"
 	"net/http"
 )

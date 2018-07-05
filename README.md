@@ -1,8 +1,8 @@
-# xfw: all-in-one REST API
+# aicra: all-in-config REST API
 
 
 
-**xfw** is a self-working API coded in *Go*:
+**Aicra** is a self-working API coded in *Go*:
 
 - It allows anyone to create a fully featured REST API
 - it can be used in *Go* as a library, or as a proxy to launch external commands (*e.g. php scripts*)
