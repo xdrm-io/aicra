@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # (1) Get default path #
-DEFAULT_PATH="`realpath $GOPATH`/src/git.xdrm.io/go/xb-api/checker/default";
+DEFAULT_PATH="`realpath $GOPATH`/src/git.xdrm.io/go/aicra/checker/default";
 # fail if do not exist
 test -d $DEFAULT_PATH || (echo "$DEFAULT_PATH does not exists.. aborting"; exit 1) || exit 1;
 
