@@ -1,7 +1,6 @@
 package gfw
 
 import (
-	"encoding/json"
 	"fmt"
 	"git.xdrm.io/go/aicra/checker"
 	"git.xdrm.io/go/aicra/config"
