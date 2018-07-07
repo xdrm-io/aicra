@@ -27,6 +27,8 @@ func main() {
 		return
 	}
 	var projectPathFlag = flag.Arg(0)
+	compileTypes := true
+	compileControllers := true
 
 	/* (2) Get absolute paths
 	---------------------------------------------------------*/
@@ -58,28 +60,41 @@ func main() {
 
 	/* (3) Check path are existing dirs
 	---------------------------------------------------------*/
+	clifmt.Title("Check files")
+
 	/* (1) Project path */
+	clifmt.Align("   . project root")
 	if stat, err := os.Stat(projectPath); err != nil || !stat.IsDir() {
+		fmt.Printf("invalid\n\n")
 		fmt.Printf("%s  invalid project folder - %s\n\n", clifmt.Warn(), clifmt.Color(36, projectPath))
 		fmt.Printf("You must specify an existing directory path\n")
 		return
+	} else {
+		fmt.Printf("ok\n")
 	}
 
 	/* (2) Controllers path */
+	clifmt.Align("   . controllers")
 	if stat, err := os.Stat(cPath); err != nil || !stat.IsDir() {
-		fmt.Printf("%s  invalid controllers' folder - %s\n\n", clifmt.Warn(), clifmt.Color(36, cPath))
-		fmt.Printf("You must specify an existing directory path\n")
-		return
-	}
-	/* (3) Types path */
-	if stat, err := os.Stat(tPath); err != nil || !stat.IsDir() {
-		fmt.Printf("%s  invalid types folder - %s\n\n", clifmt.Warn(), clifmt.Color(36, tPath))
-		fmt.Printf("You must specify an existing directory path\n")
-		return
+		compileControllers = false
+		fmt.Printf("missing\n")
+	} else {
+		fmt.Printf("ok\n")
 	}
 
-	fmt.Printf("%s\n", projectPath)
-	fmt.Printf("%s\n", cPath)
-	fmt.Printf("%s\n", tPath)
+	/* (3) Types path */
+	clifmt.Align("   . custom types")
+	if stat, err := os.Stat(tPath); err != nil || !stat.IsDir() {
+		fmt.Printf("missing\n")
+		compileTypes = false
+
+	} else {
+		fmt.Printf("ok\n")
+	}
+
+	if !compileControllers && !compileTypes {
+		fmt.Printf("\n%s\n", clifmt.Info("Nothing to compile"))
+		return
+	}
 
 }
