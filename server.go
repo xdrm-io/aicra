@@ -6,16 +6,15 @@ import (
 	"git.xdrm.io/go/aicra/config"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/implement"
+	"git.xdrm.io/go/aicra/middleware"
 	"git.xdrm.io/go/aicra/request"
 	"log"
 	"net/http"
 )
 
 // Init initilises a new framework instance
-// - path is the configuration path
-// - if typeChecker is nil, defaults will be used (all *.so files
-//   inside ./.build/types local directory)
-func Init(path string, typeChecker ...*checker.TypeRegistry) (*Server, error) {
+// - path is the configuration file
+func New(path string) (*Server, error) {
 
 	/* (1) Init instance */
 	inst := &Server{
@@ -30,20 +29,30 @@ func Init(path string, typeChecker ...*checker.TypeRegistry) (*Server, error) {
 	}
 	inst.config = config
 
-	/* (3) Store registry if given */
-	if len(typeChecker) > 0 && typeChecker[0] != nil {
-		inst.Checker = typeChecker[0]
-		return inst, nil
-	}
+	/* (3) Default type registry */
+	inst.SetTypeFolder(".build/type")
 
-	/* (4) Default registry creation */
-	inst.Checker = checker.CreateRegistry(".build/type")
+	/* (4) Default middleware registry */
+	inst.SetMiddlewareFolder(".build/middleware")
 
 	return inst, nil
+
+}
+
+// Create the type (checker) registry from
+// a given folder
+func (s *Server) SetTypeFolder(path string) {
+	s.Checker = checker.CreateRegistry(path)
+}
+
+// Create the middleware registry from
+// a given folder
+func (s *Server) SetMiddlewareFolder(path string) {
+	s.Middleware = middleware.CreateRegistry(path)
 }
 
 // Listens and binds the server to the given port
-func (s *Server) Launch(port uint16) error {
+func (s *Server) Listen(port uint16) error {
 
 	/* (1) Bind router */
 	http.HandleFunc("/", s.routeRequest)
@@ -63,16 +72,25 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 	}
 
 	/* (2) Middleware: authentication */
-	// TODO: Auth
+	scope := s.Middleware.Run(*httpReq)
 
 	/* (3) Find a matching controller */
 	controller := s.findController(req)
+	if controller == nil {
+		return
+	}
 
 	/* (4) Check if matching method exists */
 	var method = controller.Method(httpReq.Method)
 
 	if method == nil {
 		httpError(res, e.UnknownMethod)
+		return
+	}
+
+	/* (5) Check scope permissions */
+	if !method.CheckScope(scope) {
+		httpError(res, e.Permission)
 		return
 	}
 
@@ -96,16 +114,19 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (6) Execute and get response
 	---------------------------------------------------------*/
-	/* (1) Show Authorization header into controller */
+	/* (1) Give Authorization header into controller */
 	authHeader := httpReq.Header.Get("Authorization")
 	if len(authHeader) > 0 {
 		parameters["_AUTHORIZATION_"] = authHeader
 	}
 
-	/* (2) Execute */
+	/* (2) Give Scope into controller */
+	parameters["_SCOPE_"] = scope
+
+	/* (3) Execute */
 	response := callable(parameters, implement.NewResponse())
 
-	/* (3) Extract http headers */
+	/* (4) Extract http headers */
 	for k, v := range response.Dump() {
 		if k == "_REDIRECT_" {
 			if newLocation, ok := v.(string); ok {
@@ -115,7 +136,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 		}
 	}
 
-	/* (4) Build JSON response */
+	/* (5) Build JSON response */
 	httpPrint(res, response)
 	return
 
