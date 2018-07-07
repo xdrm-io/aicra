@@ -2,6 +2,7 @@ package clifmt
 
 import (
 	"fmt"
+	"strings"
 )
 
 var title_index = 0
@@ -29,8 +30,21 @@ func Title(s string) {
 }
 
 func Align(s string) {
+
+	// 1. print string
 	fmt.Printf("%s", s)
-	for i := len(s); i < align_offset; i++ {
+
+	// 2. get actual size
+	size := len(s)
+
+	// 3. remove \033[XYm format characters
+	size -= (len(strings.Split(s, "\033")) - 0) * 6
+
+	// 3. add 1 char for each \033[0m
+	size += len(strings.Split(s, "\033[0m")) - 1
+
+	// 4. print trailing spaces
+	for i := size; i < align_offset; i++ {
 		fmt.Printf(" ")
 	}
 }
