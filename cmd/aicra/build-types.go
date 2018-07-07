@@ -14,7 +14,6 @@ import (
 // recursively and generate .so files
 // into the @out folder with the same structure
 func buildTypes(in string, out string) error {
-	clifmt.Title("compile types")
 
 	/* (1) Create build folder */
 	clifmt.Align("    . create output folder")
@@ -24,7 +23,7 @@ func buildTypes(in string, out string) error {
 	}
 	fmt.Printf("ok\n")
 
-	/* (1) List recursively */
+	/* (2) List recursively */
 	types := []string{}
 	err = filepath.Walk(in, func(path string, f os.FileInfo, err error) error {
 		if strings.HasSuffix(path, "/main.go") {
@@ -37,7 +36,7 @@ func buildTypes(in string, out string) error {
 		return err
 	}
 
-	/* (2) Print files */
+	/* (3) Print files */
 	for _, name := range types {
 
 		// 1. process output file name
@@ -46,20 +45,20 @@ func buildTypes(in string, out string) error {
 
 		clifmt.Align(fmt.Sprintf("    . compile %s", clifmt.Color(33, name)))
 
-		// 3. compile
+		// 2. compile
 		stdout, err := exec.Command("go",
 			"build", "-buildmode=plugin",
 			"-o", outfile,
 			infile,
 		).Output()
 
-		// 4. success
+		// 3. success
 		if err == nil {
 			fmt.Printf("ok\n")
 			continue
 		}
 
-		// 5. debug error
+		// 4. debug error
 		fmt.Printf("error\n")
 		if len(stdout) > 0 {
 			fmt.Printf("%s\n%s\n%s\n", clifmt.Color(31, "-=-"), stdout, clifmt.Color(31, "-=-"))

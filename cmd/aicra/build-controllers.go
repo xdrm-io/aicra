@@ -14,7 +14,6 @@ import (
 // recursively and generate .so files
 // into the @out folder with the same structure
 func buildControllers(in string, out string) error {
-	clifmt.Title("compile controllers")
 
 	/* (1) Create build folder */
 	clifmt.Align("    . create output folder")

@@ -58,6 +58,9 @@ func main() {
 		return
 	}
 
+	// default types folder
+	dtPath := filepath.Join(os.Getenv("GOPATH"), "src/git.xdrm.io/go/aicra/checker/default")
+
 	/* (3) Check path are existing dirs
 	---------------------------------------------------------*/
 	clifmt.Title("file check")
@@ -82,7 +85,17 @@ func main() {
 		fmt.Printf("ok\n")
 	}
 
-	/* (3) Types path */
+	/* (3) Default types path */
+	clifmt.Align("    . default types")
+	if stat, err := os.Stat(dtPath); err != nil || !stat.IsDir() {
+		fmt.Printf("missing\n")
+		compileTypes = false
+
+	} else {
+		fmt.Printf("ok\n")
+	}
+
+	/* (4) Types path */
 	clifmt.Align("    . custom types")
 	if stat, err := os.Stat(tPath); err != nil || !stat.IsDir() {
 		fmt.Printf("missing\n")
@@ -112,21 +125,31 @@ func main() {
 
 	/* (2) Compile controllers */
 	if compileControllers {
+		clifmt.Title("compile controllers")
 		err = buildControllers(cPath, filepath.Join(projectPath, ".build/controller"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}
 	}
 
-	/* (3) Compile types */
+	/* (3) Compile DEFAULT types */
+	clifmt.Title("compile default types")
+	err = buildTypes(
+		dtPath,
+		filepath.Join(projectPath, ".build/types"))
+	if err != nil {
+		fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
+	}
+	/* (4) Compile types */
 	if compileTypes {
+		clifmt.Title("compile types")
 		err = buildTypes(tPath, filepath.Join(projectPath, ".build/types"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}
 	}
 
-	/* (4) finished */
+	/* (5) finished */
 	fmt.Printf("\n[ %s ] files are located inside the %s directory inside the project folder\n",
 		clifmt.Color(32, "finished"),
 		clifmt.Color(33, ".build"),
