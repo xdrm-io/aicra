@@ -1,4 +1,4 @@
-package gfw
+package aicra
 
 import (
 	"git.xdrm.io/go/aicra/checker"

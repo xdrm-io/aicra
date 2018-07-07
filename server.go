@@ -1,4 +1,4 @@
-package gfw
+package aicra
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 // - path is the configuration path
 // - if typeChecker is nil, defaults will be used (all *.so files
 //   inside ./.build/types local directory)
-func Init(path string, typeChecker *checker.TypeRegistry) (*Server, error) {
+func Init(path string, typeChecker ...*checker.TypeRegistry) (*Server, error) {
 
 	/* (1) Init instance */
 	inst := &Server{
@@ -30,9 +30,9 @@ func Init(path string, typeChecker *checker.TypeRegistry) (*Server, error) {
 	}
 	inst.config = config
 
-	/* (3) Store registry if not nil */
-	if typeChecker != nil {
-		inst.Checker = typeChecker
+	/* (3) Store registry if given */
+	if len(typeChecker) > 0 && typeChecker[0] != nil {
+		inst.Checker = typeChecker[0]
 		return inst, nil
 	}
 
