@@ -103,8 +103,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 	}
 
 	/* (2) Execute */
-	responseBarebone := implement.NewResponse()
-	response := callable(parameters, responseBarebone)
+	response := callable(parameters, implement.NewResponse())
 
 	/* (3) Extract http headers */
 	for k, v := range response.Dump() {
@@ -122,12 +121,15 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 }
 
+// ExtractParameters extracts parameters for the request and checks
+// every single one according to configuration options
 func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]*config.Parameter) (map[string]interface{}, e.Error) {
 
 	// init vars
-	var paramError e.Error = e.Success
+	var err e.Error = e.Success
 	parameters := make(map[string]interface{})
 
+	// for each param of the config
 	for name, param := range methodParam {
 
 		/* (1) Extract value */
@@ -135,9 +137,9 @@ func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]
 
 		/* (2) Required & missing */
 		if !isset && !param.Optional {
-			paramError = e.MissingParam
-			paramError.BindArgument(name)
-			return nil, paramError
+			err = e.MissingParam
+			err.BindArgument(name)
+			return nil, err
 		}
 
 		/* (3) Optional & missing: set default value */
@@ -164,10 +166,10 @@ func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]
 		/* (5) Fail on unexpected multipart file */
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
-			paramError = e.InvalidParam
-			paramError.BindArgument(param.Rename)
-			paramError.BindArgument("FILE")
-			return nil, paramError
+			err = e.InvalidParam
+			err.BindArgument(param.Rename)
+			err.BindArgument("FILE")
+			return nil, err
 		}
 
 		/* (6) Do not check if file */
@@ -179,10 +181,10 @@ func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]
 		/* (7) Check type */
 		if s.Checker.Run(param.Type, p.Value) != nil {
 
-			paramError = e.InvalidParam
-			paramError.BindArgument(param.Rename)
-			paramError.BindArgument(param.Type)
-			paramError.BindArgument(p.Value)
+			err = e.InvalidParam
+			err.BindArgument(param.Rename)
+			err.BindArgument(param.Type)
+			err.BindArgument(p.Value)
 			break
 
 		}
@@ -191,5 +193,5 @@ func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]
 
 	}
 
-	return parameters, paramError
+	return parameters, err
 }
