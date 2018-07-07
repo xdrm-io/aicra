@@ -101,6 +101,41 @@ Options:
 
 
 
+#### 4. Main in go
+
+The main program is pretty small, it is as followed :
+
+```go
+package main
+
+import (
+    "os"
+    "git.xdrm.io/go/aicra"
+)
+
+func main() {
+
+	// 1. init with manifest file
+	server, err := aicra.Init("manifest.json")
+	
+	if err != nil {
+		fmt.Printf("cannot load config : %s\n", err)
+		os.Exit(1)
+	}
+	
+	// 2. Launch server
+	fmt.Printf("[Server up] 0.0.0.0:4242\n")
+	err = server.Launch(4242)
+    
+	if err != nil {
+		fmt.Printf("[FAILURE] server failed : %s\n", err)
+		os.Exit(1)
+	}
+}
+```
+
+
+
 
 
 
