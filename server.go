@@ -73,6 +73,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (2) Middleware: authentication */
 	scope := s.Middleware.Run(*httpReq)
+	fmt.Printf("scope is %v\n", scope)
 
 	/* (3) Find a matching controller */
 	controller := s.findController(req)
