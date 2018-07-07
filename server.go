@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"git.xdrm.io/go/aicra/checker"
 	"git.xdrm.io/go/aicra/config"
-	"git.xdrm.io/go/aicra/err"
+	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/implement"
 	"git.xdrm.io/go/aicra/request"
 	"log"
@@ -57,9 +57,9 @@ func (s *Server) Launch(port uint16) error {
 func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (1) Build request */
-	req, err2 := request.Build(httpReq)
-	if err2 != nil {
-		log.Fatal(err2)
+	req, err := request.BuildFromHttpRequest(httpReq)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	/* (2) Middleware: authentication */
@@ -72,79 +72,16 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 	var method = controller.Method(httpReq.Method)
 
 	if method == nil {
-		httpError(res, err.UnknownMethod)
+		httpError(res, e.UnknownMethod)
 		return
 	}
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
-	var paramError err.Error = err.Success
-	parameters := make(map[string]interface{})
-	for name, param := range method.Parameters {
-
-		/* (1) Extract value */
-		p, isset := req.Data.Set[name]
-
-		/* (2) Required & missing */
-		if !isset && !param.Optional {
-			paramError = err.MissingParam
-			paramError.BindArgument(name)
-			break
-		}
-
-		/* (3) Optional & missing: set default value */
-		if !isset {
-			p = &request.Parameter{
-				Parsed: true,
-				File:   param.Type == "FILE",
-				Value:  nil,
-			}
-			if param.Default != nil {
-				p.Value = *param.Default
-			}
-
-			// we are done
-			parameters[param.Rename] = p.Value
-			continue
-		}
-
-		/* (4) Parse parameter if not file */
-		if !p.File {
-			p.Parse()
-		}
-
-		/* (5) Fail on unexpected multipart file */
-		waitFile, gotFile := param.Type == "FILE", p.File
-		if gotFile && !waitFile || !gotFile && waitFile {
-			paramError = err.InvalidParam
-			paramError.BindArgument(param.Rename)
-			paramError.BindArgument("FILE")
-			break
-		}
-
-		/* (6) Do not check if file */
-		if gotFile {
-			parameters[param.Rename] = p.Value
-			continue
-		}
-
-		/* (7) Check type */
-		if s.Checker.Run(param.Type, p.Value) != nil {
-
-			paramError = err.InvalidParam
-			paramError.BindArgument(param.Rename)
-			paramError.BindArgument(param.Type)
-			paramError.BindArgument(p.Value)
-			break
-
-		}
-
-		parameters[param.Rename] = p.Value
-
-	}
+	parameters, paramError := s.ExtractParameters(req, method.Parameters)
 
 	// Fail if argument check failed
-	if paramError.Code != err.Success.Code {
+	if paramError.Code != e.Success.Code {
 		httpError(res, paramError)
 		return
 	}
@@ -183,4 +120,76 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 	httpPrint(res, response)
 	return
 
+}
+
+func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]*config.Parameter) (map[string]interface{}, e.Error) {
+
+	// init vars
+	var paramError e.Error = e.Success
+	parameters := make(map[string]interface{})
+
+	for name, param := range methodParam {
+
+		/* (1) Extract value */
+		p, isset := req.Data.Set[name]
+
+		/* (2) Required & missing */
+		if !isset && !param.Optional {
+			paramError = e.MissingParam
+			paramError.BindArgument(name)
+			return nil, paramError
+		}
+
+		/* (3) Optional & missing: set default value */
+		if !isset {
+			p = &request.Parameter{
+				Parsed: true,
+				File:   param.Type == "FILE",
+				Value:  nil,
+			}
+			if param.Default != nil {
+				p.Value = *param.Default
+			}
+
+			// we are done
+			parameters[param.Rename] = p.Value
+			continue
+		}
+
+		/* (4) Parse parameter if not file */
+		if !p.File {
+			p.Parse()
+		}
+
+		/* (5) Fail on unexpected multipart file */
+		waitFile, gotFile := param.Type == "FILE", p.File
+		if gotFile && !waitFile || !gotFile && waitFile {
+			paramError = e.InvalidParam
+			paramError.BindArgument(param.Rename)
+			paramError.BindArgument("FILE")
+			return nil, paramError
+		}
+
+		/* (6) Do not check if file */
+		if gotFile {
+			parameters[param.Rename] = p.Value
+			continue
+		}
+
+		/* (7) Check type */
+		if s.Checker.Run(param.Type, p.Value) != nil {
+
+			paramError = e.InvalidParam
+			paramError.BindArgument(param.Rename)
+			paramError.BindArgument(param.Type)
+			paramError.BindArgument(p.Value)
+			break
+
+		}
+
+		parameters[param.Rename] = p.Value
+
+	}
+
+	return parameters, paramError
 }
