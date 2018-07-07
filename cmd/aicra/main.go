@@ -18,6 +18,9 @@ func main() {
 	/* (2) types path */
 	typPathFlag := flag.String("t", "custom-types", "Path to custom types' directory")
 
+	/* (3) middleware path */
+	midPathFlag := flag.String("m", "middleware", "Path to middlewares' directory")
+
 	flag.Parse()
 
 	/* (3) Get last arg: project path */
@@ -29,6 +32,7 @@ func main() {
 	var projectPathFlag = flag.Arg(0)
 	compileTypes := true
 	compileControllers := true
+	compileMiddlewares := true
 
 	/* (2) Get absolute paths
 	---------------------------------------------------------*/
@@ -55,6 +59,16 @@ func main() {
 	tPath, err := filepath.Abs(*typPathFlag)
 	if err != nil {
 		fmt.Printf("invalid argument: types' path\n")
+		return
+	}
+
+	/* (4) Get absolute middlewares' path */
+	if !filepath.IsAbs(*midPathFlag) {
+		*midPathFlag = filepath.Join(projectPath, *midPathFlag)
+	}
+	mPath, err := filepath.Abs(*midPathFlag)
+	if err != nil {
+		fmt.Printf("invalid argument: middlwares' path\n")
 		return
 	}
 
@@ -85,7 +99,16 @@ func main() {
 		fmt.Printf("ok\n")
 	}
 
-	/* (3) Default types path */
+	/* (3) Middlewares path */
+	clifmt.Align("    . middlewares")
+	if stat, err := os.Stat(cPath); err != nil || !stat.IsDir() {
+		compileMiddlewares = false
+		fmt.Printf("missing\n")
+	} else {
+		fmt.Printf("ok\n")
+	}
+
+	/* (4) Default types path */
 	clifmt.Align("    . default types")
 	if stat, err := os.Stat(dtPath); err != nil || !stat.IsDir() {
 		fmt.Printf("missing\n")
@@ -95,7 +118,7 @@ func main() {
 		fmt.Printf("ok\n")
 	}
 
-	/* (4) Types path */
+	/* (5) Types path */
 	clifmt.Align("    . custom types")
 	if stat, err := os.Stat(tPath); err != nil || !stat.IsDir() {
 		fmt.Printf("missing\n")
@@ -105,7 +128,7 @@ func main() {
 		fmt.Printf("ok\n")
 	}
 
-	if !compileControllers && !compileTypes {
+	if !compileControllers && !compileTypes && !compileMiddlewares {
 		fmt.Printf("\n%s\n", clifmt.Info("Nothing to compile"))
 		return
 	}
@@ -132,7 +155,16 @@ func main() {
 		}
 	}
 
-	/* (3) Compile DEFAULT types */
+	/* (3) Compile middlewares */
+	if compileMiddlewares {
+		clifmt.Title("compile middlewares")
+		err = buildControllers(mPath, filepath.Join(projectPath, ".build/middleware"))
+		if err != nil {
+			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
+		}
+	}
+
+	/* (4) Compile DEFAULT types */
 	clifmt.Title("compile default types")
 	err = buildTypes(
 		dtPath,
@@ -140,7 +172,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 	}
-	/* (4) Compile types */
+	/* (5) Compile types */
 	if compileTypes {
 		clifmt.Title("compile types")
 		err = buildTypes(tPath, filepath.Join(projectPath, ".build/type"))
@@ -149,7 +181,7 @@ func main() {
 		}
 	}
 
-	/* (5) finished */
+	/* (6) finished */
 	fmt.Printf("\n[ %s ] files are located inside the %s directory inside the project folder\n",
 		clifmt.Color(32, "finished"),
 		clifmt.Color(33, ".build"),
