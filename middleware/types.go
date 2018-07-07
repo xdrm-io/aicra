@@ -11,12 +11,12 @@ type Scope []string
 
 // Inspector updates the @Scope passed to it according to
 // the @http.Request
-type Inspector func(http.Request, Scope)
+type Inspector func(http.Request, *Scope)
 
 // Middleware contains all necessary methods
 // for a Middleware provided by user/developer
 type MiddleWare struct {
-	Inspect func(http.Request, Scope)
+	Inspect func(http.Request, *Scope)
 }
 
 // MiddlewareRegistry represents a registry containing all registered

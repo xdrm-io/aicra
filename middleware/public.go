@@ -81,7 +81,7 @@ func (tr *MiddlewareRegistry) Add(pluginName string) error {
 	}
 
 	/* (6) Cast Inspect */
-	inspectCast, ok := inspect.(func(http.Request, Scope))
+	inspectCast, ok := inspect.(func(http.Request, *Scope))
 	if !ok {
 		return fmt.Errorf("Inspect() is malformed")
 	}
@@ -102,7 +102,7 @@ func (mr MiddlewareRegistry) Run(req http.Request) Scope {
 
 	/* (2) Execute each middleware */
 	for _, m := range mr.Middlewares {
-		m.Inspect(req, scope)
+		m.Inspect(req, &scope)
 	}
 
 	return scope
