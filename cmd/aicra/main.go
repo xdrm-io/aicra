@@ -16,7 +16,7 @@ func main() {
 	ctlPathFlag := flag.String("c", "root", "Path to controllers' directory")
 
 	/* (2) types path */
-	typPathFlag := flag.String("t", "custom-types", "Path to custom types' directory")
+	typPathFlag := flag.String("t", "types", "Path to custom types' directory")
 
 	/* (3) middleware path */
 	midPathFlag := flag.String("m", "middleware", "Path to middlewares' directory")
