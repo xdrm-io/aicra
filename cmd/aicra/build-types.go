@@ -9,12 +9,12 @@ import (
 	"strings"
 )
 
-// Builds controllers as plugins (.so)
+// Builds types as plugins (.so)
 // from the sources in the @in folder
 // recursively and generate .so files
 // into the @out folder with the same structure
-func buildControllers(in string, out string) error {
-	clifmt.Title("compile controllers")
+func buildTypes(in string, out string) error {
+	clifmt.Title("compile types")
 
 	/* (1) Create build folder */
 	clifmt.Align("    . create output folder")
@@ -25,10 +25,10 @@ func buildControllers(in string, out string) error {
 	fmt.Printf("ok\n")
 
 	/* (1) List recursively */
-	sources := []string{}
+	types := []string{}
 	err = filepath.Walk(in, func(path string, f os.FileInfo, err error) error {
-		if strings.HasSuffix(path, "i.go") {
-			sources = append(sources, path)
+		if strings.HasSuffix(path, "/main.go") {
+			types = append(types, filepath.Base(filepath.Dir(path)))
 		}
 		return nil
 	})
@@ -38,14 +38,13 @@ func buildControllers(in string, out string) error {
 	}
 
 	/* (2) Print files */
-	for _, infile := range sources {
+	for _, name := range types {
 
 		// 1. process output file name
-		rel, _ := filepath.Rel(in, infile)
-		outfile := strings.Replace(rel, ".go", ".so", 1)
-		outfile = fmt.Sprintf("%s/%s", out, outfile)
+		infile := filepath.Join(in, name, "main.go")
+		outfile := filepath.Join(out, fmt.Sprintf("%s.so", name))
 
-		clifmt.Align(fmt.Sprintf("    . compile %s", clifmt.Color(33, rel)))
+		clifmt.Align(fmt.Sprintf("    . compile %s", clifmt.Color(33, name)))
 
 		// 3. compile
 		stdout, err := exec.Command("go",

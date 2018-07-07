@@ -60,10 +60,10 @@ func main() {
 
 	/* (3) Check path are existing dirs
 	---------------------------------------------------------*/
-	clifmt.Title("Check files")
+	clifmt.Title("file check")
 
 	/* (1) Project path */
-	clifmt.Align("   . project root")
+	clifmt.Align("    . project root")
 	if stat, err := os.Stat(projectPath); err != nil || !stat.IsDir() {
 		fmt.Printf("invalid\n\n")
 		fmt.Printf("%s  invalid project folder - %s\n\n", clifmt.Warn(), clifmt.Color(36, projectPath))
@@ -74,7 +74,7 @@ func main() {
 	}
 
 	/* (2) Controllers path */
-	clifmt.Align("   . controllers")
+	clifmt.Align("    . controllers")
 	if stat, err := os.Stat(cPath); err != nil || !stat.IsDir() {
 		compileControllers = false
 		fmt.Printf("missing\n")
@@ -83,7 +83,7 @@ func main() {
 	}
 
 	/* (3) Types path */
-	clifmt.Align("   . custom types")
+	clifmt.Align("    . custom types")
 	if stat, err := os.Stat(tPath); err != nil || !stat.IsDir() {
 		fmt.Printf("missing\n")
 		compileTypes = false
@@ -96,5 +96,40 @@ func main() {
 		fmt.Printf("\n%s\n", clifmt.Info("Nothing to compile"))
 		return
 	}
+
+	/* (4) Compile
+	---------------------------------------------------------*/
+	/* (1) Create build output dir */
+	buildPath := filepath.Join(projectPath, ".build")
+	clifmt.Align("    . create build folder")
+	err = os.MkdirAll(buildPath, os.ModePerm)
+	if err != nil {
+		fmt.Printf("error\n\n")
+		fmt.Printf("%s the directory %s cannot be created, check permissions.", clifmt.Warn(), clifmt.Color(33, buildPath))
+		return
+	}
+	fmt.Printf("ok\n")
+
+	/* (2) Compile controllers */
+	if compileControllers {
+		err = buildControllers(cPath, filepath.Join(projectPath, ".build/controller"))
+		if err != nil {
+			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
+		}
+	}
+
+	/* (3) Compile types */
+	if compileTypes {
+		err = buildTypes(tPath, filepath.Join(projectPath, ".build/types"))
+		if err != nil {
+			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
+		}
+	}
+
+	/* (4) finished */
+	fmt.Printf("\n[ %s ] files are located inside the %s directory inside the project folder\n",
+		clifmt.Color(32, "finished"),
+		clifmt.Color(33, ".build"),
+	)
 
 }

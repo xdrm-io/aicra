@@ -25,7 +25,7 @@ func Info(s ...string) string {
 
 func Title(s string) {
 	title_index++
-	fmt.Printf("\n%s (%d) %s %s\n", Color(33, ">>", false), title_index, s, Color(33, "<<", false))
+	fmt.Printf("\n%s |%d| %s %s\n", Color(33, ">>", false), title_index, s, Color(33, "<<", false))
 
 }
 
