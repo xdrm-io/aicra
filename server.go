@@ -12,11 +12,9 @@ import (
 )
 
 // Init initilises a new framework instance
-//
 // - path is the configuration path
-//
 // - if typeChecker is nil, defaults will be used (all *.so files
-//   inside ./types local directory)
+//   inside ./.build/types local directory)
 func Init(path string, typeChecker *checker.TypeRegistry) (*Server, error) {
 
 	/* (1) Init instance */
@@ -39,7 +37,7 @@ func Init(path string, typeChecker *checker.TypeRegistry) (*Server, error) {
 	}
 
 	/* (4) Default registry creation */
-	inst.Checker = checker.CreateRegistry(true)
+	inst.Checker = checker.CreateRegistry(".build/type")
 
 	return inst, nil
 }

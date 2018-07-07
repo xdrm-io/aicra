@@ -9,9 +9,9 @@ import (
 )
 
 // CreateRegistry creates an empty type registry
-// - if loadDir is TruE if will load all available types
+// - if loadDir is True if will load all available types
 //   inside the local ./types folder
-func CreateRegistry(loadDir bool) *TypeRegistry {
+func CreateRegistry(loadDir ...string) *TypeRegistry {
 
 	/* (1) Create registry */
 	reg := &TypeRegistry{
@@ -19,12 +19,12 @@ func CreateRegistry(loadDir bool) *TypeRegistry {
 	}
 
 	/* (2) If no default to use -> empty registry */
-	if !loadDir {
+	if len(loadDir) < 1 {
 		return reg
 	}
 
 	/* (3) List types */
-	plugins, err := ioutil.ReadDir("./types")
+	plugins, err := ioutil.ReadDir(loadDir[0])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func (tr *TypeRegistry) Add(pluginName string) error {
 	}
 
 	/* (4) Try to load the plugin */
-	p, err := plugin.Open(fmt.Sprintf("./types/%s", pluginName))
+	p, err := plugin.Open(fmt.Sprintf(".build/type/%s", pluginName))
 	if err != nil {
 		return err
 	}

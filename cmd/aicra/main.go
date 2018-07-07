@@ -136,14 +136,14 @@ func main() {
 	clifmt.Title("compile default types")
 	err = buildTypes(
 		dtPath,
-		filepath.Join(projectPath, ".build/types"))
+		filepath.Join(projectPath, ".build/type"))
 	if err != nil {
 		fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 	}
 	/* (4) Compile types */
 	if compileTypes {
 		clifmt.Title("compile types")
-		err = buildTypes(tPath, filepath.Join(projectPath, ".build/types"))
+		err = buildTypes(tPath, filepath.Join(projectPath, ".build/type"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}
