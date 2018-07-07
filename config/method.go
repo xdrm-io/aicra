@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"git.xdrm.io/go/aicra/middleware"
 )
 
@@ -12,6 +11,36 @@ import (
 // > level 1 is OR
 // > level 2 is AND
 func (m *Method) CheckScope(scope middleware.Scope) bool {
-	fmt.Printf("Scope: %v\n", m.Permission)
+
+	for _, OR := range m.Permission {
+
+		granted := true
+
+		for _, AND := range OR {
+
+			if !isPermInScope(AND, scope) {
+				granted = false
+				break
+			}
+
+		}
+
+		// if one is valid -> grant
+		if granted {
+			return true
+		}
+
+	}
+
+	return false
+}
+
+// Returns whether @perm is present in @scope
+func isPermInScope(perm string, scope []string) bool {
+	for _, s := range scope {
+		if perm == s {
+			return true
+		}
+	}
 	return false
 }

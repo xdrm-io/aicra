@@ -158,7 +158,7 @@ func main() {
 	/* (3) Compile middlewares */
 	if compileMiddlewares {
 		clifmt.Title("compile middlewares")
-		err = buildControllers(mPath, filepath.Join(projectPath, ".build/middleware"))
+		err = buildTypes(mPath, filepath.Join(projectPath, ".build/middleware"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}
