@@ -50,7 +50,7 @@ func CreateRegistry(loadDir ...string) *Registry {
 // Add adds a type to the registry; it must be a
 // valid and existing plugin name with or without the .so extension
 // it must be located in the relative directory ./types
-func (tr *Registry) Add(pluginName string) error {
+func (reg *Registry) Add(pluginName string) error {
 
 	/* (1) Check plugin name */
 	if len(pluginName) < 1 {
@@ -96,7 +96,7 @@ func (tr *Registry) Add(pluginName string) error {
 	}
 
 	/* (7) Add type to registry */
-	tr.Types = append(tr.Types, Type{
+	reg.Types = append(reg.Types, Type{
 		Match: matcherCast,
 		Check: checkerCast,
 	})
@@ -107,12 +107,12 @@ func (tr *Registry) Add(pluginName string) error {
 // Run finds a type checker from the registry matching the type @typeName
 // and uses this checker to check the @value. If no type checker matches
 // the @typeName name, error is returned by default.
-func (tr Registry) Run(typeName string, value interface{}) error {
+func (reg Registry) Run(typeName string, value interface{}) error {
 
 	var T *Type
 
 	/* (1) Iterate to find matching type (take first) */
-	for _, t := range tr.Types {
+	for _, t := range reg.Types {
 
 		// stop if found
 		if t.Match(typeName) {
