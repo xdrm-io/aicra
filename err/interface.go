@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+// Error represents an http response error following the api format.
+// These are used by the controllers to set the *execution status*
+// directly into the response as JSON.
 type Error struct {
 	Code      int
 	Reason    string
@@ -32,21 +35,22 @@ func (e Error) Error() string {
 
 }
 
-// Implements json.Marshaler
+// MarshalJSON implements the json.Marshaler interface and is used
+// to generate the JSON representation of the error data
 func (e Error) MarshalJSON() ([]byte, error) {
 
-	var json_arguments string
+	var jsonArguments string
 
 	/* (1) Marshal 'Arguments' if set */
 	if e.Arguments != nil && len(e.Arguments) > 0 {
-		arg_representation, err := json.Marshal(e.Arguments)
+		argRepresentation, err := json.Marshal(e.Arguments)
 		if err == nil {
-			json_arguments = fmt.Sprintf(",\"arguments\":%s", arg_representation)
+			jsonArguments = fmt.Sprintf(",\"arguments\":%s", argRepresentation)
 		}
 
 	}
 
 	/* (2) Render JSON manually */
-	return []byte(fmt.Sprintf("{\"error\":%d,\"reason\":\"%s\"%s}", e.Code, e.Reason, json_arguments)), nil
+	return []byte(fmt.Sprintf("{\"error\":%d,\"reason\":\"%s\"%s}", e.Code, e.Reason, jsonArguments)), nil
 
 }
