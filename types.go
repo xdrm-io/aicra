@@ -1,8 +1,8 @@
 package aicra
 
 import (
-	"git.xdrm.io/go/aicra/checker"
-	"git.xdrm.io/go/aicra/config"
+	"git.xdrm.io/go/aicra/internal/checker"
+	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/middleware"
 )
 

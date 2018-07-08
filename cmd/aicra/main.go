@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"git.xdrm.io/go/aicra/clifmt"
+	"git.xdrm.io/go/aicra/internal/clifmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -76,7 +76,7 @@ func main() {
 	}
 
 	// default types folder
-	dtPath := filepath.Join(os.Getenv("GOPATH"), "src/git.xdrm.io/go/aicra/checker/default")
+	dtPath := filepath.Join(os.Getenv("GOPATH"), "src/git.xdrm.io/go/aicra/internal/checker/default")
 
 	/* (3) Check path are existing dirs
 	---------------------------------------------------------*/

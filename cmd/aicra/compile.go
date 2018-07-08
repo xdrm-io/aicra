@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"git.xdrm.io/go/aicra/clifmt"
+	"git.xdrm.io/go/aicra/internal/clifmt"
 	"os"
 	"os/exec"
 	"path/filepath"

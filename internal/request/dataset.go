@@ -3,7 +3,7 @@ package request
 import (
 	"encoding/json"
 	"fmt"
-	"git.xdrm.io/go/aicra/multipart"
+	"git.xdrm.io/go/aicra/internal/multipart"
 	"log"
 	"net/http"
 	"strings"

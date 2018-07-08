@@ -2,10 +2,10 @@ package aicra
 
 import (
 	"encoding/json"
-	"git.xdrm.io/go/aicra/config"
 	"git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/implement"
-	"git.xdrm.io/go/aicra/request"
+	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/internal/request"
 	"log"
 	"net/http"
 )
