@@ -12,8 +12,7 @@ import (
 	"net/http"
 )
 
-// Init initilises a new framework instance
-// - path is the configuration file
+// New creates a framework instance from a configuration file
 func New(path string) (*Server, error) {
 
 	/* (1) Init instance */
@@ -30,25 +29,13 @@ func New(path string) (*Server, error) {
 	inst.config = config
 
 	/* (3) Default type registry */
-	inst.SetTypeFolder(".build/type")
+	inst.Checker = checker.CreateRegistry(".build/type")
 
 	/* (4) Default middleware registry */
-	inst.SetMiddlewareFolder(".build/middleware")
+	inst.Middleware = middleware.CreateRegistry(".build/middleware")
 
 	return inst, nil
 
-}
-
-// Create the type (checker) registry from
-// a given folder
-func (s *Server) SetTypeFolder(path string) {
-	s.Checker = checker.CreateRegistry(path)
-}
-
-// Create the middleware registry from
-// a given folder
-func (s *Server) SetMiddlewareFolder(path string) {
-	s.Middleware = middleware.CreateRegistry(path)
 }
 
 // Listens and binds the server to the given port
