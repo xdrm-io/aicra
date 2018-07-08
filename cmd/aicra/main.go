@@ -46,30 +46,21 @@ func main() {
 		return
 	}
 	/* (2) Get absolute controllers' path */
-	if !filepath.IsAbs(*ctlPathFlag) {
-		*ctlPathFlag = filepath.Join(projectPath, *ctlPathFlag)
-	}
-	cPath, err := filepath.Abs(*ctlPathFlag)
+	cPath, err := getAbsPath(projectPath, *ctlPathFlag)
 	if err != nil {
 		fmt.Printf("invalid argument: controllers' path\n")
 		return
 	}
 
 	/* (3) Get absolute types' path */
-	if !filepath.IsAbs(*typPathFlag) {
-		*typPathFlag = filepath.Join(projectPath, *typPathFlag)
-	}
-	tPath, err := filepath.Abs(*typPathFlag)
+	tPath, err := getAbsPath(projectPath, *typPathFlag)
 	if err != nil {
 		fmt.Printf("invalid argument: types' path\n")
 		return
 	}
 
 	/* (4) Get absolute middlewares' path */
-	if !filepath.IsAbs(*midPathFlag) {
-		*midPathFlag = filepath.Join(projectPath, *midPathFlag)
-	}
-	mPath, err := filepath.Abs(*midPathFlag)
+	mPath, err := getAbsPath(projectPath, *midPathFlag)
 	if err != nil {
 		fmt.Printf("invalid argument: middlwares' path\n")
 		return
@@ -84,18 +75,17 @@ func main() {
 
 	/* (1) Project path */
 	clifmt.Align("    . project root")
-	if stat, err := os.Stat(projectPath); err != nil || !stat.IsDir() {
+	if !dirExists(projectPath) {
 		fmt.Printf("invalid\n\n")
 		fmt.Printf("%s  invalid project folder - %s\n\n", clifmt.Warn(), clifmt.Color(36, projectPath))
 		fmt.Printf("You must specify an existing directory path\n")
 		return
-	} else {
-		fmt.Printf("ok\n")
 	}
+	fmt.Printf("ok\n")
 
 	/* (2) Controllers path */
 	clifmt.Align("    . controllers")
-	if stat, err := os.Stat(cPath); err != nil || !stat.IsDir() {
+	if !dirExists(cPath) {
 		compileControllers = false
 		fmt.Printf("missing\n")
 	} else {
@@ -104,7 +94,7 @@ func main() {
 
 	/* (3) Middlewares path */
 	clifmt.Align("    . middlewares")
-	if stat, err := os.Stat(cPath); err != nil || !stat.IsDir() {
+	if !dirExists(mPath) {
 		compileMiddlewares = false
 		fmt.Printf("missing\n")
 	} else {
@@ -113,7 +103,7 @@ func main() {
 
 	/* (4) Default types path */
 	clifmt.Align("    . default types")
-	if stat, err := os.Stat(dtPath); err != nil || !stat.IsDir() {
+	if !dirExists(dtPath) {
 		fmt.Printf("missing\n")
 		compileTypes = false
 
@@ -123,10 +113,9 @@ func main() {
 
 	/* (5) Types path */
 	clifmt.Align("    . custom types")
-	if stat, err := os.Stat(tPath); err != nil || !stat.IsDir() {
+	if !dirExists(tPath) {
 		fmt.Printf("missing\n")
 		compileTypes = false
-
 	} else {
 		fmt.Printf("ok\n")
 	}
