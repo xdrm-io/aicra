@@ -3,11 +3,11 @@ package aicra
 import (
 	"fmt"
 	e "git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/implement"
 	"git.xdrm.io/go/aicra/internal/checker"
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
+	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 )
@@ -124,7 +124,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 	parameters["_SCOPE_"] = scope
 
 	/* (3) Execute */
-	response := callable(parameters, implement.NewResponse())
+	response := callable(parameters, response.NewResponse())
 
 	/* (4) Extract http headers */
 	for k, v := range response.Dump() {

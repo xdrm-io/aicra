@@ -108,7 +108,7 @@ In order for your project to manage authentication, the best solution is to crea
 
 Each middleware must be directly inside the `middleware` folder.
 
-> Example - the `1-authentication` middleware will be inside `middleware/1-authentication/main.go`. 
+> Example - the `1-authentication` middleware will be inside `middleware/1-authentication/main.go`.
 
 **Note** - middleware execution will be ordered by name. Prefixing your middlewares with their order is a good practice.
 
@@ -116,7 +116,7 @@ Each middleware must be directly inside the `middleware` folder.
 
 ##### 4. Custom types
 
-In your configuration you will have to use built-in types (*e.g.* int, any, varchar), but if you want project-specific ones, you can add your own types inside the `type` folder. You can check what structure to follow by looking at the [built-in types](https://git.xdrm.io/go/aicra/src/master/checker/default).
+In your configuration you will have to use built-in types (*e.g.* int, any, varchar), but if you want project-specific ones, you can add your own types inside the `type` folder. You can check what structure to follow by looking at the [built-in types](https://git.xdrm.io/go/aicra/src/master/internal/checker/default).
 
 
 
@@ -126,7 +126,7 @@ Each type must be inside a unique package directly inside the `type` folder. The
 
 #### III. Build your project
 
-After each controller, middleware or type edition, you'll have to rebuild the project. This can be achieved through the command-line builder. 
+After each controller, middleware or type edition, you'll have to rebuild the project. This can be achieved through the command-line builder.
 
 Usage is `aicra [options] /path/to/your/project`.
 
@@ -158,7 +158,7 @@ import "git.xdrm.io/go/aicra"
 func main() {
 	server, err := aicra.New("manifest.json")
 	if err != nil { return }
-    
+
 	server.Listen(4242)
 }
 ```

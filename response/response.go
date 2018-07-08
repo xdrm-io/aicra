@@ -1,4 +1,4 @@
-package implement
+package response
 
 import (
 	"git.xdrm.io/go/aicra/err"

@@ -3,7 +3,7 @@ package request
 import (
 	"encoding/json"
 	"fmt"
-	"git.xdrm.io/go/aicra/implement"
+	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 	"plugin"
@@ -93,7 +93,7 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 
 // LoadController tries to load a controller from its uri
 // checks for its given method ('Get', 'Post', 'Put', or 'Delete')
-func (i *Request) LoadController(method string) (func(implement.Arguments, *implement.Response) implement.Response, error) {
+func (i *Request) LoadController(method string) (func(response.Arguments, *response.Response) response.Response, error) {
 
 	/* (1) Build controller path */
 	path := strings.Join(i.Path, "-")
@@ -121,7 +121,7 @@ func (i *Request) LoadController(method string) (func(implement.Arguments, *impl
 	}
 
 	/* (4) Check signature */
-	callable, validSignature := m.(func(implement.Arguments, *implement.Response) implement.Response)
+	callable, validSignature := m.(func(response.Arguments, *response.Response) response.Response)
 	if !validSignature {
 		return nil, fmt.Errorf("Invalid signature for method %s", method)
 	}

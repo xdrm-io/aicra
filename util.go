@@ -3,9 +3,9 @@ package aicra
 import (
 	"encoding/json"
 	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/implement"
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/request"
+	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 )
@@ -34,7 +34,7 @@ func httpRedirect(r http.ResponseWriter, loc string) {
 }
 
 // Prints an HTTP response
-func httpPrint(r http.ResponseWriter, res implement.Response) {
+func httpPrint(r http.ResponseWriter, res response.Response) {
 	// get response data
 	formattedResponse := res.Dump()
 
