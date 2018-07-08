@@ -210,8 +210,8 @@ func (c *Controller) format(controllerName string) error {
 	for ctlName, ctl := range c.Children {
 
 		/* (3) Invalid name */
-		if strings.Contains(ctlName, "/") {
-			return fmt.Errorf("Controller '%s' must not contain any slash '/'", ctlName)
+		if strings.ContainsAny(ctlName, "/-") {
+			return fmt.Errorf("Controller '%s' must not contain any slash '/' nor '-' symbols", ctlName)
 		}
 
 		/* (4) Check recursively */
