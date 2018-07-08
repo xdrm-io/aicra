@@ -4,7 +4,7 @@ var (
 	// Success represents a generic successful controller execution
 	Success = Error{0, "all right", nil}
 
-	// Failure is the more generic error
+	// Failure is the most generic error
 	Failure = Error{1, "it failed", nil}
 
 	// Unknown represents any error which cause is unknown.
