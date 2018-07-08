@@ -6,9 +6,12 @@ import (
 	"git.xdrm.io/go/aicra/clifmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func main() {
+
+	starttime := time.Now().UnixNano()
 
 	/* (1) Flags
 	---------------------------------------------------------*/
@@ -182,8 +185,9 @@ func main() {
 	}
 
 	/* (6) finished */
-	fmt.Printf("\n[ %s ] files are located inside the %s directory inside the project folder\n",
+	fmt.Printf("\n[ %s | %.0f ms ] files are located inside the %s directory inside the project folder\n",
 		clifmt.Color(32, "finished"),
+		float64(time.Now().UnixNano()-starttime)/1e6,
 		clifmt.Color(33, ".build"),
 	)
 
