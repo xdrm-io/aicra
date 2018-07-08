@@ -13,7 +13,7 @@ import (
 // path<string>					The path to the configuration
 //
 // @return<controller>			The parsed configuration root controller
-// @return<err>					The error if occured
+// @return<err>					The error if occurred
 //
 func Load(path string) (*Controller, error) {
 
