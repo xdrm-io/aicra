@@ -11,10 +11,10 @@ import (
 // CreateRegistry creates an empty type registry
 // - if loadDir is True if will load all available types
 //   inside the local ./types folder
-func CreateRegistry(loadDir ...string) *TypeRegistry {
+func CreateRegistry(loadDir ...string) *Registry {
 
 	/* (1) Create registry */
-	reg := &TypeRegistry{
+	reg := &Registry{
 		Types: make([]Type, 0),
 	}
 
@@ -50,7 +50,7 @@ func CreateRegistry(loadDir ...string) *TypeRegistry {
 // Add adds a type to the registry; it must be a
 // valid and existing plugin name with or without the .so extension
 // it must be located in the relative directory ./types
-func (tr *TypeRegistry) Add(pluginName string) error {
+func (tr *Registry) Add(pluginName string) error {
 
 	/* (1) Check plugin name */
 	if len(pluginName) < 1 {
@@ -104,16 +104,18 @@ func (tr *TypeRegistry) Add(pluginName string) error {
 	return nil
 }
 
-// Checks the 'value' which must be of type 'name'
-func (tr TypeRegistry) Run(name string, value interface{}) error {
+// Run finds a type checker from the registry matching the type @typeName
+// and uses this checker to check the @value. If no type checker matches
+// the @typeName name, error is returned by default.
+func (tr Registry) Run(typeName string, value interface{}) error {
 
-	var T *Type = nil
+	var T *Type
 
 	/* (1) Iterate to find matching type (take first) */
 	for _, t := range tr.Types {
 
 		// stop if found
-		if t.Match(name) {
+		if t.Match(typeName) {
 			T = &t
 			break
 		}

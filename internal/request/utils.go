@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// normaliseUri removes the trailing '/' to always
+// normaliseURI removes the trailing '/' to always
 // have the same Uri format for later processing
-func normaliseUri(uri string) string {
+func normaliseURI(uri string) string {
 
 	if len(uri) < 1 {
 		return uri
@@ -62,24 +62,22 @@ func parseParameter(data interface{}) interface{} {
 			}
 			return parseParameter(element.String())
 
-			// 3. Return all elements if more than 1
-		} else {
-
-			result := make([]interface{}, dvalue.Len())
-
-			for i, l := 0, dvalue.Len(); i < l; i++ {
-				element := dvalue.Index(i)
-
-				// ignore non-string
-				if element.Kind() != reflect.String {
-					continue
-				}
-
-				result[i] = parseParameter(element.String())
-			}
-			return result
-
 		}
+
+		// 3. Return all elements if more than 1
+		result := make([]interface{}, dvalue.Len())
+
+		for i, l := 0, dvalue.Len(); i < l; i++ {
+			element := dvalue.Index(i)
+
+			// ignore non-string
+			if element.Kind() != reflect.String {
+				continue
+			}
+
+			result[i] = parseParameter(element.String())
+		}
+		return result
 
 	/* (2) string -> parse */
 	case reflect.String:

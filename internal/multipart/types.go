@@ -4,7 +4,8 @@ import (
 	"bufio"
 )
 
-type MultipartReader struct {
+// Reader represents a multipart reader
+type Reader struct {
 	// reader used for http.Request.Body reading
 	reader *bufio.Reader
 
@@ -12,11 +13,11 @@ type MultipartReader struct {
 	boundary string
 
 	// result will be inside this field
-	Components map[string]*MultipartComponent
+	Components map[string]*Component
 }
 
-// Represents a multipart component
-type MultipartComponent struct {
+// Component represents a multipart component
+type Component struct {
 	// whether this component is a file
 	// if not, it is a simple variable data
 	File bool

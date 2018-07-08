@@ -5,8 +5,8 @@ import (
 	"strconv"
 )
 
-var min *uint64 = nil
-var max *uint64 = nil
+var min *uint64
+var max *uint64
 
 func Match(name string) bool {
 

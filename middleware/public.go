@@ -12,10 +12,10 @@ import (
 // CreateRegistry creates an empty middleware registry
 // - if loadDir is set -> load all available middlewares
 //   inside the local ./middleware folder
-func CreateRegistry(loadDir ...string) *MiddlewareRegistry {
+func CreateRegistry(loadDir ...string) *Registry {
 
 	/* (1) Create registry */
-	reg := &MiddlewareRegistry{
+	reg := &Registry{
 		Middlewares: make([]MiddleWare, 0),
 	}
 
@@ -51,7 +51,7 @@ func CreateRegistry(loadDir ...string) *MiddlewareRegistry {
 // Add adds a middleware to the registry; it must be a
 // valid and existing plugin name with or without the .so extension
 // it must be located in the relative directory .build/middleware
-func (tr *MiddlewareRegistry) Add(pluginName string) error {
+func (reg *Registry) Add(pluginName string) error {
 
 	/* (1) Check plugin name */
 	if len(pluginName) < 1 {
@@ -87,21 +87,21 @@ func (tr *MiddlewareRegistry) Add(pluginName string) error {
 	}
 
 	/* (7) Add type to registry */
-	tr.Middlewares = append(tr.Middlewares, MiddleWare{
+	reg.Middlewares = append(reg.Middlewares, MiddleWare{
 		Inspect: inspectCast,
 	})
 
 	return nil
 }
 
-// Runs all middlewares (default browse order)
-func (mr MiddlewareRegistry) Run(req http.Request) Scope {
+// Run executes all middlewares (default browse order)
+func (reg Registry) Run(req http.Request) Scope {
 
 	/* (1) Initialise scope */
 	scope := Scope{}
 
 	/* (2) Execute each middleware */
-	for _, m := range mr.Middlewares {
+	for _, m := range reg.Middlewares {
 		m.Inspect(req, &scope)
 	}
 

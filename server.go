@@ -53,7 +53,7 @@ func (s *Server) Listen(port uint16) error {
 func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (1) Build request */
-	req, err := request.BuildFromHttpRequest(httpReq)
+	req, err := request.BuildFromHTTPRequest(httpReq)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 	parameters["_SCOPE_"] = scope
 
 	/* (3) Execute */
-	response := callable(parameters, response.NewResponse())
+	response := callable(parameters, response.New())
 
 	/* (4) Extract http headers */
 	for k, v := range response.Dump() {

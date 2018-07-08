@@ -8,18 +8,18 @@ import (
 	"net/http"
 )
 
-// Creates a new multipart reader from an http.Request
-func CreateReader(req *http.Request) *MultipartReader {
+// CreateReader creates a new multipart reader from an http.Request
+func CreateReader(req *http.Request) *Reader {
 
 	/* (1) extract boundary */
 	boundary := req.Header.Get("Content-Type")[len("multipart/form-data; boundary="):]
 	boundary = fmt.Sprintf("--%s", boundary)
 
 	/* (2) init reader */
-	i := &MultipartReader{
+	i := &Reader{
 		reader:     bufio.NewReader(req.Body),
 		boundary:   boundary,
-		Components: make(map[string]*MultipartComponent),
+		Components: make(map[string]*Component),
 	}
 
 	/* (3) Place reader cursor after first boundary */
@@ -36,8 +36,8 @@ func CreateReader(req *http.Request) *MultipartReader {
 
 }
 
-// Parses the multipart components from the request
-func (i *MultipartReader) Parse() error {
+// Parse parses the multipart components from the request
+func (i *Reader) Parse() error {
 
 	/* (1) For each component (until boundary) */
 	for {

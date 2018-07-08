@@ -3,7 +3,7 @@ package request
 type Request struct {
 	// corresponds to the list of uri components
 	//  featuring in the request URI
-	Uri []string
+	URI []string
 
 	// controller path (portion of 'Uri')
 	Path []string
@@ -18,7 +18,7 @@ type DataSet struct {
 	//  catches all after the controller path
 	//
 	// points to Request.Data
-	Uri []*Parameter
+	URI []*Parameter
 
 	// uri parameters following the QUERY format
 	//

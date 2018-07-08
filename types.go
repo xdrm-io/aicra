@@ -13,6 +13,6 @@ import (
 type Server struct {
 	config     *config.Controller
 	Params     map[string]interface{}
-	Checker    *checker.TypeRegistry          // type check
-	Middleware *middleware.MiddlewareRegistry // middlewares
+	Checker    *checker.Registry    // type check
+	Middleware *middleware.Registry // middlewares
 }

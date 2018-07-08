@@ -4,7 +4,7 @@ import (
 	"git.xdrm.io/go/aicra/err"
 )
 
-func NewResponse() *Response {
+func New() *Response {
 	return &Response{
 		data: make(map[string]interface{}),
 		Err:  err.Success,

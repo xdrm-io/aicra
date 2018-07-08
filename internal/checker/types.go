@@ -15,8 +15,8 @@ type Type struct {
 	Check func(interface{}) bool
 }
 
-// TypeRegistry represents a registry containing all available
+// Registry represents a registry containing all available
 // Type-s to be used by the framework according to the configuration
-type TypeRegistry struct {
+type Registry struct {
 	Types []Type // registered Type-s
 }

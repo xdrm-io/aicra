@@ -13,14 +13,14 @@ import (
 func (s *Server) findController(req *request.Request) *config.Controller {
 
 	/* (1) Try to browse by URI */
-	pathi, ctl := s.config.Browse(req.Uri)
+	pathi, ctl := s.config.Browse(req.URI)
 
 	/* (2) Set controller uri */
 	req.Path = make([]string, 0, pathi)
-	req.Path = append(req.Path, req.Uri[:pathi]...)
+	req.Path = append(req.Path, req.URI[:pathi]...)
 
 	/* (3) Extract & store URI params */
-	req.Data.SetUri(req.Uri[pathi:])
+	req.Data.SetURI(req.URI[pathi:])
 
 	/* (4) Return controller */
 	return ctl

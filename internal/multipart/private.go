@@ -6,7 +6,7 @@ import (
 )
 
 // Read all until the next boundary is found
-func (i *MultipartReader) readComponent() ([]string, error) {
+func (i *Reader) readComponent() ([]string, error) {
 
 	component := make([]string, 0)
 
@@ -34,7 +34,7 @@ func (i *MultipartReader) readComponent() ([]string, error) {
 }
 
 // Parses a single component from its raw lines
-func (i *MultipartReader) parseComponent(line []string) error {
+func (i *Reader) parseComponent(line []string) error {
 
 	// next line index to use
 	cursor := 1
@@ -69,7 +69,7 @@ func (i *MultipartReader) parseComponent(line []string) error {
 	already, isset := i.Components[name]
 	if !isset {
 
-		i.Components[name] = &MultipartComponent{
+		i.Components[name] = &Component{
 			File: isFile,
 			Data: make([]string, 0),
 		}

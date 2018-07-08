@@ -8,6 +8,8 @@ import (
 var title_index = 0
 var align_offset = 30
 
+// Warn returns a red warning ASCII sign. If a string is given
+// as argument, it will print it after the warning sign
 func Warn(s ...string) string {
 	if len(s) == 0 {
 		return Color(31, "/!\\")
@@ -15,6 +17,9 @@ func Warn(s ...string) string {
 
 	return fmt.Sprintf("%s  %s", Warn(), s[0])
 }
+
+// Info returns a blue info ASCII sign. If a string is given
+// as argument, it will print it after the info sign
 func Info(s ...string) string {
 	if len(s) == 0 {
 		return Color(34, "(!)")
@@ -23,12 +28,14 @@ func Info(s ...string) string {
 	return fmt.Sprintf("%s  %s", Info(), s[0])
 }
 
+// Title prints a formatted title (auto-indexed from local counted)
 func Title(s string) {
 	title_index++
 	fmt.Printf("\n%s |%d| %s %s\n", Color(33, ">>", false), title_index, s, Color(33, "<<", false))
 
 }
 
+// Align prints strings with space padding to align line ends (fixed width)
 func Align(s string) {
 
 	// 1. print string

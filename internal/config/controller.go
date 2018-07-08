@@ -73,7 +73,7 @@ func (c Controller) Method(method string) *Method {
 
 }
 
-// Browses tries to browse the controller childtree and
+// Browse tries to browse the controller childtree and
 // returns the farthest matching child
 //
 // @path					the path to browse

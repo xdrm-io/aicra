@@ -12,16 +12,16 @@ import (
 	"time"
 )
 
-// BuildFromHttpRequest builds an interface request from a http.Request
-func BuildFromHttpRequest(req *http.Request) (*Request, error) {
+// BuildFromHTTPRequest builds an interface request from a http.Request
+func BuildFromHTTPRequest(req *http.Request) (*Request, error) {
 
 	/* (1) Get useful data */
-	uri := normaliseUri(req.URL.Path)
+	uri := normaliseURI(req.URL.Path)
 	uriparts := strings.Split(uri, "/")
 
 	/* (2) Init request */
 	inst := &Request{
-		Uri:  uriparts,
+		URI:  uriparts,
 		Path: make([]string, 0, len(uriparts)),
 		Data: NewDataset(),
 	}

@@ -11,7 +11,7 @@ import (
 
 func NewDataset() *DataSet {
 	return &DataSet{
-		Uri:  make([]*Parameter, 0),
+		URI:  make([]*Parameter, 0),
 		Get:  make(map[string]*Parameter),
 		Form: make(map[string]*Parameter),
 		Set:  make(map[string]*Parameter),
@@ -34,9 +34,9 @@ func (i *DataSet) Build(req *http.Request) {
 
 }
 
-// setUriData stores URL data and fills 'Set'
+// SetURI stores URL data and fills 'Set'
 // with creating pointers inside 'Url'
-func (i *DataSet) SetUri(data []string) {
+func (i *DataSet) SetURI(data []string) {
 
 	for index, value := range data {
 
@@ -50,7 +50,7 @@ func (i *DataSet) SetUri(data []string) {
 		}
 
 		// create link in 'Url'
-		i.Uri = append(i.Uri, i.Set[setindex])
+		i.URI = append(i.URI, i.Set[setindex])
 
 	}
 
@@ -94,7 +94,7 @@ func (i *DataSet) fetchForm(req *http.Request) {
 
 	// parse json
 	if strings.HasPrefix(contentType, "application/json") {
-		i.parseJson(req)
+		i.parseJSON(req)
 		return
 	}
 
@@ -113,9 +113,9 @@ func (i *DataSet) fetchForm(req *http.Request) {
 	// if unknown type store nothing
 }
 
-// parseJson parses JSON from the request body inside 'Form'
+// parseJSON parses JSON from the request body inside 'Form'
 // and 'Set'
-func (i *DataSet) parseJson(req *http.Request) {
+func (i *DataSet) parseJSON(req *http.Request) {
 
 	parsed := make(map[string]interface{}, 0)
 
