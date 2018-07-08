@@ -38,7 +38,7 @@ func New(path string) (*Server, error) {
 
 }
 
-// Listens and binds the server to the given port
+// Listen binds the server to the given port
 func (s *Server) Listen(port uint16) error {
 
 	/* (1) Bind router */
@@ -83,7 +83,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
-	parameters, paramError := s.ExtractParameters(req, method.Parameters)
+	parameters, paramError := s.extractParameters(req, method.Parameters)
 
 	// Fail if argument check failed
 	if paramError.Code != e.Success.Code {
@@ -93,8 +93,9 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	callable, err := req.LoadController(httpReq.Method)
-	if err != nil {
+	callable, callErr := req.LoadController(httpReq.Method)
+	if callErr.Code != e.Success.Code {
+		httpError(res, callErr)
 		log.Printf("[err] %s\n", err)
 		return
 	}
@@ -129,12 +130,12 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 }
 
-// ExtractParameters extracts parameters for the request and checks
+// extractParameters extracts parameters for the request and checks
 // every single one according to configuration options
-func (s *Server) ExtractParameters(req *request.Request, methodParam map[string]*config.Parameter) (map[string]interface{}, e.Error) {
+func (s *Server) extractParameters(req *request.Request, methodParam map[string]*config.Parameter) (map[string]interface{}, e.Error) {
 
 	// init vars
-	var err e.Error = e.Success
+	err := e.Success
 	parameters := make(map[string]interface{})
 
 	// for each param of the config

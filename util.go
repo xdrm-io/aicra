@@ -55,8 +55,8 @@ func httpPrint(r http.ResponseWriter, res response.Response) {
 
 // Prints an error as HTTP response
 func httpError(r http.ResponseWriter, e err.Error) {
-	Json, _ := e.MarshalJSON()
+	JSON, _ := e.MarshalJSON()
 	r.Header().Add("Content-Type", "application/json")
-	r.Write(Json)
+	r.Write(JSON)
 	log.Printf("[http.fail] %s\n", e.Reason)
 }

@@ -3,6 +3,7 @@ package request
 import (
 	"encoding/json"
 	"fmt"
+	"git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
@@ -93,7 +94,7 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 
 // LoadController tries to load a controller from its uri
 // checks for its given method ('Get', 'Post', 'Put', or 'Delete')
-func (i *Request) LoadController(method string) (func(response.Arguments, *response.Response) response.Response, error) {
+func (i *Request) LoadController(method string) (func(response.Arguments, *response.Response) response.Response, err.Error) {
 
 	/* (1) Build controller path */
 	path := strings.Join(i.Path, "-")
@@ -111,21 +112,21 @@ func (i *Request) LoadController(method string) (func(response.Arguments, *respo
 	/* (2) Try to load plugin */
 	p, err2 := plugin.Open(path)
 	if err2 != nil {
-		return nil, err2
+		return nil, err.UncallableController
 	}
 
 	/* (3) Try to extract method */
 	m, err2 := p.Lookup(method)
 	if err2 != nil {
-		return nil, err2
+		return nil, err.UncallableMethod
 	}
 
 	/* (4) Check signature */
 	callable, validSignature := m.(func(response.Arguments, *response.Response) response.Response)
 	if !validSignature {
-		return nil, fmt.Errorf("Invalid signature for method %s", method)
+		return nil, err.UncallableMethod
 	}
 
-	return callable, nil
+	return callable, err.Success
 
 }
