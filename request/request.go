@@ -96,7 +96,7 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 func (i *Request) LoadController(method string) (func(implement.Arguments, *implement.Response) implement.Response, error) {
 
 	/* (1) Build controller path */
-	path := fmt.Sprintf(".build/controller/%si.so", strings.Join(i.Path, "/"))
+	path := fmt.Sprintf(".build/controller/%s/i.so", strings.Join(i.Path, "/"))
 
 	/* (2) Format url */
 	tmp := []byte(strings.ToLower(method))
