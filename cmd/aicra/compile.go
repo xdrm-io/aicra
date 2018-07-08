@@ -13,7 +13,7 @@ import (
 // from the sources in the @in folder
 // recursively and generate .so files
 // into the @out folder with the same structure
-func buildTypes(in string, out string) error {
+func compile(in string, out string) error {
 
 	/* (1) Create build folder */
 	clifmt.Align("    . create output folder")

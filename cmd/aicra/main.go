@@ -152,7 +152,7 @@ func main() {
 	/* (2) Compile controllers */
 	if compileControllers {
 		clifmt.Title("compile controllers")
-		err = buildControllers(cPath, filepath.Join(projectPath, ".build/controller"))
+		err = compile(cPath, filepath.Join(projectPath, ".build/controller"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}
@@ -161,7 +161,7 @@ func main() {
 	/* (3) Compile middlewares */
 	if compileMiddlewares {
 		clifmt.Title("compile middlewares")
-		err = buildTypes(mPath, filepath.Join(projectPath, ".build/middleware"))
+		err = compile(mPath, filepath.Join(projectPath, ".build/middleware"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}
@@ -169,16 +169,14 @@ func main() {
 
 	/* (4) Compile DEFAULT types */
 	clifmt.Title("compile default types")
-	err = buildTypes(
-		dtPath,
-		filepath.Join(projectPath, ".build/type"))
+	err = compile(dtPath, filepath.Join(projectPath, ".build/type"))
 	if err != nil {
 		fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 	}
 	/* (5) Compile types */
 	if compileTypes {
 		clifmt.Title("compile types")
-		err = buildTypes(tPath, filepath.Join(projectPath, ".build/type"))
+		err = compile(tPath, filepath.Join(projectPath, ".build/type"))
 		if err != nil {
 			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
 		}

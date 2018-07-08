@@ -98,9 +98,9 @@ func (i *Request) LoadController(method string) (func(implement.Arguments, *impl
 	/* (1) Build controller path */
 	path := strings.Join(i.Path, "-")
 	if len(path) == 0 {
-		path = fmt.Sprintf(".build/controller/ROOT/main.so")
+		path = fmt.Sprintf(".build/controller/ROOT.so")
 	} else {
-		path = fmt.Sprintf(".build/controller/%s/main.so", path)
+		path = fmt.Sprintf(".build/controller/%s.so", path)
 	}
 
 	/* (2) Format url */
