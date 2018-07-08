@@ -135,7 +135,9 @@ For a project that does not need a different structure, you just have to run thi
 $ aicra .
 ```
 
-The output should look like ![that](/storage/git.xdrm.io/GOPATH/src/git.xdrm.io/go/aicra/README.assets/1531039386654.png).
+The output should look like
+
+ ![that](./README.assets/1531039386654.png).
 
 #### 4. Main
 
