@@ -75,7 +75,7 @@ The default project structure for **aicra** is as follows :
 
 ```
 
-In order for your project to be run, each controller, middleware and type have to be compiled as *plugins* (*i.e. shared objects*). They can then be loaded by the server.
+In order for your project to be run, each controller, middleware and type checker has to be compiled as a *plugin* (*i.e. shared objects*). They can then be loaded by the server.
 
 
 
