@@ -27,7 +27,9 @@ func New(path string) (*Server, error) {
 
 	/* (1) Init instance */
 	var err error
-	var i *Server
+	var i = &Server{
+		controller: nil,
+	}
 
 	/* (2) Load configuration */
 	i.controller, err = controller.Load(path)
@@ -57,25 +59,25 @@ func (s *Server) Listen(port uint16) error {
 }
 
 // Router called for each request
-func (s *Server) manageRequest(res http.ResponseWriter, httpReq *http.Request) {
+func (s *Server) manageRequest(res http.ResponseWriter, req *http.Request) {
 
 	/* (1) Build request */
-	req, err := apirequest.BuildFromHTTPRequest(httpReq)
+	apiRequest, err := apirequest.BuildFromHTTPRequest(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	/* (2) Middleware: authentication */
-	scope := s.middleware.Run(*httpReq)
+	/* (2) Launch middlewares to build the scope */
+	scope := s.middleware.Run(*req)
 
 	/* (3) Find a matching controller */
-	controller := s.findController(req)
+	controller := s.matchController(apiRequest)
 	if controller == nil {
 		return
 	}
 
 	/* (4) Check if matching method exists */
-	var method = controller.Method(httpReq.Method)
+	var method = controller.Method(req.Method)
 
 	if method == nil {
 		httpError(res, e.UnknownMethod)
@@ -90,7 +92,7 @@ func (s *Server) manageRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
-	parameters, paramError := s.extractParameters(req, method.Parameters)
+	parameters, paramError := s.extractParameters(apiRequest, method.Parameters)
 
 	// Fail if argument check failed
 	if paramError.Code != e.Success.Code {
@@ -100,7 +102,7 @@ func (s *Server) manageRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	callable, callErr := req.LoadController(httpReq.Method)
+	controllerImplementation, callErr := apiRequest.LoadController(req.Method)
 	if callErr.Code != e.Success.Code {
 		httpError(res, callErr)
 		log.Printf("[err] %s\n", err)
@@ -110,16 +112,13 @@ func (s *Server) manageRequest(res http.ResponseWriter, httpReq *http.Request) {
 	/* (6) Execute and get response
 	---------------------------------------------------------*/
 	/* (1) Give Authorization header into controller */
-	authHeader := httpReq.Header.Get("Authorization")
-	if len(authHeader) > 0 {
-		parameters["_AUTHORIZATION_"] = authHeader
-	}
+	parameters["_AUTHORIZATION_"] = req.Header.Get("Authorization")
 
 	/* (2) Give Scope into controller */
 	parameters["_SCOPE_"] = scope
 
 	/* (3) Execute */
-	response := callable(parameters, response.New())
+	response := controllerImplementation(parameters, response.New())
 
 	/* (4) Extract http headers */
 	for k, v := range response.Dump() {

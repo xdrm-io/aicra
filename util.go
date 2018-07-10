@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func (s *Server) findController(req *apirequest.Request) *controller.Controller {
+func (s *Server) matchController(req *apirequest.Request) *controller.Controller {
 
 	/* (1) Try to browse by URI */
 	pathi, ctl := s.controller.Browse(req.URI)

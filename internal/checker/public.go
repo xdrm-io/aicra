@@ -37,7 +37,7 @@ func CreateRegistry(loadDir ...string) *Registry {
 			continue
 		}
 
-		err := reg.Add(file.Name())
+		err := reg.add(file.Name())
 		if err != nil {
 			log.Fatalf("Cannot load plugin '%s'", file.Name())
 		}
@@ -47,10 +47,10 @@ func CreateRegistry(loadDir ...string) *Registry {
 	return reg
 }
 
-// Add adds a type to the registry; it must be a
+// add adds a type to the registry; it must be a
 // valid and existing plugin name with or without the .so extension
 // it must be located in the relative directory ./types
-func (reg *Registry) Add(pluginName string) error {
+func (reg *Registry) add(pluginName string) error {
 
 	/* (1) Check plugin name */
 	if len(pluginName) < 1 {

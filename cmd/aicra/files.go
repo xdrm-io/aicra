@@ -21,5 +21,5 @@ func getAbsPath(base string, path string) (string, error) {
 // Returns whether a directory exists for the path @path
 func dirExists(path string) bool {
 	stat, err := os.Stat(path)
-	return err != nil || !stat.IsDir()
+	return err == nil && stat.IsDir()
 }
