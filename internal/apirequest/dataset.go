@@ -1,4 +1,4 @@
-package request
+package apirequest
 
 import (
 	"encoding/json"

@@ -3,17 +3,17 @@ package aicra
 import (
 	"encoding/json"
 	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/config"
-	"git.xdrm.io/go/aicra/internal/request"
+	"git.xdrm.io/go/aicra/internal/apirequest"
+	"git.xdrm.io/go/aicra/internal/controller"
 	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 )
 
-func (s *Server) findController(req *request.Request) *config.Controller {
+func (s *Server) findController(req *apirequest.Request) *controller.Controller {
 
 	/* (1) Try to browse by URI */
-	pathi, ctl := s.config.Browse(req.URI)
+	pathi, ctl := s.controller.Browse(req.URI)
 
 	/* (2) Set controller uri */
 	req.Path = make([]string, 0, pathi)

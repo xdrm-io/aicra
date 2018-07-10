@@ -1,4 +1,4 @@
-package request
+package apirequest
 
 // Parse parameter (json-like) if not already done
 func (i *Parameter) Parse() {

@@ -3,38 +3,45 @@ package aicra
 import (
 	"fmt"
 	e "git.xdrm.io/go/aicra/err"
+	"git.xdrm.io/go/aicra/internal/apirequest"
 	"git.xdrm.io/go/aicra/internal/checker"
-	"git.xdrm.io/go/aicra/internal/config"
-	"git.xdrm.io/go/aicra/internal/request"
+	"git.xdrm.io/go/aicra/internal/controller"
 	"git.xdrm.io/go/aicra/middleware"
 	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 )
 
+// Server represents an AICRA instance featuring:
+// * its type checkers
+// * its middlewares
+// * its controllers (config)
+type Server struct {
+	controller *controller.Controller // controllers
+	checker    *checker.Registry      // type checker registry
+	middleware *middleware.Registry   // middlewares
+}
+
 // New creates a framework instance from a configuration file
 func New(path string) (*Server, error) {
 
 	/* (1) Init instance */
-	inst := &Server{
-		config: nil,
-		Params: make(map[string]interface{}),
-	}
+	var err error
+	var i *Server
 
 	/* (2) Load configuration */
-	config, err := config.Load(path)
+	i.controller, err = controller.Load(path)
 	if err != nil {
 		return nil, err
 	}
-	inst.config = config
 
 	/* (3) Default type registry */
-	inst.Checker = checker.CreateRegistry(".build/type")
+	i.checker = checker.CreateRegistry(".build/type")
 
 	/* (4) Default middleware registry */
-	inst.Middleware = middleware.CreateRegistry(".build/middleware")
+	i.middleware = middleware.CreateRegistry(".build/middleware")
 
-	return inst, nil
+	return i, nil
 
 }
 
@@ -42,7 +49,7 @@ func New(path string) (*Server, error) {
 func (s *Server) Listen(port uint16) error {
 
 	/* (1) Bind router */
-	http.HandleFunc("/", s.routeRequest)
+	http.HandleFunc("/", s.manageRequest)
 
 	/* (2) Bind listener */
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
@@ -50,16 +57,16 @@ func (s *Server) Listen(port uint16) error {
 }
 
 // Router called for each request
-func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
+func (s *Server) manageRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 	/* (1) Build request */
-	req, err := request.BuildFromHTTPRequest(httpReq)
+	req, err := apirequest.BuildFromHTTPRequest(httpReq)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	/* (2) Middleware: authentication */
-	scope := s.Middleware.Run(*httpReq)
+	scope := s.middleware.Run(*httpReq)
 
 	/* (3) Find a matching controller */
 	controller := s.findController(req)
@@ -132,7 +139,7 @@ func (s *Server) routeRequest(res http.ResponseWriter, httpReq *http.Request) {
 
 // extractParameters extracts parameters for the request and checks
 // every single one according to configuration options
-func (s *Server) extractParameters(req *request.Request, methodParam map[string]*config.Parameter) (map[string]interface{}, e.Error) {
+func (s *Server) extractParameters(req *apirequest.Request, methodParam map[string]*controller.Parameter) (map[string]interface{}, e.Error) {
 
 	// init vars
 	err := e.Success
@@ -153,7 +160,7 @@ func (s *Server) extractParameters(req *request.Request, methodParam map[string]
 
 		/* (3) Optional & missing: set default value */
 		if !isset {
-			p = &request.Parameter{
+			p = &apirequest.Parameter{
 				Parsed: true,
 				File:   param.Type == "FILE",
 				Value:  nil,
@@ -188,7 +195,7 @@ func (s *Server) extractParameters(req *request.Request, methodParam map[string]
 		}
 
 		/* (7) Check type */
-		if s.Checker.Run(param.Type, p.Value) != nil {
+		if s.checker.Run(param.Type, p.Value) != nil {
 
 			err = e.InvalidParam
 			err.BindArgument(param.Rename)

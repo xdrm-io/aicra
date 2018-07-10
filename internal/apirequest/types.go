@@ -1,4 +1,4 @@
-package request
+package apirequest
 
 type Request struct {
 	// corresponds to the list of uri components
@@ -17,12 +17,12 @@ type DataSet struct {
 	// ordered values from the URI
 	//  catches all after the controller path
 	//
-	// points to Request.Data
+	// points to DataSet.Data
 	URI []*Parameter
 
 	// uri parameters following the QUERY format
 	//
-	// points to Request.Data
+	// points to DataSet.Data
 	Get map[string]*Parameter
 
 	// form data depending on the Content-Type:
@@ -30,7 +30,7 @@ type DataSet struct {
 	//  'application/x-www-form-urlencoded' => standard parameters as QUERY parameters
 	//  'multipart/form-data'               => parse form-data format
 	//
-	// points to Request.Data
+	// points to DataSet.Data
 	Form map[string]*Parameter
 
 	// contains URL+GET+FORM data with prefixes:
