@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// BuildFromHTTPRequest builds an interface request from a http.Request
-func BuildFromHTTPRequest(req *http.Request) (*Request, error) {
+// FromHTTP builds an interface request from a http.Request
+func FromHTTP(req *http.Request) (*Request, error) {
 
 	/* (1) Get useful data */
 	uri := normaliseURI(req.URL.Path)

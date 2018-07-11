@@ -1,7 +1,6 @@
 package aicra
 
 import (
-	"fmt"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/internal/apirequest"
 	"git.xdrm.io/go/aicra/internal/checker"
@@ -47,22 +46,11 @@ func New(path string) (*Server, error) {
 
 }
 
-// Listen binds the server to the given port
-func (s *Server) Listen(port uint16) error {
-
-	/* (1) Bind router */
-	http.HandleFunc("/", s.manageRequest)
-
-	/* (2) Bind listener */
-	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
-
-}
-
-// Router called for each request
-func (s *Server) manageRequest(res http.ResponseWriter, req *http.Request) {
+// ServeHTTP implements http.Handler and has to be called on each request
+func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (1) Build request */
-	apiRequest, err := apirequest.BuildFromHTTPRequest(req)
+	apiRequest, err := apirequest.FromHTTP(req)
 	if err != nil {
 		log.Fatal(err)
 	}

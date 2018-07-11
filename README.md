@@ -37,7 +37,7 @@ You need a recent machine with `go` installed.
 ##### 1. Download and install the package
 
 ```bash
-$ go get -u git.xdrm.io/go/aicra
+go get -u git.xdrm.io/go/aicra
 ```
 
 It should now be available locally and available for your imports.
@@ -49,7 +49,7 @@ It should now be available locally and available for your imports.
 You should then compile the project builder to help you manage your projects.
 
 ```bash
-$ go install git.xdrm.io/go/aicra/cmd/aicra
+go install git.xdrm.io/go/aicra/cmd/aicra
 ```
 
 
@@ -75,7 +75,7 @@ The default project structure for **aicra** is as follows :
 
 ```
 
-In order for your project to be run, each controller, middleware and type checker has to be compiled as a *plugin* (*i.e. shared objects*). They can then be loaded by the server.
+In order for your project to be run, each controller, middleware and type checker has to be compiled as a *plugin* (*i.e. shared objects*). They can then be loaded by the server.
 
 
 
@@ -142,7 +142,7 @@ Options:
 For a project that does not need a different structure, you just have to run this command under your project root
 
 ```bash
-$ aicra .
+aicra .
 ```
 
 The output should look like
@@ -154,13 +154,27 @@ The output should look like
 The main default program is pretty small as below :
 
 ```go
-import "git.xdrm.io/go/aicra"
+package main
+
+import (
+	"git.xdrm.io/go/aicra"
+	"net/http"
+)
 
 func main() {
+ 
+    // 1. create server
 	server, err := aicra.New("manifest.json")
-	if err != nil { return }
+	if err != nil {
+		panic(err)
+	}
+	
+    // 2. listen to incoming http requests
+	err = http.ListenAndServe("127.0.0.1:4242", server)
+	if err != nil {
+		panic(err)
+	}
 
-	server.Listen(4242)
 }
 ```
 
