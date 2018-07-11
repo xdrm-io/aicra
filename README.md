@@ -21,12 +21,22 @@ This framework is based over some of the following concepts.
 > A working example is available [here](https://git.xdrm.io/example/aicra)
 
 
-
 #### Table of contents
+<!-- toc -->
 
-[TOC]
+- [I. Installation](#i-installation)
+  * [1. Download and install the package](#1-download-and-install-the-package)
+  * [2. Compile the command-line builder](#2-compile-the-command-line-builder)
+- [II. Setup a project](#ii-setup-a-project)
+  * [1. Configuration](#1-configuration)
+  * [2. Controllers](#2-controllers)
+  * [3. Middlewares](#3-middlewares)
+  * [4. Custom types](#4-custom-types)
+- [III. Build your project](#iii-build-your-project)
+- [IV. Main](#iv-main)
+- [V. Change Log](#v-change-log)
 
-
+<!-- tocstop -->
 
 #### I. Installation
 
@@ -164,13 +174,13 @@ import (
 )
 
 func main() {
- 
+
     // 1. create server
 	server, err := aicra.New("manifest.json")
 	if err != nil {
 		panic(err)
 	}
-	
+
     // 2. listen to incoming http requests
 	err = http.ListenAndServe("127.0.0.1:4242", server)
 	if err != nil {
