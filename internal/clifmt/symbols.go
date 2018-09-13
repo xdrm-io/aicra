@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-var title_index = 0
-var align_offset = 30
+var titleIndex = 0
+var alignOffset = 30
 
 // Warn returns a red warning ASCII sign. If a string is given
 // as argument, it will print it after the warning sign
@@ -30,8 +30,8 @@ func Info(s ...string) string {
 
 // Title prints a formatted title (auto-indexed from local counted)
 func Title(s string) {
-	title_index++
-	fmt.Printf("\n%s |%d| %s %s\n", Color(33, ">>", false), title_index, s, Color(33, "<<", false))
+	titleIndex++
+	fmt.Printf("\n%s |%d| %s %s\n", Color(33, ">>", false), titleIndex, s, Color(33, "<<", false))
 
 }
 
@@ -51,7 +51,7 @@ func Align(s string) {
 	size += len(strings.Split(s, "\033[0m")) - 1
 
 	// 4. print trailing spaces
-	for i := size; i < align_offset; i++ {
+	for i := size; i < alignOffset; i++ {
 		fmt.Printf(" ")
 	}
 }

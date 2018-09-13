@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// NewDataset creates an empty request dataset
 func NewDataset() *DataSet {
 	return &DataSet{
 		URI:  make([]*Parameter, 0),

@@ -1,5 +1,6 @@
 package apirequest
 
+// Request represents a request by its URI, controller path and data (uri, get, post)
 type Request struct {
 	// corresponds to the list of uri components
 	//  featuring in the request URI
@@ -12,6 +13,10 @@ type Request struct {
 	Data *DataSet
 }
 
+// DataSet represents all data that can be caught:
+// - URI (guessed from the URI by removing the controller path)
+// - GET (default url data)
+// - POST (from json, form-data, url-encoded)
 type DataSet struct {
 
 	// ordered values from the URI

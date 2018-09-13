@@ -6,7 +6,7 @@
 [![Go doc](https://godoc.org/git.xdrm.io/go/aicra?status.svg)](https://godoc.org/git.xdrm.io/go/aicra)
 
 
-**Aicra** is a self-working framework coded in *Go* that allows anyone to create a fully featured REST API. It features type checking, authentication management through middlewares, file upload, rich argument parsing (*i.e. url slash-separated, urlencoded, form-data, json*), nested routes, project builder (*i.e. aicra*), etc.
+**Aicra** is a self-working framework coded in *Go* that allows anyone to create a fully featured REST API. It features type checking, authentication management through middlewares, file upload, rich argument parsing (*i.e. url slash-separated, urlencoded, form-data, json*), nested routes, project compiler (*i.e. aicra*), etc.
 
 
 
@@ -40,7 +40,7 @@ This framework is based over some of the following concepts.
 
 #### I. Installation
 
-You need a recent machine with `go` installed.
+You need a recent machine with `go` [installed](https://golang.org/doc/install).
 
 > This package has not been tested under the version **1.10**.
 
@@ -66,7 +66,7 @@ go install git.xdrm.io/go/aicra/cmd/aicra
 
 
 
-> The executable `aicra` will be placed into your `$GOPATH/bin` folder, if added to your environment PATH it should be available as a standalone command in your terminal. If not, you can simply run `$GOPATH/bin/aicra` to use the command or create a symlink into `/usr/local/bin` or the PATH folder of your choice for less characters to type.
+> The executable `aicra` will be placed into your `$GOPATH/bin` folder, if added to your environment PATH it should be available as a standalone command in your terminal. If not, you can simply run `$GOPATH/bin/aicra` to use the command or create a symlink into `/usr/local/bin` for instance.
 
 
 
@@ -105,17 +105,17 @@ The whole project behavior is described inside the `manifest.json` file. For a b
 
 ##### 2. Controllers
 
-For each route, you'll have to place your implementation into the `controller` folder following the naming convention : add `/i.go` at the end of the route.
+For each route, you'll have to place your implementation into the `controller` folder following the naming convention : add `/main.go` at the end of the route.
 
-> Example - `/path/to/some/uri` will be inside `controller/path/to/some/uri/i.go`.
+> Example - `/path/to/some/uri` will be inside `controller/path/to/some/uri/main.go`.
 
-A fully working example is available [here](https://git.xdrm.io/example/aicra).
+A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/controller).
 
 
 
 ##### 3. Middlewares
 
-In order for your project to manage authentication, the best solution is to create middlewares, there are programs that updates a *Scope* according to internal or persistent (*i.e.* database) information and the actual http request. They are all run before each request it routed by aicra. The scope are used to match the `scope` field in the configuration file and automatically block non-authed requests. Scopes can also be used for implementation-specific behavior.
+In order for your project to manage authentication, the best solution is to create middlewares, there are programs that updates a *Scope* according to internal or persistent (*i.e.* database) information and the actual http request. They are all run before each request is forwarded to your controller. The scope are used to match the `scope` field in the configuration file and automatically block non-authenticated requests. Scopes can also be used for implementation-specific behavior.
 
 
 

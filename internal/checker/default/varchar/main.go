@@ -8,6 +8,7 @@ import (
 var min *uint64
 var max *uint64
 
+// Match filters the parameter type format "varchar(min, max)"
 func Match(name string) bool {
 
 	/* (1) Create regexp */
@@ -45,6 +46,7 @@ func Match(name string) bool {
 
 }
 
+// Check whether the given value fulfills the condition (min, max)
 func Check(value interface{}) bool {
 
 	/* (1) Check if string */
