@@ -181,13 +181,17 @@ func (i *DataSet) parseUrlencoded(req *http.Request) {
 func (i *DataSet) parseMultipart(req *http.Request) {
 
 	/* (1) Create reader */
-	mpr := multipart.CreateReader(req)
+	boundary := req.Header.Get("Content-Type")[len("multipart/form-data; boundary="):]
+	mpr, err := multipart.NewReader(req.Body, boundary)
+	if err != nil {
+		return
+	}
 
 	/* (2) Parse multipart */
 	mpr.Parse()
 
 	/* (3) Store data into 'Form' and 'Set */
-	for name, component := range mpr.Components {
+	for name, data := range mpr.Data {
 
 		// prevent injections
 		if nameInjection(name) {
@@ -198,8 +202,8 @@ func (i *DataSet) parseMultipart(req *http.Request) {
 		// store value in 'Set'
 		i.Set[name] = &Parameter{
 			Parsed: false,
-			File:   component.File,
-			Value:  component.Data,
+			File:   len(data.GetHeader("filename")) > 0,
+			Value:  string(data.Data),
 		}
 
 		// create link in 'Form'
