@@ -124,6 +124,7 @@ func (i *DataSet) parseJSON(req *http.Request) {
 
 	// if parse error: do nothing
 	if err := decoder.Decode(&parsed); err != nil {
+		log.Printf("json.parse() %s\n", err)
 		return
 	}
 
@@ -154,7 +155,10 @@ func (i *DataSet) parseJSON(req *http.Request) {
 func (i *DataSet) parseUrlencoded(req *http.Request) {
 
 	// use http.Request interface
-	req.ParseForm()
+	if err := req.ParseForm(); err != nil {
+		log.Printf("urlencoded.parse() %s\n", err)
+		return
+	}
 
 	for name, value := range req.PostForm {
 
@@ -188,7 +192,10 @@ func (i *DataSet) parseMultipart(req *http.Request) {
 	}
 
 	/* (2) Parse multipart */
-	mpr.Parse()
+	if err = mpr.Parse(); err != nil {
+		log.Printf("multipart.parse() %s\n", err)
+		return
+	}
 
 	/* (3) Store data into 'Form' and 'Set */
 	for name, data := range mpr.Data {
