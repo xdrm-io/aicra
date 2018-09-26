@@ -16,13 +16,12 @@ func (comp *Component) parseHeaders(_raw []byte) error {
 	}
 
 	// 2. trim each line + remove 'Content-Disposition' prefix
-	trimmed := strings.Trim(_lines[0], " \t")
-	header := trimmed
+	header := strings.Trim(_lines[0], " \t\r")
 
-	if !strings.HasPrefix(trimmed, "Content-Disposition: form-data;") {
+	if !strings.HasPrefix(header, "Content-Disposition: form-data;") {
 		return ErrNoHeader
 	}
-	header = strings.Trim(trimmed[len("Content-Disposition: form-data;"):], " \t")
+	header = strings.Trim(header[len("Content-Disposition: form-data;"):], " \t\r")
 
 	if len(header) < 1 {
 		return ErrNoHeader
@@ -53,7 +52,7 @@ func (comp *Component) parseHeaders(_raw []byte) error {
 	for _, l := range _lines[1:] {
 
 		if strings.HasPrefix(l, "Content-Type: ") {
-			comp.ContentType = strings.Trim(l[len("Content-Type: "):], " \t")
+			comp.ContentType = strings.Trim(l[len("Content-Type: "):], " \t\r")
 			break
 		}
 
@@ -89,8 +88,9 @@ func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
 			// remove last CR (newline)
 			if strings.HasSuffix(string(comp.Data), "\n") {
 				comp.Data = comp.Data[0 : len(comp.Data)-1]
-			} else if strings.HasSuffix(string(comp.Data), "\r\n") {
-				comp.Data = comp.Data[0 : len(comp.Data)-2]
+			}
+			if strings.HasSuffix(string(comp.Data), "\r") {
+				comp.Data = comp.Data[0 : len(comp.Data)-1]
 			}
 			return err
 		}
@@ -101,8 +101,9 @@ func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
 			// remove last CR (newline)
 			if strings.HasSuffix(string(comp.Data), "\n") {
 				comp.Data = comp.Data[0 : len(comp.Data)-1]
-			} else if strings.HasSuffix(string(comp.Data), "\r\n") {
-				comp.Data = comp.Data[0 : len(comp.Data)-2]
+			}
+			if strings.HasSuffix(string(comp.Data), "\r") {
+				comp.Data = comp.Data[0 : len(comp.Data)-1]
 			}
 
 			// io.EOF if last boundary
