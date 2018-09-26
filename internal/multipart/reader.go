@@ -44,21 +44,21 @@ func (reader *Reader) Parse() error {
 	/* (1) For each component (until boundary) */
 	for {
 
-		mpd := &Component{
+		comp := &Component{
 			ContentType: "raw",
 			Data:        make([]byte, 0),
 			Headers:     make(map[string]string),
 		}
 
 		// 1. Read and parse data
-		err := mpd.read(reader.reader, reader.boundary)
+		err := comp.read(reader.reader, reader.boundary)
 
 		// 3. Dispatch error
 		if err != nil && err != io.EOF {
 			return err
 		}
 
-		name := mpd.GetHeader("name")
+		name := comp.GetHeader("name")
 		if len(name) < 1 {
 			return ErrMissingDataName
 		}
@@ -67,7 +67,7 @@ func (reader *Reader) Parse() error {
 			return ErrDataNameConflict
 		}
 
-		reader.Data[name] = mpd
+		reader.Data[name] = comp
 
 		if err == io.EOF {
 			return nil

@@ -2,6 +2,8 @@ package multipart
 
 import (
 	"bufio"
+	"fmt"
+	"io"
 	"strings"
 )
 
@@ -85,8 +87,10 @@ func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
 		// 1. Stop on error
 		if err != nil {
 			// remove last CR (newline)
-			if string(comp.Data[len(comp.Data)-1]) == "\n" {
+			if strings.HasSuffix(string(comp.Data), "\n") {
 				comp.Data = comp.Data[0 : len(comp.Data)-1]
+			} else if strings.HasSuffix(string(comp.Data), "\r\n") {
+				comp.Data = comp.Data[0 : len(comp.Data)-2]
 			}
 			return err
 		}
@@ -95,14 +99,22 @@ func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
 		if strings.HasPrefix(string(line), _boundary) {
 
 			// remove last CR (newline)
-			if string(comp.Data[len(comp.Data)-1]) == "\n" {
+			if strings.HasSuffix(string(comp.Data), "\n") {
 				comp.Data = comp.Data[0 : len(comp.Data)-1]
+			} else if strings.HasSuffix(string(comp.Data), "\r\n") {
+				comp.Data = comp.Data[0 : len(comp.Data)-2]
 			}
+
+			// io.EOF if last boundary
+			if strings.Trim(string(line), " \t\r\n") == fmt.Sprintf("%s--", _boundary) {
+				return io.EOF
+			}
+
 			return nil
 		}
 
 		// 3. Ignore empty lines
-		if string(line) != "\n" && len(line) > 0 {
+		if len(strings.Trim(string(line), " \t\r\n")) > 0 {
 
 			// add to header if not finished
 			if !headerRead {
