@@ -9,7 +9,7 @@ import (
 )
 
 // Load implements the Driver interface
-func (d *Plugin) Load(_path []string, _method string) (func(response.Arguments, *response.Response) response.Response, err.Error) {
+func (d *Plugin) Load(_path []string, _method string) (func(response.Arguments) response.Response, err.Error) {
 
 	/* (1) Build controller path */
 	path := strings.Join(_path, "-")
@@ -37,7 +37,7 @@ func (d *Plugin) Load(_path []string, _method string) (func(response.Arguments, 
 	}
 
 	/* (4) Check signature */
-	callable, validSignature := m.(func(response.Arguments, *response.Response) response.Response)
+	callable, validSignature := m.(func(response.Arguments) response.Response)
 	if !validSignature {
 		return nil, err.UncallableMethod
 	}

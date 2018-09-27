@@ -6,12 +6,12 @@ import (
 )
 
 type Driver interface {
-	Load(_path []string, _method string) (func(response.Arguments, *response.Response) response.Response, err.Error)
+	Load(_path []string, _method string) (func(response.Arguments) response.Response, err.Error)
 }
 
 // Generic tells the aicra instance to use the generic driver to load controller's executables
 //
-// It will call an executable with the json input into the standard input
+// It will call an executable with the json input into the standard input (argument 1)
 //    the HTTP method is send as the key _HTTP_METHOD_ (in upper case)
 // The standard output must be a json corresponding to the data
 //

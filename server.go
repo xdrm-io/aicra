@@ -8,7 +8,6 @@ import (
 	"git.xdrm.io/go/aicra/internal/checker"
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/middleware"
-	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 )
@@ -116,7 +115,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	parameters["_SCOPE_"] = scope
 
 	/* (3) Execute */
-	response := controllerImplementation(parameters, response.New())
+	response := controllerImplementation(parameters)
 
 	/* (4) Extract http headers */
 	for k, v := range response.Dump() {
