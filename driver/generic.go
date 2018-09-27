@@ -45,16 +45,26 @@ func (d *Generic) Load(_path []string, _method string) (func(response.Arguments)
 		}
 
 		/* (3) Get output json */
-		output := make(response.Arguments)
-		err2 = json.Unmarshal(stdout, output)
+		var outputI interface{}
+		err2 = json.Unmarshal(stdout, &outputI)
+		if err2 != nil {
+			res.Err = err.UncallableController
+			return *res
+		}
+
+		output, ok := outputI.(map[string]interface{})
+		if !ok {
+			res.Err = err.UncallableController
+			return *res
+		}
 
 		res.Err = err.Success
 
 		// extract error (success by default or on error)
 		if outErr, ok := output["error"]; ok {
-			tmpErr, ok := outErr.(err.Error)
+			errCode, ok := outErr.(float64)
 			if ok {
-				res.Err = tmpErr
+				res.Err = err.Error{int(errCode), "unknown reason", nil}
 			}
 
 			delete(output, "error")
