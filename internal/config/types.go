@@ -1,4 +1,4 @@
-package controller
+package config
 
 /* (1) Configuration
 ---------------------------------------------------------*/

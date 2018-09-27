@@ -1,10 +1,12 @@
 package aicra
 
 import (
+	"errors"
+	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/internal/apirequest"
 	"git.xdrm.io/go/aicra/internal/checker"
-	"git.xdrm.io/go/aicra/internal/controller"
+	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/middleware"
 	"git.xdrm.io/go/aicra/response"
 	"log"
@@ -16,22 +18,30 @@ import (
 // * its middlewares
 // * its controllers (config)
 type Server struct {
-	controller *controller.Controller // controllers
-	checker    *checker.Registry      // type checker registry
-	middleware *middleware.Registry   // middlewares
+	controller *config.Controller   // controllers
+	checker    *checker.Registry    // type checker registry
+	middleware *middleware.Registry // middlewares
+	driver     driver.Driver
 }
 
+var ErrNilDriver = errors.New("the driver is <nil>")
+
 // New creates a framework instance from a configuration file
-func New(path string) (*Server, error) {
+func New(_path string, _driver driver.Driver) (*Server, error) {
+
+	if _driver == nil {
+		return nil, ErrNilDriver
+	}
 
 	/* (1) Init instance */
 	var err error
 	var i = &Server{
 		controller: nil,
+		driver:     _driver,
 	}
 
 	/* (2) Load configuration */
-	i.controller, err = controller.Load(path)
+	i.controller, err = config.Load(_path)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +100,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	controllerImplementation, callErr := apiRequest.LoadController(req.Method)
+	controllerImplementation, callErr := apiRequest.LoadController(req.Method, s.driver)
 	if callErr.Code != e.Success.Code {
 		httpError(res, callErr)
 		log.Printf("[err] %s\n", err)
@@ -126,7 +136,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 // extractParameters extracts parameters for the request and checks
 // every single one according to configuration options
-func (s *Server) extractParameters(req *apirequest.Request, methodParam map[string]*controller.Parameter) (map[string]interface{}, e.Error) {
+func (s *Server) extractParameters(req *apirequest.Request, methodParam map[string]*config.Parameter) (map[string]interface{}, e.Error) {
 
 	// init vars
 	err := e.Success
