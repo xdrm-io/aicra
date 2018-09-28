@@ -47,8 +47,7 @@ func (d *Plugin) RunController(_path []string, _method string) (func(response.Ar
 }
 
 // LoadMiddleware returns a new middleware function; it must be a
-// valid and existing folder/filename file with or without the .so extension
-// it must be located in the relative directory .build/middleware
+// valid and existing folder/filename file with the .so extension
 func (d *Plugin) LoadMiddleware(_path string) (func(http.Request, *[]string), error) {
 
 	// ignore non .so files
@@ -58,7 +57,7 @@ func (d *Plugin) LoadMiddleware(_path string) (func(http.Request, *[]string), er
 
 	/* (1) Check plugin name */
 	if len(_path) < 1 {
-		return nil, fmt.Errorf("Plugin name must not be empty")
+		return nil, fmt.Errorf("Middleware name must not be empty")
 	}
 
 	/* (2) Check plugin extension */
