@@ -145,6 +145,11 @@ func (c *Controller) format(controllerName string) error {
 		/* check parameters */
 		for pName, pData := range method.Ptr.Parameters {
 
+			// check name
+			if strings.Trim(pName, "_") != pName {
+				return fmt.Errorf("Invalid name '%s' must not begin/end with '_'", pName)
+			}
+
 			if len(pData.Rename) < 1 {
 				pData.Rename = pName
 			}

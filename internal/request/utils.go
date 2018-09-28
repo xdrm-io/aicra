@@ -34,6 +34,12 @@ func nameInjection(pName string) bool {
 	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
 }
 
+// validName returns whether a parameter name (without the GET@ or URL# prefix) is valid
+// if fails if the name begins/ends with underscores
+func validName(pName string) bool {
+	return strings.Trim(pName, "_") == pName
+}
+
 // parseParameter parses http GET/POST data
 // - []string
 //		- size = 1 : return json of first element

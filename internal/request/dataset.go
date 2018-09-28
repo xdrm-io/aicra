@@ -62,6 +62,12 @@ func (i *DataSet) fetchGet(req *http.Request) {
 
 	for name, value := range req.URL.Query() {
 
+		// prevent invalid names
+		if !validName(name) {
+			log.Printf("invalid variable name: '%s'\n", name)
+			continue
+		}
+
 		// prevent injections
 		if nameInjection(name) {
 			log.Printf("get.injection: '%s'\n", name)
@@ -131,6 +137,12 @@ func (i *DataSet) parseJSON(req *http.Request) {
 	// else store values 'parsed' values
 	for name, value := range parsed {
 
+		// prevent invalid names
+		if !validName(name) {
+			log.Printf("invalid variable name: '%s'\n", name)
+			continue
+		}
+
 		// prevent injections
 		if nameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
@@ -161,6 +173,12 @@ func (i *DataSet) parseUrlencoded(req *http.Request) {
 	}
 
 	for name, value := range req.PostForm {
+
+		// prevent invalid names
+		if !validName(name) {
+			log.Printf("invalid variable name: '%s'\n", name)
+			continue
+		}
 
 		// prevent injections
 		if nameInjection(name) {
@@ -199,6 +217,12 @@ func (i *DataSet) parseMultipart(req *http.Request) {
 
 	/* (3) Store data into 'Form' and 'Set */
 	for name, data := range mpr.Data {
+
+		// prevent invalid names
+		if !validName(name) {
+			log.Printf("invalid variable name: '%s'\n", name)
+			continue
+		}
 
 		// prevent injections
 		if nameInjection(name) {
