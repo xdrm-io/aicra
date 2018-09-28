@@ -96,6 +96,6 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 // checks for its given method ('Get', 'Post', 'Put', or 'Delete')
 func (i *Request) LoadController(_method string, _driver driver.Driver) (func(response.Arguments) response.Response, err.Error) {
 
-	return _driver.Load(i.Path, _method)
+	return _driver.RunController(i.Path, _method)
 
 }

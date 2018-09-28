@@ -1,22 +1,21 @@
 package middleware
 
 import (
-	"fmt"
+	"git.xdrm.io/go/aicra/driver"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"plugin"
-	"strings"
+	"path"
 )
 
 // CreateRegistry creates an empty middleware registry
 // - if loadDir is set -> load all available middlewares
 //   inside the local ./middleware folder
-func CreateRegistry(loadDir ...string) *Registry {
+func CreateRegistry(_driver driver.Driver, loadDir ...string) *Registry {
 
 	/* (1) Create registry */
 	reg := &Registry{
-		Middlewares: make([]MiddleWare, 0),
+		Middlewares: make([]*Wrapper, 0),
 	}
 
 	/* (2) If no default to use -> empty registry */
@@ -24,81 +23,31 @@ func CreateRegistry(loadDir ...string) *Registry {
 		return reg
 	}
 
-	/* (3) List types */
-	plugins, err := ioutil.ReadDir(loadDir[0])
+	/* (3) List middleware files */
+	files, err := ioutil.ReadDir(loadDir[0])
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	/* (4) Else try to load each given default */
-	for _, file := range plugins {
+	for _, file := range files {
 
-		// ignore non .so files
-		if !strings.HasSuffix(file.Name(), ".so") {
-			continue
-		}
-
-		err := reg.add(file.Name())
+		mwFunc, err := _driver.LoadMiddleware(path.Join(loadDir[0], file.Name()))
 		if err != nil {
-			log.Fatalf("Cannot load plugin '%s'", file.Name())
+			log.Printf("Cannot load middleware '%s' | %s", file.Name(), err)
 		}
+		reg.Middlewares = append(reg.Middlewares, &Wrapper{Inspect: mwFunc})
 
 	}
 
 	return reg
 }
 
-// add adds a middleware to the registry; it must be a
-// valid and existing plugin name with or without the .so extension
-// it must be located in the relative directory .build/middleware
-func (reg *Registry) add(pluginName string) error {
-
-	/* (1) Check plugin name */
-	if len(pluginName) < 1 {
-		return fmt.Errorf("Plugin name must not be empty")
-	}
-
-	/* (2) Check if valid plugin name */
-	if strings.ContainsAny(pluginName, "/") {
-		return fmt.Errorf("'%s' can only be a name, not a path", pluginName)
-	}
-
-	/* (3) Check plugin extension */
-	if !strings.HasSuffix(pluginName, ".so") {
-		pluginName = fmt.Sprintf("%s.so", pluginName)
-	}
-
-	/* (4) Try to load the plugin */
-	p, err := plugin.Open(fmt.Sprintf(".build/middleware/%s", pluginName))
-	if err != nil {
-		return err
-	}
-
-	/* (5) Export wanted properties */
-	inspect, err := p.Lookup("Inspect")
-	if err != nil {
-		return fmt.Errorf("Missing method 'Inspect()'; %s", err)
-	}
-
-	/* (6) Cast Inspect */
-	inspectCast, ok := inspect.(func(http.Request, *Scope))
-	if !ok {
-		return fmt.Errorf("Inspect() is malformed")
-	}
-
-	/* (7) Add type to registry */
-	reg.Middlewares = append(reg.Middlewares, MiddleWare{
-		Inspect: inspectCast,
-	})
-
-	return nil
-}
-
 // Run executes all middlewares (default browse order)
-func (reg Registry) Run(req http.Request) Scope {
+func (reg Registry) Run(req http.Request) []string {
 
 	/* (1) Initialise scope */
-	scope := Scope{}
+	scope := make([]string, 0)
 
 	/* (2) Execute each middleware */
 	for _, m := range reg.Middlewares {

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/response"
+	"net/http"
 	"plugin"
 	"strings"
 )
 
-// Load implements the Driver interface
-func (d *Plugin) Load(_path []string, _method string) (func(response.Arguments) response.Response, err.Error) {
+// RunController implements the Driver interface
+func (d *Plugin) RunController(_path []string, _method string) (func(response.Arguments) response.Response, err.Error) {
 
 	/* (1) Build controller path */
 	path := strings.Join(_path, "-")
@@ -43,4 +44,46 @@ func (d *Plugin) Load(_path []string, _method string) (func(response.Arguments) 
 	}
 
 	return callable, err.Success
+}
+
+// LoadMiddleware returns a new middleware function; it must be a
+// valid and existing folder/filename file with or without the .so extension
+// it must be located in the relative directory .build/middleware
+func (d *Plugin) LoadMiddleware(_path string) (func(http.Request, *[]string), error) {
+
+	// ignore non .so files
+	if !strings.HasSuffix(_path, ".so") {
+		return nil, fmt.Errorf("Invalid name")
+	}
+
+	/* (1) Check plugin name */
+	if len(_path) < 1 {
+		return nil, fmt.Errorf("Plugin name must not be empty")
+	}
+
+	/* (2) Check plugin extension */
+	if !strings.HasSuffix(_path, ".so") {
+		_path = fmt.Sprintf("%s.so", _path)
+	}
+
+	/* (3) Try to load the plugin */
+	p, err := plugin.Open(_path)
+	if err != nil {
+		return nil, err
+	}
+
+	/* (4) Export wanted properties */
+	inspect, err := p.Lookup("Inspect")
+	if err != nil {
+		return nil, fmt.Errorf("Missing method 'Inspect()'; %s", err)
+	}
+
+	/* (5) Cast Inspect */
+	mware, ok := inspect.(func(http.Request, *[]string))
+	if !ok {
+		return nil, fmt.Errorf("Inspect() is malformed")
+	}
+
+	/* (6) Add type to registry */
+	return mware, nil
 }

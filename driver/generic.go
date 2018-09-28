@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// Load implements the Driver interface
-func (d *Generic) Load(_path []string, _method string) (func(response.Arguments) response.Response, e.Error) {
+// RunController implements the Driver interface
+func (d *Generic) RunController(_path []string, _method string) (func(response.Arguments) response.Response, e.Error) {
 
 	/* (1) Build controller path */
 	path := strings.Join(_path, "-")

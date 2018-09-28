@@ -50,7 +50,7 @@ func New(_path string, _driver driver.Driver) (*Server, error) {
 	i.checker = checker.CreateRegistry(".build/type")
 
 	/* (4) Default middleware registry */
-	i.middleware = middleware.CreateRegistry(".build/middleware")
+	i.middleware = middleware.CreateRegistry(_driver, ".build/middleware")
 
 	return i, nil
 
