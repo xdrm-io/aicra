@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// Name returns the driver name
 func (d *Generic) Name() string { return "generic" }
 
 // RunController implements the Driver interface

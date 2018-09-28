@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Name returns the driver name
 func (d *Plugin) Name() string { return "plugin" }
 
 // RunController implements the Driver interface
