@@ -92,9 +92,9 @@ func FetchFormData(req *http.Request) map[string]interface{} {
 	return res
 }
 
-// LoadController tries to load a controller from its uri
+// RunController tries to load a controller from its uri
 // checks for its given method ('Get', 'Post', 'Put', or 'Delete')
-func (i *Request) LoadController(_method string, _driver driver.Driver) (func(response.Arguments) response.Response, err.Error) {
+func (i *Request) RunController(_method string, _driver driver.Driver) (func(response.Arguments) response.Response, err.Error) {
 
 	return _driver.RunController(i.Path, _method)
 

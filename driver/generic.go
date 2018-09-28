@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+func (d *Generic) Name() string { return "generic" }
+
 // RunController implements the Driver interface
 func (d *Generic) RunController(_path []string, _method string) (func(response.Arguments) response.Response, e.Error) {
 
@@ -114,23 +116,22 @@ func (d *Generic) LoadMiddleware(_path string) (func(http.Request, *[]string), e
 			return
 		}
 
-		output, ok := outputI.(map[string]interface{})
+		/* (4) Get as []string */
+		scope, ok := outputI.([]interface{})
 		if !ok {
+			fmt.Printf("3\n")
 			return
 		}
 
-		// extract 'scope' (empty by default or error)
-		scopeOut, ok := output["scope"]
-		if !ok {
-			return
+		/* (5) Try to add each value to the scope */
+		for _, v := range scope {
+			stringScope, ok := v.(string)
+			if !ok {
+				fmt.Printf("4\n")
+				continue
+			}
+			*_scope = append(*_scope, stringScope)
 		}
-
-		scope, ok := scopeOut.([]string)
-		if !ok {
-			return
-		}
-
-		*_scope = append(*_scope, scope...)
 
 	}, nil
 

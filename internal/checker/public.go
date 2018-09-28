@@ -1,6 +1,7 @@
 package checker
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,29 +9,26 @@ import (
 	"strings"
 )
 
+var ErrNoMatchingType = errors.New("no matching type")
+var ErrDoesNotMatch = errors.New("does not match")
+var ErrEmptyTypeName = errors.New("type name must not be empty")
+
 // CreateRegistry creates an empty type registry
-// - if loadDir is True if will load all available types
-//   inside the local ./types folder
-func CreateRegistry(loadDir ...string) *Registry {
+func CreateRegistry(_folder string) *Registry {
 
 	/* (1) Create registry */
 	reg := &Registry{
 		Types: make([]Type, 0),
 	}
 
-	/* (2) If no default to use -> empty registry */
-	if len(loadDir) < 1 {
-		return reg
-	}
-
-	/* (3) List types */
-	plugins, err := ioutil.ReadDir(loadDir[0])
+	/* (2) List types */
+	files, err := ioutil.ReadDir(_folder)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	/* (4) Else try to load each given default */
-	for _, file := range plugins {
+	/* (3) Else try to load each given default */
+	for _, file := range files {
 
 		// ignore non .so files
 		if !strings.HasSuffix(file.Name(), ".so") {
@@ -39,7 +37,7 @@ func CreateRegistry(loadDir ...string) *Registry {
 
 		err := reg.add(file.Name())
 		if err != nil {
-			log.Fatalf("Cannot load plugin '%s'", file.Name())
+			log.Printf("cannot load plugin '%s'", file.Name())
 		}
 
 	}
@@ -54,7 +52,7 @@ func (reg *Registry) add(pluginName string) error {
 
 	/* (1) Check plugin name */
 	if len(pluginName) < 1 {
-		return fmt.Errorf("Plugin name must not be empty")
+		return ErrEmptyTypeName
 	}
 
 	/* (2) Check if valid plugin name */
@@ -123,12 +121,12 @@ func (reg Registry) Run(typeName string, value interface{}) error {
 
 	/* (2) Abort if no matching type */
 	if T == nil {
-		return fmt.Errorf("No matching type")
+		return ErrNoMatchingType
 	}
 
 	/* (3) Check */
 	if !T.Check(value) {
-		return fmt.Errorf("Does not match")
+		return ErrDoesNotMatch
 	}
 
 	return nil

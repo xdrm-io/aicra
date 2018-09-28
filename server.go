@@ -1,7 +1,6 @@
 package aicra
 
 import (
-	"errors"
 	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/internal/checker"
@@ -23,14 +22,24 @@ type Server struct {
 	driver     driver.Driver
 }
 
-// ErrNilDriver is raised when a NULL driver is given to the constructor
-var ErrNilDriver = errors.New("the driver is <nil>")
-
 // New creates a framework instance from a configuration file
+// _path is the json configuration path
+// _driver is used to load/run the controllers and middlewares (default: )
+//
 func New(_path string, _driver driver.Driver) (*Server, error) {
 
+	/* (1) Default driver : Plugin */
 	if _driver == nil {
-		return nil, ErrNilDriver
+		_driver = &driver.Plugin{}
+	}
+
+	/* (2) Default folders according to drivers */
+	_folders := make([]string, 0, 2)
+	_folders = append(_folders, ".build/type")
+	if _driver.Name() == "plugin" { // plugin
+		_folders = append(_folders, ".build/middleware")
+	} else { // generic
+		_folders = append(_folders, "middleware")
 	}
 
 	/* (1) Init instance */
@@ -47,10 +56,10 @@ func New(_path string, _driver driver.Driver) (*Server, error) {
 	}
 
 	/* (3) Default type registry */
-	i.checker = checker.CreateRegistry(".build/type")
+	i.checker = checker.CreateRegistry(_folders[0])
 
 	/* (4) Default middleware registry */
-	i.middleware = middleware.CreateRegistry(_driver, ".build/middleware")
+	i.middleware = middleware.CreateRegistry(_driver, _folders[1])
 
 	return i, nil
 
@@ -100,7 +109,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	controllerImplementation, callErr := apiRequest.LoadController(req.Method, s.driver)
+	controllerImplementation, callErr := apiRequest.RunController(req.Method, s.driver)
 	if callErr.Code != e.Success.Code {
 		httpError(res, callErr)
 		log.Printf("[err] %s\n", err)

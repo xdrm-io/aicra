@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+func (d *Plugin) Name() string { return "plugin" }
+
 // RunController implements the Driver interface
 func (d *Plugin) RunController(_path []string, _method string) (func(response.Arguments) response.Response, err.Error) {
 

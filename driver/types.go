@@ -8,6 +8,7 @@ import (
 
 // Driver defines the driver interface to load controller/middleware implementation or executables
 type Driver interface {
+	Name() string
 	RunController(_path []string, _method string) (func(response.Arguments) response.Response, err.Error)
 	LoadMiddleware(_path string) (func(http.Request, *[]string), error)
 }
