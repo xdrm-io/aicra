@@ -5,6 +5,7 @@ import (
 	"fmt"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/response"
+	"net/http"
 	"os/exec"
 	"strings"
 )
@@ -78,4 +79,59 @@ func (d *Generic) RunController(_path []string, _method string) (func(response.A
 		return *res
 
 	}, e.Success
+}
+
+// LoadMiddleware returns a new middleware function; it must be a
+// valid and existing folder/filename file
+func (d *Plugin) LoadMiddleware(_path string) (func(http.Request, *[]string), error) {
+
+	/* (1) Check plugin name */
+	if len(_path) < 1 {
+		return nil, fmt.Errorf("Middleware name must not be empty")
+	}
+
+	/* (2) Create method + error  */
+	return func(_req http.Request, _scope *[]string) {
+
+		/* (1) Prepare stdin data */
+		stdin, err := json.Marshal(_scope)
+		if err != nil {
+			return
+		}
+
+		/* (2) Try to load command with <stdin> -> stdout */
+		cmd := exec.Command(_path, string(stdin))
+
+		stdout, err := cmd.Output()
+		if err != nil {
+			return
+		}
+
+		/* (3) Get output json */
+		var outputI interface{}
+		err = json.Unmarshal(stdout, &outputI)
+		if err != nil {
+			return
+		}
+
+		output, ok := outputI.(map[string]interface{})
+		if !ok {
+			return
+		}
+
+		// extract 'scope' (empty by default or error)
+		scopeOut, ok := output["scope"]
+		if !ok {
+			return
+		}
+
+		scope, ok := scopeOut.([]string)
+		if !ok {
+			return
+		}
+
+		*_scope = append(*_scope, scope...)
+
+	}, nil
+
 }
