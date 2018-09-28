@@ -1,4 +1,4 @@
-package apirequest
+package request
 
 // Request represents a request by its URI, controller path and data (uri, get, post)
 type Request struct {

@@ -3,8 +3,8 @@ package aicra
 import (
 	"encoding/json"
 	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/apirequest"
 	"git.xdrm.io/go/aicra/internal/config"
+	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"

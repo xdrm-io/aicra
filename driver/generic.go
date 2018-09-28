@@ -64,7 +64,7 @@ func (d *Generic) Load(_path []string, _method string) (func(response.Arguments)
 		if outErr, ok := output["error"]; ok {
 			errCode, ok := outErr.(float64)
 			if ok {
-				res.Err = e.Error{int(errCode), "unknown reason", nil}
+				res.Err = e.Error{Code: int(errCode), Reason: "unknown reason", Arguments: nil}
 			}
 
 			delete(output, "error")

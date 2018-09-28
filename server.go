@@ -4,9 +4,9 @@ import (
 	"errors"
 	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/apirequest"
 	"git.xdrm.io/go/aicra/internal/checker"
 	"git.xdrm.io/go/aicra/internal/config"
+	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
 	"log"
 	"net/http"
@@ -23,6 +23,7 @@ type Server struct {
 	driver     driver.Driver
 }
 
+// ErrNilDriver is raised when a NULL driver is given to the constructor
 var ErrNilDriver = errors.New("the driver is <nil>")
 
 // New creates a framework instance from a configuration file

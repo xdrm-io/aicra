@@ -5,6 +5,7 @@ import (
 	"git.xdrm.io/go/aicra/response"
 )
 
+// Driver defines the driver interface to load controller/middleware implementation or executables
 type Driver interface {
 	Load(_path []string, _method string) (func(response.Arguments) response.Response, err.Error)
 }
