@@ -119,7 +119,6 @@ func (d *Generic) LoadMiddleware(_path string) (func(http.Request, *[]string), e
 		/* (4) Get as []string */
 		scope, ok := outputI.([]interface{})
 		if !ok {
-			fmt.Printf("3\n")
 			return
 		}
 
@@ -127,7 +126,6 @@ func (d *Generic) LoadMiddleware(_path string) (func(http.Request, *[]string), e
 		for _, v := range scope {
 			stringScope, ok := v.(string)
 			if !ok {
-				fmt.Printf("4\n")
 				continue
 			}
 			*_scope = append(*_scope, stringScope)
