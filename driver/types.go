@@ -25,6 +25,46 @@ type Driver interface {
 // - the a/b/c controller executable must be named <WORKDIR>/controller/a/b/c
 type Generic struct{}
 
+// Controller is the interface that controller implementation must follow
+// it is used by the 'Import' driver
+type Controller interface {
+	Get(d response.Arguments) response.Response
+	Post(d response.Arguments) response.Response
+	Put(d response.Arguments) response.Response
+	Delete(d response.Arguments) response.Response
+}
+
+// Middleware is the interface that middleware implementation must follow
+// it is used by the 'Import' driver
+type Middleware interface {
+	Inspect(http.Request, *[]string)
+}
+
+// Import tells the aicra instance to use the import driver to load controller/middleware executables
+//
+// It will compile imported with the following interface :
+//
+// type Controller interface {
+// 	Get(d response.Arguments) response.Response
+// 	Post(d response.Arguments) response.Response
+// 	Put(d response.Arguments) response.Response
+// 	Delete(d response.Arguments) response.Response
+// }
+//
+// CONTROLLER FILE STRUCTURE
+// --------------
+// - the root (/) controller executable must be named  <WORKDIR>/controller/ROOT.go
+// - the a/b/c controller executable must be named <WORKDIR>/controller/a/b/c.go
+//
+// COMPILATION
+// -----------
+// The controllers/middlewares are imported and instanciated inside the main function, they are
+// thus compiled with the main binary file
+type Import struct {
+	Controllers map[string]Controller
+	Middlewares map[string]Middleware
+}
+
 // Plugin tells the aicra instance to use the plugin driver to load controller/middleware executables
 //
 // It will load go .so plugins with the following interface :
