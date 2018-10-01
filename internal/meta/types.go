@@ -5,8 +5,8 @@ import (
 )
 
 type builder struct {
-	// IgnoreBuiltIn tells whether or not to ignore the built-in components
-	IgnoreBuiltIn bool `json:"default,ommitempty"`
+	// Default tells whether or not to ignore the built-in components
+	Default bool `json:"default,ommitempty"`
 
 	// Folder is used to infer the 'Map' object
 	Folder string `json:"folder,ommitempty"`

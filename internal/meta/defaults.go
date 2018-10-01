@@ -6,18 +6,18 @@ var Default = Schema{
 	Port:       80,
 	DriverName: "",
 	Types: &builder{
-		IgnoreBuiltIn: false,
-		Folder:        "",
-		Map:           nil,
+		Default: true,
+		Folder:  "",
+		Map:     nil,
 	},
 	Controllers: &builder{
-		IgnoreBuiltIn: true,
-		Folder:        "",
-		Map:           nil,
+		Default: false,
+		Folder:  "",
+		Map:     nil,
 	},
 	Middlewares: &builder{
-		IgnoreBuiltIn: true,
-		Folder:        "",
-		Map:           nil,
+		Default: false,
+		Folder:  "",
+		Map:     nil,
 	},
 }

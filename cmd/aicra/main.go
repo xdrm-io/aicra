@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var defaultTypeFolder = filepath.Join(os.Getenv("GOPATH"), "src/git.xdrm.io/go/aicra/internal/checker/default/*")
+
 func main() {
 
 	starttime := time.Now()
@@ -39,7 +41,36 @@ func main() {
 		return
 	}
 
-	/* (2) Compile Types */
+	/* (2) Compile Default Types */
+	if schema.Types.Default {
+		clifmt.Title("compile default types")
+		files, err := filepath.Glob(defaultTypeFolder)
+		if err != nil {
+			fmt.Printf("cannot load default types")
+		} else {
+
+			for _, file := range files {
+
+				typeName, err := filepath.Rel(filepath.Dir(file), file)
+				if err != nil {
+					fmt.Printf("cannot load type '%s'\n", typeName)
+					continue
+
+				}
+
+				fmt.Printf("   [%s]\n", clifmt.Color(33, typeName))
+
+				// Get useful paths
+				source := filepath.Join(file, "main.go")
+				build := filepath.Join(schema.Root, ".build/type", fmt.Sprintf("%s.so", typeName))
+
+				compile(source, build)
+			}
+
+		}
+	}
+
+	/* (3) Compile Types */
 	if len(schema.Types.Map) > 0 {
 		clifmt.Title("compile types")
 		for name, upath := range schema.Types.Map {
@@ -54,7 +85,7 @@ func main() {
 		}
 	}
 
-	/* (3) Compile controllers */
+	/* (4) Compile controllers */
 	if len(schema.Controllers.Map) > 0 {
 		clifmt.Title("compile controllers")
 		for name, upath := range schema.Controllers.Map {
@@ -70,7 +101,7 @@ func main() {
 		}
 	}
 
-	/* (4) Compile middlewares */
+	/* (5) Compile middlewares */
 	if len(schema.Middlewares.Map) > 0 {
 		clifmt.Title("compile middlewares")
 		for name, upath := range schema.Middlewares.Map {
