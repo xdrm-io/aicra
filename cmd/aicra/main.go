@@ -44,7 +44,7 @@ func main() {
 		clifmt.Title("compile types")
 		for name, upath := range schema.Types.Map {
 
-			fmt.Printf("  '%s'\n", clifmt.Color(33, name))
+			fmt.Printf("   [%s]\n", clifmt.Color(33, name))
 
 			// Get useful paths
 			source := schema.Driver.Source(schema.Root, schema.Types.Folder, upath)
@@ -59,7 +59,7 @@ func main() {
 		clifmt.Title("compile controllers")
 		for name, upath := range schema.Controllers.Map {
 
-			fmt.Printf("  '%s'\n", clifmt.Color(33, name))
+			fmt.Printf("   [%s]\n", clifmt.Color(33, name))
 
 			// Get useful paths
 			source := schema.Driver.Source(schema.Root, schema.Controllers.Folder, upath)
@@ -75,7 +75,7 @@ func main() {
 		clifmt.Title("compile middlewares")
 		for name, upath := range schema.Middlewares.Map {
 
-			fmt.Printf("  '%s'\n", clifmt.Color(33, name))
+			fmt.Printf("   [%s]\n", clifmt.Color(33, name))
 
 			// Get useful paths
 			source := schema.Driver.Source(schema.Root, schema.Middlewares.Folder, upath)
