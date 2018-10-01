@@ -1,4 +1,4 @@
-package config
+package api
 
 /* (1) Configuration
 ---------------------------------------------------------*/

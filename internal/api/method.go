@@ -1,4 +1,4 @@
-package config
+package api
 
 import (
 	"git.xdrm.io/go/aicra/middleware"

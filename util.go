@@ -3,14 +3,14 @@ package aicra
 import (
 	"encoding/json"
 	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/internal/api"
 	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 )
 
-func (s *Server) matchController(req *apirequest.Request) *config.Controller {
+func (s *Server) matchController(req *apirequest.Request) *api.Controller {
 
 	/* (1) Try to browse by URI */
 	pathi, ctl := s.controller.Browse(req.URI)

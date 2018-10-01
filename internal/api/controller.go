@@ -1,4 +1,4 @@
-package config
+package api
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Load builds a representation of the configuration
+// Parse builds a representation of the configuration
 // The struct definition checks for most format errors
 //
 // path<string>					The path to the configuration
@@ -15,7 +15,7 @@ import (
 // @return<controller>			The parsed configuration root controller
 // @return<err>					The error if occurred
 //
-func Load(path string) (*Controller, error) {
+func Parse(path string) (*Controller, error) {
 
 	/* (1) Extract data
 	---------------------------------------------------------*/
