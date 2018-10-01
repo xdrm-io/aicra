@@ -14,9 +14,9 @@ type Error struct {
 	Arguments []interface{}
 }
 
-// BindArgument adds an argument to the error
+// Put adds an argument to the error
 // to be displayed back to API caller
-func (e *Error) BindArgument(arg interface{}) {
+func (e *Error) Put(arg interface{}) {
 
 	/* (1) Make slice if not */
 	if e.Arguments == nil {

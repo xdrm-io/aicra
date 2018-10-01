@@ -135,7 +135,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	httpMethod := strings.ToUpper(req.Method)
 	if err != nil {
 		httpErr := e.UncallableController
-		httpErr.BindArgument(err)
+		httpErr.Put(err)
 		httpError(res, httpErr)
 		log.Printf("err( %s )\n", err)
 		return
@@ -204,7 +204,7 @@ func (s *Server) extractParameters(req *apirequest.Request, methodParam map[stri
 		/* (2) Required & missing */
 		if !isset && !param.Optional {
 			err = e.MissingParam
-			err.BindArgument(name)
+			err.Put(name)
 			return nil, err
 		}
 
@@ -233,8 +233,8 @@ func (s *Server) extractParameters(req *apirequest.Request, methodParam map[stri
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
 			err = e.InvalidParam
-			err.BindArgument(param.Rename)
-			err.BindArgument("FILE")
+			err.Put(param.Rename)
+			err.Put("FILE")
 			return nil, err
 		}
 
@@ -248,9 +248,9 @@ func (s *Server) extractParameters(req *apirequest.Request, methodParam map[stri
 		if s.checker.Run(param.Type, p.Value) != nil {
 
 			err = e.InvalidParam
-			err.BindArgument(param.Rename)
-			err.BindArgument(param.Type)
-			err.BindArgument(p.Value)
+			err.Put(param.Rename)
+			err.Put(param.Type)
+			err.Put(p.Value)
 			break
 
 		}
