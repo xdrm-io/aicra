@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-// GenericController is the mockup for returning a controller with as a string the path
-type GenericController string
+// genericController is the mockup for returning a controller with as a string the path
+type genericController string
 
-func (path GenericController) Get(d response.Arguments) response.Response {
+func (path genericController) Get(d response.Arguments) response.Response {
 
 	res := response.New()
 
@@ -67,20 +67,20 @@ func (path GenericController) Get(d response.Arguments) response.Response {
 
 }
 
-func (path GenericController) Post(d response.Arguments) response.Response {
+func (path genericController) Post(d response.Arguments) response.Response {
 	return path.Get(d)
 }
-func (path GenericController) Put(d response.Arguments) response.Response {
+func (path genericController) Put(d response.Arguments) response.Response {
 	return path.Get(d)
 }
-func (path GenericController) Delete(d response.Arguments) response.Response {
+func (path genericController) Delete(d response.Arguments) response.Response {
 	return path.Get(d)
 }
 
-// GenericMiddleware is the mockup for returning a middleware as a string (its path)
-type GenericMiddleware string
+// genericMiddleware is the mockup for returning a middleware as a string (its path)
+type genericMiddleware string
 
-func (path GenericMiddleware) Inspect(_req http.Request, _scope *[]string) {
+func (path genericMiddleware) Inspect(_req http.Request, _scope *[]string) {
 
 	/* (1) Prepare stdin data */
 	stdin, err := json.Marshal(_scope)
@@ -120,10 +120,10 @@ func (path GenericMiddleware) Inspect(_req http.Request, _scope *[]string) {
 
 }
 
-// GenericChecker is the mockup for returning a checker as a string (its path)
-type GenericChecker string
+// genericChecker is the mockup for returning a checker as a string (its path)
+type genericChecker string
 
-func (path GenericChecker) Match(_type string) bool {
+func (path genericChecker) Match(_type string) bool {
 
 	/* (1) Try to load command with <stdin> -> stdout */
 	cmd := exec.Command(string(path), _type)
@@ -139,7 +139,7 @@ func (path GenericChecker) Match(_type string) bool {
 	return output == "true" || output == "1"
 
 }
-func (path GenericChecker) Check(_value interface{}) bool {
+func (path genericChecker) Check(_value interface{}) bool {
 
 	/* (1) Prepare stdin data */
 	indata := make(map[string]interface{})

@@ -35,17 +35,17 @@ func (d Generic) Compiled() bool { return false }
 
 // LoadController implements the Driver interface
 func (d *Generic) LoadController(_path string) (Controller, error) {
-	return GenericController(_path), nil
+	return genericController(_path), nil
 }
 
 // LoadMiddleware returns a new middleware; it must be a
 // valid and existing folder/filename file
 func (d *Generic) LoadMiddleware(_path string) (Middleware, error) {
-	return GenericMiddleware(_path), nil
+	return genericMiddleware(_path), nil
 }
 
 // LoadChecker returns a new middleware; it must be a
 // valid and existing folder/filename file
 func (d *Generic) LoadChecker(_path string) (Checker, error) {
-	return GenericChecker(_path), nil
+	return genericChecker(_path), nil
 }
