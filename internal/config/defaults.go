@@ -1,4 +1,4 @@
-package meta
+package config
 
 // Default contains the default values when ommited in json
 var Default = Schema{

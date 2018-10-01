@@ -1,4 +1,4 @@
-package meta
+package config
 
 import (
 	"git.xdrm.io/go/aicra/driver"

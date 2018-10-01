@@ -10,6 +10,20 @@ import (
 	"strings"
 )
 
+// Plugin tells the aicra instance to use the plugin driver to load controller/middleware executables
+//
+// It will load go .so plugins with the following interface :
+//
+// type Controller interface {
+//		Get(d i.Arguments, r *i.Response) i.Response
+//		Post(d i.Arguments, r *i.Response) i.Response
+//		Put(d i.Arguments, r *i.Response) i.Response
+//		Delete(d i.Arguments, r *i.Response) i.Response
+// }
+//
+// The controllers are exported by calling the 'Export() Controller' method
+type Plugin struct{}
+
 // Name returns the driver name
 func (d Plugin) Name() string { return "plugin" }
 

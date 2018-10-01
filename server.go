@@ -4,7 +4,7 @@ import (
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/internal/api"
 	"git.xdrm.io/go/aicra/internal/checker"
-	"git.xdrm.io/go/aicra/internal/meta"
+	"git.xdrm.io/go/aicra/internal/config"
 	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
 	"log"
@@ -19,7 +19,7 @@ type Server struct {
 	controller *api.Controller      // controllers
 	checker    *checker.Registry    // type checker registry
 	middleware *middleware.Registry // middlewares
-	schema     *meta.Schema
+	schema     *config.Schema
 }
 
 // New creates a framework instance from a configuration file
@@ -29,7 +29,7 @@ type Server struct {
 func New(_path string) (*Server, error) {
 
 	/* 1. Load config */
-	schema, err := meta.Parse("./aicra.json")
+	schema, err := config.Parse("./aicra.json")
 	if err != nil {
 		return nil, err
 	}

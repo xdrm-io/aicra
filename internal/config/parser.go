@@ -1,4 +1,4 @@
-package meta
+package config
 
 import (
 	"encoding/json"
@@ -36,11 +36,9 @@ func Parse(_path string) (*Schema, error) {
 		receiver.Driver = &driver.Generic{}
 	case "plugin":
 		receiver.Driver = &driver.Plugin{}
-	case "import":
-		receiver.Driver = &driver.Import{}
 
 	default:
-		return nil, errors.New("invalid driver; choose from 'generic', 'plugin', and 'import'")
+		return nil, errors.New("invalid driver; choose from 'generic', 'plugin'")
 	}
 
 	/* 5. Fail if type map is set */

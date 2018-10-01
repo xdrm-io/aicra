@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"git.xdrm.io/go/aicra/internal/clifmt"
-	"git.xdrm.io/go/aicra/internal/meta"
+	"git.xdrm.io/go/aicra/internal/config"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,7 +16,7 @@ func main() {
 	starttime := time.Now()
 
 	/* 1. Load config */
-	schema, err := meta.Parse("./aicra.json")
+	schema, err := config.Parse("./aicra.json")
 	if err != nil {
 		fmt.Printf("aicra.json: %s\n", err)
 		return

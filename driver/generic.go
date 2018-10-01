@@ -11,6 +11,13 @@ import (
 	"strings"
 )
 
+// Generic tells the aicra instance to use the generic driver to load controller/middleware executables
+//
+// It will call an executable with the json input into the standard input (argument 1)
+//    the HTTP method is send as the key _HTTP_METHOD_ (in upper case)
+// The standard output must be a json corresponding to the data
+type Generic struct{}
+
 // Name returns the driver name
 func (d *Generic) Name() string { return "generic" }
 
