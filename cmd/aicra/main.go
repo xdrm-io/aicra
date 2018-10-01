@@ -97,7 +97,6 @@ func main() {
 			build := schema.Driver.Build(schema.Root, schema.Controllers.Folder, upath)
 
 			compile(source, build)
-			fmt.Printf("\n")
 		}
 	}
 

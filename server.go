@@ -1,10 +1,10 @@
 package aicra
 
 import (
-	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/internal/api"
 	"git.xdrm.io/go/aicra/internal/checker"
+	"git.xdrm.io/go/aicra/internal/meta"
 	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
 	"log"
@@ -19,34 +19,34 @@ type Server struct {
 	controller *api.Controller      // controllers
 	checker    *checker.Registry    // type checker registry
 	middleware *middleware.Registry // middlewares
-	driver     driver.Driver
+	schema     *meta.Schema
 }
 
 // New creates a framework instance from a configuration file
 // _path is the json configuration path
 // _driver is used to load/run the controllers and middlewares (default: )
 //
-func New(_path string, _driver driver.Driver) (*Server, error) {
+func New(_path string) (*Server, error) {
 
-	/* (1) Default driver : Plugin */
-	if _driver == nil {
-		_driver = &driver.Plugin{}
+	/* 1. Load config */
+	schema, err := meta.Parse("./aicra.json")
+	if err != nil {
+		return nil, err
 	}
 
-	/* (2) Default folders according to drivers */
+	/* 2. Default driver : Plugin */
 	_folders := make([]string, 0, 2)
 	_folders = append(_folders, ".build/type")
-	if _driver.Name() == "plugin" { // plugin
+	if schema.Driver.Name() == "plugin" { // plugin
 		_folders = append(_folders, ".build/middleware")
 	} else { // generic
 		_folders = append(_folders, "middleware")
 	}
 
 	/* (1) Init instance */
-	var err error
 	var i = &Server{
 		controller: nil,
-		driver:     _driver,
+		schema:     schema,
 	}
 
 	/* (2) Load configuration */
@@ -59,7 +59,7 @@ func New(_path string, _driver driver.Driver) (*Server, error) {
 	i.checker = checker.CreateRegistry(_folders[0])
 
 	/* (4) Default middleware registry */
-	i.middleware = middleware.CreateRegistry(_driver, _folders[1])
+	i.middleware = middleware.CreateRegistry(schema.Driver, _folders[1])
 
 	return i, nil
 
@@ -109,7 +109,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	controllerImplementation, callErr := apiRequest.RunController(req.Method, s.driver)
+	controllerImplementation, callErr := apiRequest.RunController(req.Method, s.schema.Driver)
 	if callErr.Code != e.Success.Code {
 		httpError(res, callErr)
 		log.Printf("[err] %s\n", err)

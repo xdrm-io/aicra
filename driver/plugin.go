@@ -44,9 +44,7 @@ func (d *Plugin) RunController(_path []string, _method string) (func(response.Ar
 	}
 
 	/* (2) Format url */
-	tmp := []byte(strings.ToLower(_method))
-	tmp[0] = tmp[0] - ('a' - 'A')
-	method := string(tmp)
+	method := strings.ToLower(_method)
 
 	/* (2) Try to load plugin */
 	p, err2 := plugin.Open(path)
@@ -54,19 +52,34 @@ func (d *Plugin) RunController(_path []string, _method string) (func(response.Ar
 		return nil, err.UncallableController
 	}
 
-	/* (3) Try to extract method */
-	m, err2 := p.Lookup(method)
+	/* (3) Try to extract exported field */
+	m, err2 := p.Lookup("Export")
 	if err2 != nil {
-		return nil, err.UncallableMethod
+		return nil, err.UncallableController
 	}
+
+	exported, ok := m.(func() Controller)
+	if !ok {
+		return nil, err.UncallableController
+	}
+
+	/* (4) Controller */
+	ctl := exported()
 
 	/* (4) Check signature */
-	callable, validSignature := m.(func(response.Arguments) response.Response)
-	if !validSignature {
-		return nil, err.UncallableMethod
+	switch method {
+	case "get":
+		return ctl.Get, err.Success
+	case "post":
+		return ctl.Post, err.Success
+	case "put":
+		return ctl.Put, err.Success
+	case "delete":
+		return ctl.Delete, err.Success
 	}
+	fmt.Printf("method: %s\n", method)
 
-	return callable, err.Success
+	return nil, err.UncallableMethod
 }
 
 // LoadMiddleware returns a new middleware function; it must be a
@@ -94,18 +107,17 @@ func (d *Plugin) LoadMiddleware(_path string) (func(http.Request, *[]string), er
 		return nil, err
 	}
 
-	/* (4) Export wanted properties */
-	inspect, err := p.Lookup("Inspect")
+	/* (4) Extract exported fields */
+	mw, err := p.Lookup("Export")
 	if err != nil {
 		return nil, fmt.Errorf("Missing method 'Inspect()'; %s", err)
 	}
 
-	/* (5) Cast Inspect */
-	mware, ok := inspect.(func(http.Request, *[]string))
+	exported, ok := mw.(func() Middleware)
 	if !ok {
 		return nil, fmt.Errorf("Inspect() is malformed")
 	}
 
-	/* (6) Add type to registry */
-	return mware, nil
+	/* (5) Return Inspect method */
+	return exported().Inspect, nil
 }

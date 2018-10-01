@@ -12,14 +12,6 @@ import (
 //             purposes, the type is always used as its definition ([]string)
 type Scope []string
 
-type MiddlewareFunc func(http.Request, *[]string)
-
-// Middleware updates the @Scope passed to it according to
-// the @http.Request
-type Middleware interface {
-	Inspect(http.Request, *[]string)
-}
-
 // Wrapper is a struct that stores middleware Inspect() method
 type Wrapper struct {
 	Inspect func(http.Request, *[]string)
