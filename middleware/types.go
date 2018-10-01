@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"net/http"
+	"git.xdrm.io/go/aicra/driver"
 )
 
 // Scope represents a list of scope processed by middlewares
@@ -12,13 +12,7 @@ import (
 //             purposes, the type is always used as its definition ([]string)
 type Scope []string
 
-// Wrapper is a struct that stores middleware Inspect() method
-type Wrapper struct {
-	Inspect func(http.Request, *[]string)
-}
-
 // Registry represents a registry containing all registered
 // middlewares to be processed before routing any request
-type Registry struct {
-	Middlewares []*Wrapper
-}
+// The map is <name> => <middleware>
+type Registry map[string]driver.Middleware

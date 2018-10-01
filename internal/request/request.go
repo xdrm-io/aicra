@@ -1,9 +1,6 @@
 package request
 
 import (
-	"git.xdrm.io/go/aicra/driver"
-	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/response"
 	"net/http"
 	"strings"
 )
@@ -26,12 +23,4 @@ func FromHTTP(req *http.Request) (*Request, error) {
 	inst.Data.Build(req)
 
 	return inst, nil
-}
-
-// RunController tries to load a controller from its uri
-// checks for its given method ('Get', 'Post', 'Put', or 'Delete')
-func (i *Request) RunController(_method string, _driver driver.Driver) (func(response.Arguments) response.Response, err.Error) {
-
-	return _driver.RunController(i.Path, _method)
-
 }

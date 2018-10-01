@@ -1,7 +1,6 @@
 package driver
 
 import (
-	"git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/response"
 	"net/http"
 )
@@ -14,8 +13,15 @@ type Driver interface {
 	Build(string, string, string) string
 	Compiled() bool
 
-	RunController(_path []string, _method string) (func(response.Arguments) response.Response, err.Error)
-	LoadMiddleware(_path string) (func(http.Request, *[]string), error)
+	LoadController(_path string) (Controller, error)
+	LoadMiddleware(_path string) (Middleware, error)
+	LoadChecker(_path string) (Checker, error)
+}
+
+// Checker is the interface that type checkers implementation must follow
+type Checker interface {
+	Match(string) bool
+	Check(interface{}) bool
 }
 
 // Controller is the interface that controller implementation must follow

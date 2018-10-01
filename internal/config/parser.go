@@ -41,12 +41,7 @@ func Parse(_path string) (*Schema, error) {
 		return nil, errors.New("invalid driver; choose from 'generic', 'plugin'")
 	}
 
-	/* 5. Fail if type map is set */
-	if receiver.Types.Map != nil {
-		return nil, errors.New("types must not feature the 'map'")
-	}
-
-	/* 6. Fail on absolute folders */
+	/* 5. Fail on absolute folders */
 	if len(receiver.Types.Folder) > 0 && filepath.IsAbs(receiver.Types.Folder) {
 		return nil, errors.New("types folder must be relative to root")
 	}
@@ -83,7 +78,7 @@ func (m *Schema) setDefaults() {
 		m.Port = Default.Port
 	}
 
-	// 4. Empty builders
+	// 4. Use default builders if not set
 	if m.Types == nil {
 		m.Types = Default.Types
 	}
@@ -94,10 +89,16 @@ func (m *Schema) setDefaults() {
 		m.Middlewares = Default.Middlewares
 	}
 
-	// 5. Init map if not set
-	m.Types.format()
-	m.Controllers.format()
-	m.Middlewares.format()
+	// 5. Use default folders if not set
+	if m.Types.Folder == "" {
+		m.Types.Folder = Default.Types.Folder
+	}
+	if m.Controllers.Folder == "" {
+		m.Controllers.Folder = Default.Controllers.Folder
+	}
+	if m.Middlewares.Folder == "" {
+		m.Middlewares.Folder = Default.Middlewares.Folder
+	}
 
 	// 6. Infer Maps from Folders
 	m.Types.InferFromFolder(m.Root, m.Driver)

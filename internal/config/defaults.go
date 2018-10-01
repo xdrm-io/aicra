@@ -2,22 +2,20 @@ package config
 
 // Default contains the default values when ommited in json
 var Default = Schema{
+	Root:       ".",
 	Host:       "0.0.0.0",
 	Port:       80,
 	DriverName: "",
 	Types: &builder{
 		Default: true,
-		Folder:  "",
-		Map:     nil,
+		Folder:  "type",
 	},
 	Controllers: &builder{
 		Default: false,
-		Folder:  "",
-		Map:     nil,
+		Folder:  "controller",
 	},
 	Middlewares: &builder{
 		Default: false,
-		Folder:  "",
-		Map:     nil,
+		Folder:  "middleware",
 	},
 }

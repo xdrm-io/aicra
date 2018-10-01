@@ -12,13 +12,13 @@ type builder struct {
 	Folder string `json:"folder,ommitempty"`
 
 	// Map defines the association path=>file
-	Map map[string]string `json:"map,ommitempty"`
+	Map map[string]string
 }
 
 // Schema represents an AICRA configuration (not the API, the server, drivers, etc)
 type Schema struct {
-	// Root is root of the project structure
-	Root string `json:"root"`
+	// Root is root of the project structure default is "." (current directory)
+	Root string `json:"root,ommitempty"`
 
 	// Host is the hostname to listen to (default is 0.0.0.0)
 	Host string `json:"host,ommitempty"`
@@ -26,28 +26,24 @@ type Schema struct {
 	Port uint16 `json:"port,ommitempty"`
 
 	// DriverName is the driver used to load the controllers and middlewares
-	// (default is 'plugin')
 	DriverName string `json:"driver"`
 	Driver     driver.Driver
 
 	// Types defines :
 	// - the type folder
-	// - each type by 'name => path'
 	// - whether to load the built-in types
 	//
 	// types are ommited if not set (no default)
 	Types *builder `json:"types,ommitempty"`
 
 	// Controllers defines :
-	// - the controller folder (as a single string)
-	// - each controller by 'name => path' (as a map)
+	// - the controller folder
 	//
 	// (default is .build/controller)
 	Controllers *builder `json:"controllers,ommitempty"`
 
 	// Middlewares defines :
-	// - the middleware folder (as a single string)
-	// - each middleware by 'name => path' (as a map)
+	// - the middleware folder
 	//
 	// (default is .build/middleware)
 	Middlewares *builder `json:"middlewares,ommitempty"`

@@ -7,8 +7,10 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
+	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
+	"strings"
 )
 
 // Server represents an AICRA instance featuring:
@@ -16,9 +18,9 @@ import (
 // * its middlewares
 // * its controllers (api config)
 type Server struct {
-	controller *api.Controller      // controllers
-	checker    *checker.Registry    // type checker registry
-	middleware *middleware.Registry // middlewares
+	controller *api.Controller     // controllers
+	checker    checker.Registry    // type checker registry
+	middleware middleware.Registry // middlewares
 	schema     *config.Schema
 }
 
@@ -34,32 +36,47 @@ func New(_path string) (*Server, error) {
 		return nil, err
 	}
 
-	/* 2. Default driver : Plugin */
-	_folders := make([]string, 0, 2)
-	_folders = append(_folders, ".build/type")
-	if schema.Driver.Name() == "plugin" { // plugin
-		_folders = append(_folders, ".build/middleware")
-	} else { // generic
-		_folders = append(_folders, "middleware")
-	}
-
-	/* (1) Init instance */
+	/* 2. Init instance */
 	var i = &Server{
 		controller: nil,
 		schema:     schema,
 	}
 
-	/* (2) Load configuration */
+	/* 3. Load configuration */
 	i.controller, err = api.Parse(_path)
 	if err != nil {
 		return nil, err
 	}
 
-	/* (3) Default type registry */
-	i.checker = checker.CreateRegistry(_folders[0])
+	/* 4. Load type registry */
+	i.checker = checker.CreateRegistry()
 
-	/* (4) Default middleware registry */
-	i.middleware = middleware.CreateRegistry(schema.Driver, _folders[1])
+	// add default types if set
+
+	// add custom types
+	for name, path := range schema.Types.Map {
+
+		fullpath := schema.Driver.Build(schema.Root, schema.Types.Folder, path)
+		mwFunc, err := schema.Driver.LoadChecker(fullpath)
+		if err != nil {
+			log.Printf("cannot load type checker '%s' | %s", name, err)
+		}
+		i.checker.Add(path, mwFunc)
+
+	}
+
+	/* 5. Load middleware registry */
+	i.middleware = middleware.CreateRegistry()
+	for name, path := range schema.Middlewares.Map {
+
+		fullpath := schema.Driver.Build(schema.Root, schema.Middlewares.Folder, path)
+		mwFunc, err := schema.Driver.LoadMiddleware(fullpath)
+		if err != nil {
+			log.Printf("cannot load middleware '%s' | %s", name, err)
+		}
+		i.middleware.Add(path, mwFunc)
+
+	}
 
 	return i, nil
 
@@ -109,25 +126,52 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (5) Load controller
 	---------------------------------------------------------*/
-	controllerImplementation, callErr := apiRequest.RunController(req.Method, s.schema.Driver)
-	if callErr.Code != e.Success.Code {
-		httpError(res, callErr)
-		log.Printf("[err] %s\n", err)
+	// get paths
+	ctlBuildPath := strings.Join(apiRequest.Path, "/")
+	ctlBuildPath = s.schema.Driver.Build(s.schema.Root, s.schema.Controllers.Folder, ctlBuildPath)
+
+	// get controller
+	ctlObject, err := s.schema.Driver.LoadController(ctlBuildPath)
+	httpMethod := strings.ToUpper(req.Method)
+	if err != nil {
+		httpErr := e.UncallableController
+		httpErr.BindArgument(err)
+		httpError(res, httpErr)
+		log.Printf("err( %s )\n", err)
+		return
+	}
+
+	var ctlMethod func(response.Arguments) response.Response
+	// select method
+	switch httpMethod {
+	case "GET":
+		ctlMethod = ctlObject.Get
+	case "POST":
+		ctlMethod = ctlObject.Post
+	case "PUT":
+		ctlMethod = ctlObject.Put
+	case "DELETE":
+		ctlMethod = ctlObject.Delete
+	default:
+		httpError(res, e.UnknownMethod)
 		return
 	}
 
 	/* (6) Execute and get response
 	---------------------------------------------------------*/
-	/* (1) Give Authorization header into controller */
+	/* (1) Give HTTP METHOD */
+	parameters["_HTTP_METHOD_"] = httpMethod
+
+	/* (2) Give Authorization header into controller */
 	parameters["_AUTHORIZATION_"] = req.Header.Get("Authorization")
 
-	/* (2) Give Scope into controller */
+	/* (3) Give Scope into controller */
 	parameters["_SCOPE_"] = scope
 
-	/* (3) Execute */
-	response := controllerImplementation(parameters)
+	/* (4) Execute */
+	response := ctlMethod(parameters)
 
-	/* (4) Extract http headers */
+	/* (5) Extract http headers */
 	for k, v := range response.Dump() {
 		if k == "_REDIRECT_" {
 			if newLocation, ok := v.(string); ok {
