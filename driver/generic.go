@@ -7,11 +7,31 @@ import (
 	"git.xdrm.io/go/aicra/response"
 	"net/http"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
 // Name returns the driver name
 func (d *Generic) Name() string { return "generic" }
+
+// Path returns the universal path from the source path
+func (d Generic) Path(_root, _folder, _src string) string {
+	return _src
+}
+
+// Source returns the source path from the universal path
+func (d Generic) Source(_root, _folder, _path string) string {
+	return filepath.Join(_root, _folder, _path)
+
+}
+
+// Build returns the build path from the universal path
+func (d Generic) Build(_root, _folder, _path string) string {
+	return filepath.Join(_root, _folder, _path)
+}
+
+// Compiled returns whether the driver has to be build
+func (d Generic) Compiled() bool { return false }
 
 // RunController implements the Driver interface
 func (d *Generic) RunController(_path []string, _method string) (func(response.Arguments) response.Response, e.Error) {

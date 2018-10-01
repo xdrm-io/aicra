@@ -5,12 +5,32 @@ import (
 	"git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/response"
 	"net/http"
+	"path/filepath"
 	"plugin"
 	"strings"
 )
 
 // Name returns the driver name
-func (d *Plugin) Name() string { return "plugin" }
+func (d Plugin) Name() string { return "plugin" }
+
+// Path returns the universal path from the source path
+func (d Plugin) Path(_root, _folder, _src string) string {
+	return filepath.Dir(_src)
+}
+
+// Source returns the source path from the universal path
+func (d Plugin) Source(_root, _folder, _path string) string {
+	return filepath.Join(_root, _folder, _path, "main.go")
+
+}
+
+// Build returns the build path from the universal path
+func (d Plugin) Build(_root, _folder, _path string) string {
+	return fmt.Sprintf("%s.so", filepath.Join(_root, ".build", _folder, _path))
+}
+
+// Compiled returns whether the driver has to be build
+func (d Plugin) Compiled() bool { return true }
 
 // RunController implements the Driver interface
 func (d *Plugin) RunController(_path []string, _method string) (func(response.Arguments) response.Response, err.Error) {

@@ -6,12 +6,31 @@ import (
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/response"
 	"net/http"
-	"plugin"
+	"path/filepath"
 	"strings"
 )
 
 // Name returns the driver name
 func (d *Import) Name() string { return "import" }
+
+// Path returns the universal path from the source path
+func (d Import) Path(_root, _folder, _src string) string {
+	return strings.TrimSuffix(_src, ".go")
+}
+
+// Source returns the source path from the universal path
+func (d Import) Source(_root, _folder, _path string) string {
+	return fmt.Sprintf("%s.go", filepath.Join(_root, _folder, _path))
+
+}
+
+// Build returns the build path from the universal path
+func (d Import) Build(_root, _folder, _path string) string {
+	return filepath.Join(_root, _folder, _path)
+}
+
+// Compiled returns whether the driver has to be build
+func (d Import) Compiled() bool { return false }
 
 // RegisterController registers a new controller
 func (d *Import) RegisterController(_path string, _controller Controller) error {
@@ -62,7 +81,7 @@ func (d *Import) RegisterMiddlware(_path string, _middleware Middleware) error {
 }
 
 // RunController implements the Driver interface
-func (d *Import) RunController(_path []string, _method string) (func(response.Arguments) response.Response, err.Error) {
+func (d *Import) RunController(_path []string, _method string) (func(response.Arguments) response.Response, e.Error) {
 
 	/* (1) Build controller path */
 	path := strings.Join(_path, "-")
@@ -109,5 +128,5 @@ func (d *Import) LoadMiddleware(_path string) (func(http.Request, *[]string), er
 	}
 
 	/* (3) Return middleware */
-	return mware, nil
+	return middleware.Inspect, nil
 }

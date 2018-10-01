@@ -1,9 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"git.xdrm.io/go/aicra/internal/clifmt"
+	"git.xdrm.io/go/aicra/internal/meta"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,170 +11,84 @@ import (
 
 func main() {
 
-	starttime := time.Now().UnixNano()
+	starttime := time.Now()
 
-	/* (1) Flags
-	---------------------------------------------------------*/
-	/* (1) controller path */
-	ctlPathFlag := flag.String("c", "controller", "Path to controllers' directory")
-
-	/* (2) types path */
-	typPathFlag := flag.String("t", "type", "Path to custom types' directory")
-
-	/* (3) middleware path */
-	midPathFlag := flag.String("m", "middleware", "Path to middlewares' directory")
-
-	flag.Parse()
-
-	/* (3) Get last arg: project path */
-	if len(flag.Args()) < 1 {
-		fmt.Printf("%s\n\n", clifmt.Warn("missing argument"))
-		fmt.Printf("You must provide the project folder as the last argument\n")
-		return
-	}
-	var projectPathFlag = flag.Arg(0)
-	compileTypes := true
-	compileControllers := true
-	compileMiddlewares := true
-
-	/* (2) Get absolute paths
-	---------------------------------------------------------*/
-	/* (1) Get absolute project path */
-	projectPath, err := filepath.Abs(projectPathFlag)
+	/* 1. Load config */
+	schema, err := meta.Parse("./aicra.json")
 	if err != nil {
-		fmt.Printf("invalid argument: project path\n")
-		return
-	}
-	/* (2) Get absolute controllers' path */
-	cPath, err := getAbsPath(projectPath, *ctlPathFlag)
-	if err != nil {
-		fmt.Printf("invalid argument: controllers' path\n")
+		fmt.Printf("aicra.json: %s\n", err)
 		return
 	}
 
-	/* (3) Get absolute types' path */
-	tPath, err := getAbsPath(projectPath, *typPathFlag)
-	if err != nil {
-		fmt.Printf("invalid argument: types' path\n")
+	/* 2. End if nothing to compile */
+	if !schema.Driver.Compiled() {
+		fmt.Printf("\n[ %s | %s ] nothing to compile\n",
+			clifmt.Color(32, "finished"),
+			time.Now().Sub(starttime),
+		)
 		return
 	}
 
-	/* (4) Get absolute middlewares' path */
-	mPath, err := getAbsPath(projectPath, *midPathFlag)
-	if err != nil {
-		fmt.Printf("invalid argument: middlwares' path\n")
-		return
-	}
-
-	// default types folder
-	dtPath := filepath.Join(os.Getenv("GOPATH"), "src/git.xdrm.io/go/aicra/internal/checker/default")
-
-	/* (3) Check path are existing dirs
-	---------------------------------------------------------*/
-	clifmt.Title("file check")
-
-	/* (1) Project path */
-	clifmt.Align("    . project root")
-	if !dirExists(projectPath) {
-		fmt.Printf("invalid\n\n")
-		fmt.Printf("%s  invalid project folder - %s\n\n", clifmt.Warn(), clifmt.Color(36, projectPath))
-		fmt.Printf("You must specify an existing directory path\n")
-		return
-	}
-	fmt.Printf("ok\n")
-
-	/* (2) Controllers path */
-	clifmt.Align("    . controllers")
-	if !dirExists(cPath) {
-		compileControllers = false
-		fmt.Printf("missing\n")
-	} else {
-		fmt.Printf("ok\n")
-	}
-
-	/* (3) Middlewares path */
-	clifmt.Align("    . middlewares")
-	if !dirExists(mPath) {
-		compileMiddlewares = false
-		fmt.Printf("missing\n")
-	} else {
-		fmt.Printf("ok\n")
-	}
-
-	/* (4) Default types path */
-	clifmt.Align("    . default types")
-	if !dirExists(dtPath) {
-		fmt.Printf("missing\n")
-		compileTypes = false
-
-	} else {
-		fmt.Printf("ok\n")
-	}
-
-	/* (5) Types path */
-	clifmt.Align("    . custom types")
-	if !dirExists(tPath) {
-		fmt.Printf("missing\n")
-		compileTypes = false
-	} else {
-		fmt.Printf("ok\n")
-	}
-
-	if !compileControllers && !compileTypes && !compileMiddlewares {
-		fmt.Printf("\n%s\n", clifmt.Info("Nothing to compile"))
-		return
-	}
-
-	/* (4) Compile
+	/* Compile
 	---------------------------------------------------------*/
 	/* (1) Create build output dir */
-	buildPath := filepath.Join(projectPath, ".build")
-	clifmt.Align("    . create build folder")
+	buildPath := filepath.Join(schema.Root, ".build")
 	err = os.MkdirAll(buildPath, os.ModePerm)
 	if err != nil {
-		fmt.Printf("error\n\n")
 		fmt.Printf("%s the directory %s cannot be created, check permissions.", clifmt.Warn(), clifmt.Color(33, buildPath))
 		return
 	}
-	fmt.Printf("ok\n")
 
-	/* (2) Compile controllers */
-	if compileControllers {
-		clifmt.Title("compile controllers")
-		err = compile(cPath, filepath.Join(projectPath, ".build/controller"))
-		if err != nil {
-			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
-		}
-	}
-
-	/* (3) Compile middlewares */
-	if compileMiddlewares {
-		clifmt.Title("compile middlewares")
-		err = compile(mPath, filepath.Join(projectPath, ".build/middleware"))
-		if err != nil {
-			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
-		}
-	}
-
-	/* (4) Compile DEFAULT types */
-	clifmt.Title("compile default types")
-	err = compile(dtPath, filepath.Join(projectPath, ".build/type"))
-	if err != nil {
-		fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
-	}
-	/* (5) Compile types */
-	if compileTypes {
+	/* (2) Compile Types */
+	if len(schema.Types.Map) > 0 {
 		clifmt.Title("compile types")
-		err = compile(tPath, filepath.Join(projectPath, ".build/type"))
-		if err != nil {
-			fmt.Printf("%s compilation error: %s\n", clifmt.Warn(), err)
+		for name, upath := range schema.Types.Map {
+
+			fmt.Printf("  '%s'\n", clifmt.Color(33, name))
+
+			// Get useful paths
+			source := schema.Driver.Source(schema.Root, schema.Types.Folder, upath)
+			build := schema.Driver.Build(schema.Root, schema.Types.Folder, upath)
+
+			compile(source, build)
+		}
+	}
+
+	/* (3) Compile controllers */
+	if len(schema.Controllers.Map) > 0 {
+		clifmt.Title("compile controllers")
+		for name, upath := range schema.Controllers.Map {
+
+			fmt.Printf("  '%s'\n", clifmt.Color(33, name))
+
+			// Get useful paths
+			source := schema.Driver.Source(schema.Root, schema.Controllers.Folder, upath)
+			build := schema.Driver.Build(schema.Root, schema.Controllers.Folder, upath)
+
+			compile(source, build)
+			fmt.Printf("\n")
+		}
+	}
+
+	/* (4) Compile middlewares */
+	if len(schema.Middlewares.Map) > 0 {
+		clifmt.Title("compile middlewares")
+		for name, upath := range schema.Middlewares.Map {
+
+			fmt.Printf("  '%s'\n", clifmt.Color(33, name))
+
+			// Get useful paths
+			source := schema.Driver.Source(schema.Root, schema.Middlewares.Folder, upath)
+			build := schema.Driver.Build(schema.Root, schema.Middlewares.Folder, upath)
+
+			compile(source, build)
 		}
 	}
 
 	/* (6) finished */
-	fmt.Printf("\n[ %s | %.0f ms ] files are located inside the %s directory inside the project folder\n",
+	fmt.Printf("\n[ %s | %s ] files are located inside the %s directory inside the project folder\n",
 		clifmt.Color(32, "finished"),
-		float64(time.Now().UnixNano()-starttime)/1e6,
+		time.Now().Sub(starttime),
 		clifmt.Color(33, ".build"),
 	)
 
