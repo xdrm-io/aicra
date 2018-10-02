@@ -23,7 +23,7 @@ func compile(source, build string) {
 	// 3. Compile
 	clifmt.Align("    + compile")
 	stdout, err := exec.Command("go",
-		"build", "-buildmode=plugin",
+		"build", "-ldflags", "-s -w", "-buildmode=plugin",
 		"-o", build,
 		source,
 	).Output()
