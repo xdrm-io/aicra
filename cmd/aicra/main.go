@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"git.xdrm.io/go/aicra/driver"
 	"git.xdrm.io/go/aicra/internal/clifmt"
 	"git.xdrm.io/go/aicra/internal/config"
 	"os"
