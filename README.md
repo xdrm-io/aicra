@@ -6,7 +6,7 @@
 [![Go doc](https://godoc.org/git.xdrm.io/go/aicra?status.svg)](https://godoc.org/git.xdrm.io/go/aicra)
 
 
-**Aicra** is a self-working framework coded in *Go* that allows anyone to create a fully featured REST API. It features type checking, authentication management through middlewares, file upload, rich argument parsing (*i.e. url slash-separated, urlencoded, form-data, json*), nested routes, project compiler (*i.e. aicra*), etc.
+**Aicra** is a self-working **REST API engine** coded in *Go* that allows anyone to create a fully featured API. It features type checking, authentication management through middlewares, file upload, rich argument parsing (*i.e. url slash-separated, urlencoded, form-data, json*), nested routes, project compiler (*i.e. aicra*), etc.
 
 All the REST API management is done for you, you just need to implement :
 
