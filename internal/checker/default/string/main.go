@@ -2,7 +2,6 @@ package main
 
 import (
 	"git.xdrm.io/go/aicra/driver"
-	"reflect"
 )
 
 func main()                  {}
@@ -20,8 +19,8 @@ func (sck StringChecker) Check(value interface{}) bool {
 		return false
 	}
 
-	kind := reflect.TypeOf(value).Kind()
+	_, ok := value.(string)
 
-	return kind == reflect.String
+	return ok
 
 }
