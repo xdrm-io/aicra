@@ -476,13 +476,13 @@ To add a new type, just open the file `/build/api/Checker.php` and add an entry 
 |Type|Example|Description|
 |---|---|---|
 |`any`|`[9,"a"]`, `"a"`|Any data (can be simple or complex)|
-|`id`|`10`, `"23"`|Positive integer number|
-|`int`|`-10`, `"23"`|Any integer number|
-|`float`|`-10.2`, `"23.5"`|Any float|
-|`text`|`"Hello!"`|String that can be of any length (even empty)|
+|`id`|`10`, `23`|Positive integer number|
+|`int`|`-10`, `23`|Any integer number|
+|`float`|`-10.2`, `23.5`|Any float|
+|`string`|`"Hello!"`|String that can be of any length (even empty)|
 |`digest(L)`|`"4612473aa81f93a878..."`|String with a length of  `L`, containing only hexadecimal lowercase characters.|
 |`mail`|`"a.b@c.def"`|Valid email address|
-|`array`|`[]`, `[1, 3]`|Any array|
+|`array`|`[]`, `[1, "a"]`|Any array|
 |`bool`|`true`, `false`|Boolean|
 |`varchar(a,b)`|`"Hello!"`|String with a length between `a` and `b` (included)|
 
