@@ -108,6 +108,8 @@ func New(_path string) (*Server, error) {
 // ServeHTTP implements http.Handler and has to be called on each request
 func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
+	defer req.Body.Close()
+
 	/* (1) Build request */
 	apiRequest, err := apirequest.FromHTTP(req)
 	if err != nil {
