@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"git.xdrm.io/go/aicra/driver"
 	"git.xdrm.io/go/aicra/internal/clifmt"
 	"git.xdrm.io/go/aicra/internal/config"
 	"os"
@@ -43,6 +44,7 @@ func main() {
 
 	/* (2) Compile Default Types */
 	if schema.Types.Default {
+
 		clifmt.Title("compile default types")
 		files, err := filepath.Glob(defaultTypeFolder)
 		if err != nil {
@@ -62,7 +64,7 @@ func main() {
 
 				// Get useful paths
 				source := filepath.Join(file, "main.go")
-				build := filepath.Join(schema.Root, ".build/type", fmt.Sprintf("%s.so", typeName))
+				build := filepath.Join(schema.Root, ".build/DEFAULT_TYPES", fmt.Sprintf("%s.so", typeName))
 
 				compile(source, build)
 			}

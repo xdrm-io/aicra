@@ -1,15 +1,24 @@
 package main
 
 import (
+	"git.xdrm.io/go/aicra/driver"
 	"regexp"
 	"strconv"
 )
 
-var min *uint64
-var max *uint64
+func main()                  {}
+func Export() driver.Checker { return new(VarcharChecker) }
+
+type VarcharChecker struct {
+	min *uint64
+	max *uint64
+}
 
 // Match filters the parameter type format "varchar(min, max)"
-func Match(name string) bool {
+func (vck *VarcharChecker) Match(name string) bool {
+
+	vck.min = nil
+	vck.max = nil
 
 	/* (1) Create regexp */
 	re, err := regexp.Compile(`^varchar\((\d+), ?(\d+)\)$`)
@@ -28,7 +37,7 @@ func Match(name string) bool {
 	if err != nil {
 		return false
 	}
-	min = &minVal
+	vck.min = &minVal
 
 	/* (4) Extract max */
 	maxVal, err := strconv.ParseUint(matches[2], 10, 64)
@@ -40,14 +49,14 @@ func Match(name string) bool {
 	if maxVal < minVal {
 		panic("varchar(x, y) ; constraint violation : x <= y")
 	}
-	max = &maxVal
+	vck.max = &maxVal
 
 	return true
 
 }
 
 // Check whether the given value fulfills the condition (min, max)
-func Check(value interface{}) bool {
+func (vck *VarcharChecker) Check(value interface{}) bool {
 
 	/* (1) Check if string */
 	strval, ok := value.(string)
@@ -56,17 +65,19 @@ func Check(value interface{}) bool {
 	}
 
 	/* (2) Check if sizes set */
-	if min == nil || max == nil {
+	if vck.min == nil || vck.max == nil {
 		return false
 	}
 
+	length := uint64(len(strval))
+
 	/* (3) Check min */
-	if uint64(len(strval)) < *min {
+	if length < *vck.min {
 		return false
 	}
 
 	/* (4) Check max */
-	if uint64(len(strval)) > *max {
+	if length > *vck.max {
 		return false
 	}
 

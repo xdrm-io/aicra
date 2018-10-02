@@ -26,6 +26,10 @@ func (reg Registry) Run(typeName string, value interface{}) error {
 	/* (1) Iterate to find matching type (take first) */
 	for _, t := range reg {
 
+		if t == nil {
+			continue
+		}
+
 		// stop if found
 		if t.Match(typeName) {
 

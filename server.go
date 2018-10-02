@@ -1,6 +1,8 @@
 package aicra
 
 import (
+	"errors"
+	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
 	"git.xdrm.io/go/aicra/internal/api"
 	"git.xdrm.io/go/aicra/internal/checker"
@@ -10,6 +12,7 @@ import (
 	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 )
 
@@ -52,6 +55,26 @@ func New(_path string) (*Server, error) {
 	i.checker = checker.CreateRegistry()
 
 	// add default types if set
+	if schema.Types.Default {
+
+		// driver is Plugin for defaults (even if generic for the controllers etc)
+		defaultTypesDriver := new(driver.Plugin)
+		files, err := filepath.Glob(filepath.Join(schema.Root, ".build/DEFAULT_TYPES/*.so"))
+		if err != nil {
+			return nil, errors.New("cannot load default types")
+		}
+		for _, path := range files {
+
+			name := strings.TrimSuffix(filepath.Base(path), ".so")
+
+			mwFunc, err := defaultTypesDriver.LoadChecker(path)
+			if err != nil {
+				log.Printf("cannot load default type checker '%s' | %s", name, err)
+			}
+			i.checker.Add(name, mwFunc)
+
+		}
+	}
 
 	// add custom types
 	for name, path := range schema.Types.Map {
