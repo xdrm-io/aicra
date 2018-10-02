@@ -34,7 +34,6 @@ This framework is based over some of the following concepts.
 
 - [I. Installation](#i-installation)
   * [1. Download and install the package](#1-download-and-install-the-package)
-  * [2. Compile the command-line builder](#2-compile-the-command-line-builder)
 - [II. Setup a project](#ii-setup-a-project)
   * [1. Configuration](#1-configuration)
   * [2. Controllers](#2-controllers)
@@ -57,22 +56,10 @@ You need a recent machine with `go` [installed](https://golang.org/doc/install).
 ##### 1. Download and install the package
 
 ```bash
-go get -u git.xdrm.io/go/aicra
+go get -u git.xdrm.io/go/aicra/cmd/aicra
 ```
 
-It should now be available locally and available for your imports.
-
-
-
-##### 2. Compile the command-line compiler
-
-You should then compile the project compiler to help you manage your projects.
-
-```bash
-go install git.xdrm.io/go/aicra/cmd/aicra
-```
-
-
+The library should now be available locally and available for your imports. Moreover, the **project compilet** have been installed as the `aicra` command.
 
 > The executable `aicra` will be placed into your `$GOPATH/bin` folder, if added to your environment PATH it should be available as a standalone command in your terminal. If not, you can simply run `$GOPATH/bin/aicra` to use the command or create a symlink into `/usr/local/bin` for instance.
 
@@ -183,7 +170,7 @@ In order for your project to manage authentication, the best solution is to crea
 
 ###### Plugin driver
 
-Each middleware must be **directly** inside the `middleware` folder (according to the _aicra.json_ configuration). 
+Each middleware must be **directly** inside the `middleware` folder (according to the _aicra.json_ configuration).
 
 > Example - the `1-authentication` middleware will be inside `middleware/1-authentication/main.go`.
 
@@ -215,7 +202,7 @@ Each type must be **directly** inside the `type` folder. The package name is arb
 
 ###### Plugin driver
 
-Each type checker must be **directly** inside the `type` folder (according to the _aicra.json_ configuration). 
+Each type checker must be **directly** inside the `type` folder (according to the _aicra.json_ configuration).
 
 > Example - the `number` type checker will be inside `type/number/main.go`.
 
@@ -315,4 +302,4 @@ func main() {
   - [x] type checkers
 - [x] project configuration file to select **driver**, source folders and whether to load default type checkers.
   - [x] used to compile the project by the `aicra` command
-  - [x] used to create an API from `aicra.New()` 
+  - [x] used to create an API from `aicra.New()`
