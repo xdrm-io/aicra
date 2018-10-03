@@ -99,144 +99,38 @@ The API uses the routes defined in the _api.json_ configuration to export your c
 	* `PUT` to edit an existing article
 	* `DELETE` to delete an exisint article
 
-*Note that each method must be a valid HTTP METHOD*.
+*Note that these are all the available methods handled by aicra*
 
 
 
 
 # **III.** Project Configuration
 
-
-The documentation consists of a _chain_ of urls each one can contain several HTTP method specifications.
-Note that each url can be chained apart the method specifications.
-
-
-
+The documentation consists of directions for how to compile and run the project controllers, middle-wares and type checkers.
 
 ## **1** - configuration format
 
-The configuration is a set of `uri` paths that can contain up to 4 method types: **POST**, **DELETE**, **PUT**, **GET** or `uri` subpaths.
-
-For instance the 4 methods directly inside `uri1` will be triggered when the calling URI is `/uri1`, the ones directly inside `uri2` will be triggered when calling `/uri1/uri2` and so on..
-
-You can also set full paths if you don't need transitional methods, for instance the path `uri5/uri6/uri7` will be triggered by the url `/uri5/uri6/uri7`.
-
-**Example:** The example file loaded with the default configuration can be found [here](./../../src/config/api/3.0/modules.json).
 ```json
 {
-	"uri1" : {
-		"GET":    method.definition,
-		"POST":   method.definition,
-		"PUT":    method.definition,
-		"DELETE": method.definition,
-
-		"uri2": {
-			"GET":    method.definition,
-			"POST":   method.definition,
-			"PUT":    method.definition,
-			"DELETE": method.definition,
-
-			"uri3": {}
-		}
-	},
-
-	"uri5/uri6/uri7": {
-		"GET":    method.definition,
-		"POST":   method.definition,
-		"PUT":    method.definition,
-		"DELETE": method.definition
-	}
+	"root": "<project-root>",
+    "driver": "<driver>",
+    "types": {
+        "default": true,
+		"folder": "<custom-types-folder>"        
+    },
+    "controllers": {
+        "folder": "<controllers-folder"
+    },
+    "middlewares": {
+        "folder": "<middlewares-folder"
+    }
 }
 ```
 
-**Note**: It is possible to trigger the *root uri* (`/`), so you can set methods directly at the root of the JSON file.
+**Note**: The following fields are optional :
 
-## **2** - method.definition
-```json
-{
-	"des": method.description,
-	"per": method.permissions,
-	"par": method.parameters,
-	"out": method.output_format,
-	"opt": method.options
-}
-```
-
-## **2.1** - method.description
-
-The *description* field must be a **string** containing the human-readable description of what the method does.
-
-## **2.2** - method.permissions
-
-The *permissions* field must be an array. You can manage **OR** and **AND** permission combinations.
-
-- **OR** is applied between each **0-depth** array
-- **AND** is applied between each **1-depth** array
-
-For instance the following permission `[ ["a","b"], ["c"] ]` means you need the permissions **a** and **b** combined or only the permission **c**.
-
-## **2.3** - method.parameters
-
-The *parameters* field must be an object containing each required or optional parameter needed for the implementation.
-
-```json
-"parameter.name": {
-	"des": parameter.description,
-	"typ": parameter.checker_type,
-	"opt": parameter.is_optional,
-	"ren": parameter.rename,
-	"def": parameter.default_value,
-}
-```
-
-#### parameter.name
-
-The *name* field must be a **string** containing variable name that will be asked for the caller.
-
-Note that you can set any string for **body parameters**, but **GET parameters** must be named `URL#`, where `#` is the index within the URI, beginning with 0.
-#### parameter.description
-
-The *description* field must be a **string** containing the human-readable description of what the parameter is or must be.
-#### parameter.checker_type
-
-The *checker_type* field must be a **string** corresponding to a `\api\core\Checker` type that will be checked before calling the implementation.
-
-#### parameter.is_optional
-
-The *is_optional* field must be a **boolean** set to `true` if the parameter can be ommited. By default, the field is set to `false` so each parameter is required.
-
-#### parameter.rename
-
-The *rename* field must be a **string** corresponding to the *variable name* given to the implementation. It is useful for **GET parameters** because they need to be called `URL#`, where `#` is the position in the URI. (cf. [paramter.name](#parametername)))
-
-If ommited, by default, `parameter.name` will be used.
-#### parameter.default_value
-
-The *default_value* field must be of any type according to the *checker_type* field, it will be used only for **optional** parameters when ommited by the caller
-
-By default, each optional parameter will exist and will be set to `null` to the implementation.
-
-## **2.4** - method.output_format
-
-The *output_format* field must have the same format as `method.parameters` but will only be used to generate a documentation or to tell other developers what the method returns if no error occurs.
-
-## **2.5** - method.options
-
-The *options* field must be an **object** containing the available options.
-
-The only option available for now is:
-
-```json
-"download": true
-```
-
-Your implementation must return 2 fields:
-- `body` a string containing the file body
-- `headers` an array containing as an associative array file headers
-
-If the API is called with HTTP directly, it will not print the **json** response (only on error), but will instead directly return the created file.
-
-*AJAX:* If called with ajax, you must give the header `HTTP_X_REQUESTED_WITH` set to `XMLHttpRequest`. In that case only, it will return a normal JSON response with the field `link` containing the link to call for downloading the created file. **You must take care of deleting not used files** - there is no such mechanism.
+- `types.default` is by default "types"
+- 
 
 
 
@@ -395,31 +289,7 @@ If the API is called with HTTP directly, it will not print the **json** response
 
 ## **1** - middle-wares
 
-In order to implement your Permission System you have to implement the **interface** `AuthSystem` located in `/build/api/core/AuthSystem`.
-
-You must register your custom authentification system before each api call.
-
-For instance, lets suppose your implementation is called `myAuthSystem`.
-```php
-\api\core\Request::setAuthSystem(new myAuthSystem);
-```
-**Note**: By default the API will try to find `\api\core\AuthSystemDefault`.
-
-
-## **2** - core implementation
-
-### classes
-Each module's implementation is represented as a **file** so as a **class** located in `/build/api/module/`. In order for the autoloader to work, you must name the **file** the same name as the **class**.
-Also the **namespace** must match, it corresponds to the path (starting at `/api`).
-
-For instance if you have in your configuration a path called `/uri1/uri2/uri3`, you will create the file `/build/api/module/uri1/uri2/uri3.php`.
-
-*Specific*: For the root (`/`) path, it will trigger the class `\api\module\root`, so you have to create the file `/build/api/module/root.php`. (cf. [configuration format](#1---configuration-format))
-
-
-
-### methods
-Each middle-wares must implement the [driver.Middleware](https://godoc.org/git.xdrm.io/go/aicra/driver#Middleware) interface.
+Each middle-ware must implement the [driver.Middleware](https://godoc.org/git.xdrm.io/go/aicra/driver#Middleware) interface.
 
 The `Inspect(http.Request, *[]string)` method gives you the actual http request. And you must edit the string list to add scope elements. After all middle-wares are executed, the final scope is used to check the **method.permission** field to decide whether the controller can be accessed.
 
@@ -454,12 +324,74 @@ func (tm TokenManager) Inspect(req http.Request, scope *[]string) {
 *Note*: Functions `isTokenValid()` and `getTokenPermissions()` do not exist, it was in order for all to understand the example.
 
 
+## **2** - controller
+
+Each controller must implement the [driver.Controller](https://godoc.org/git.xdrm.io/go/aicra/driver#Controller) interface.
+
+The `Get(response.Arguments) response.Response` method defines the controller implementation for the `GET` method. Other methods are `Post`, `Put`, and `Delete`. Each controller will be given the arguments according to the <u>api definition</u>.
+
+### example
+
+For instance here, we implement a simple **user** controller.
+
+```go
+package main
+
+import (
+	"git.xdrm.io/aicra/driver"
+	"git.xdrm.io/aicra/response"
+	"git.xdrm.io/aicra/err"
+)
+
+// for the API code to export our middle-ware
+func Export() driver.Controller { return new(UserController) }
+
+// mockup type to implement the driver.Controller interface
+type UserController interface{}
+
+func (ctl UserController) Get(args response.Arguments) response.Response {
+    res := response.New()
+    
+    // extract user ID argument
+    user_id, ok := args["user_id"].(float64)
+    if !ok {
+        res.Err = e.Failure
+        return *res
+    }
+    
+    // fetch user data
+    res.Set("user", getUserData(user_id))
+    return res
+}
+
+func (ctl UserController) Post(args response.Arguments) response.Response {
+    res := response.New()
+    
+    // extract user ID argument
+    username, ok := args["username"].(string)
+    password, ok1 := args["password"].(string)
+    
+    if !ok || !ok1 {
+        res.Err = e.Failure
+        return *res
+    }
+    
+    // store user data
+    res.Set("created", storeUser(username, password))
+    return res
+}
+```
+
+*Note*: Functions `getUserData(int) map[string]string` and `storeUser(string,string) bool` do not exist, it was in order for all to understand the example.
+
+
+
+
 # **V.** Type Checker
 
-Each type checker checks the parameter values according to the type given in the api definition.
+Each type checker checks http request extracted values according to the type given in the api definition.
 
-The default types below are available in the default package.
-To add a new type, just open the file `/build/api/Checker.php` and add an entry in the `switch` statement.
+The default types below are available in the `$GOPATH/src/git.xdrm.io/go/aicra/internal/checker/default`, they are loaded by default in any project. You can choose not to load them by settings `types`.`default` to `false` in the project configuration. To add custom types you must implement the [driver.Checker](https://godoc.org/git.xdrm.io/go/aicra/driver#Checker) interface and export it in order for aicra to dynamically load it. 
 
 ## **1** - Default types
 
@@ -481,7 +413,6 @@ To add a new type, just open the file `/build/api/Checker.php` and add an entry 
 |`float`|`-10.2`, `23.5`|Any float|
 |`string`|`"Hello!"`|String that can be of any length (even empty)|
 |`digest(L)`|`"4612473aa81f93a878..."`|String with a length of  `L`, containing only hexadecimal lowercase characters.|
-|`mail`|`"a.b@c.def"`|Valid email address|
 |`array`|`[]`, `[1, "a"]`|Any array|
 |`bool`|`true`, `false`|Boolean|
 |`varchar(a,b)`|`"Hello!"`|String with a length between `a` and `b` (included)|
