@@ -30,18 +30,32 @@ The engine has been designed with the following concepts in mind.
 
 
 ### Table of contents
+
 <!-- toc -->
 
 - [I. Installation](#i-installation)
   * [1. Download and install the package](#1-download-and-install-the-package)
 - [II. Setup a project](#ii-setup-a-project)
-  * [1. Configuration](#1-configuration)
-  * [2. Controllers](#2-controllers)
-  * [3. Middlewares](#3-middlewares)
-  * [4. Custom types](#4-custom-types)
+  * [1. Compilation configuration](#1-compilation-configuration)
+      - [Example](#example)
+  * [2. API Configuration](#2-api-configuration)
+      - [Definition](#definition)
+    + [Input Arguments](#input-arguments)
+      - [1. Input types](#1-input-types)
+      - [2. Global Format](#2-global-format)
+      - [3. Example](#3-example)
+  * [3. Controllers](#3-controllers)
+      - [Plugin driver](#plugin-driver)
+      - [Generic driver](#generic-driver)
+  * [4. Middlewares](#4-middlewares)
+      - [Plugin driver](#plugin-driver-1)
+      - [Generic driver](#generic-driver-1)
+  * [5. Type checkers](#5-type-checkers)
+      - [Plugin driver](#plugin-driver-2)
+      - [Generic driver](#generic-driver-2)
 - [III. Build your project](#iii-build-your-project)
-- [IV. Main](#iv-main)
-- [V. Change Log](#v-change-log)
+  * [IV. Main](#iv-main)
+  * [V. Change Log](#v-change-log)
 
 <!-- tocstop -->
 
@@ -143,6 +157,8 @@ The whole project behavior is described inside the `api.json` file. For a better
   - default value
   - variable renaming
 
+
+
 ###### Definition
 
 At the root of the json file are available 5 field names :
@@ -168,6 +184,8 @@ For each method you will have to create fields described in the table above.
 
 ##### Input Arguments
 
+
+
 ###### 1. Input types
 
 Input arguments defines what data from the HTTP request the method needs. Aicra is able to extract 3 types of data :
@@ -188,6 +206,8 @@ The `in` field in each method contains as list of arguments where the key is the
 >
 > - The first **URI** data has to be named `URL#0`, the second one `URL#1` and so on...
 > - The variable named `somevar` in the **Query** has to be named `GET@somvar` in the configuration.
+
+
 
 **Example**
 
@@ -217,7 +237,7 @@ In this example we want 3 arguments :
 
 
 
-###### Example
+###### 3. Example
 
 In this example you can see a pretty basic user/article REST API definition. The API let's you fetch, create, edit, and delete users and do the same for their articles. Users actions will be available at the uri `/user`, and `/article` for articles.
 
@@ -325,11 +345,9 @@ A sample directory structure is available [here](https://git.xdrm.io/example/aic
 
 ### III. Build your project
 
-After each controller, middleware or type implementation, you'll have to compile the project. This can be achieved through the command-line builder.
+After each controller, middle-ware or type checker implementation, you'll have to compile the project. This can be achieved through the command-line builder.
 
 Usage is `aicra /path/to/your/project`.
-
-
 
 Usually you just have to run the following command inside your project directory :
 
@@ -355,17 +373,13 @@ import (
 
 func main() {
 
-    // 1. create the API from the configuration file
+    // load config
 	server, err := aicra.New("api.json")
-	if err != nil {
-		panic(err)
-	}
+	if err != nil { panic(err) }
 
-    // 2. listen to incoming http requests
+    // bind server
 	err = http.ListenAndServe("127.0.0.1:4242", server)
-	if err != nil {
-		panic(err)
-	}
+	if err != nil { panic(err) }
 
 }
 ```
@@ -385,7 +399,7 @@ func main() {
   - [x] application/json
 - [x] required vs. optional parameters with a default value
 - [x] parameter renaming
-- [ ] generic authentication system (*i.e. you can override the built-in one*)
+- [ ] ~~generic authentication system (*i.e. you can override the built-in one*)~~ Replaced by the middle-ware system
 - [x] generic type check (*i.e. implement custom types alongside built-in ones*)
 - [ ] built-in types
   - [x] `any` - wildcard matching all values
