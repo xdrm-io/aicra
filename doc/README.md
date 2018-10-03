@@ -116,7 +116,7 @@ The documentation consists of directions for how to compile and run the project 
     "driver": "<driver>",
     "types": {
         "default": true,
-		"folder": "<custom-types-folder>"        
+		"folder": "<custom-types-folder>"
     },
     "controllers": {
         "folder": "<controllers-folder"
@@ -130,7 +130,7 @@ The documentation consists of directions for how to compile and run the project 
 **Note**: The following fields are optional :
 
 - `types.default` is by default "types"
-- 
+-
 
 
 
@@ -316,7 +316,7 @@ func (tm TokenManager) Inspect(req http.Request, scope *[]string) {
     if !isTokenValid(token) {
         return
     }
-    
+
     scope = append(scope, getTokenPermissions(token)...)
 }
 ```
@@ -351,14 +351,14 @@ type UserController interface{}
 
 func (ctl UserController) Get(args response.Arguments) response.Response {
     res := response.New()
-    
+
     // extract user ID argument
     user_id, ok := args["user_id"].(float64)
     if !ok {
         res.Err = e.Failure
         return *res
     }
-    
+
     // fetch user data
     res.Set("user", getUserData(user_id))
     return res
@@ -366,16 +366,16 @@ func (ctl UserController) Get(args response.Arguments) response.Response {
 
 func (ctl UserController) Post(args response.Arguments) response.Response {
     res := response.New()
-    
+
     // extract user ID argument
     username, ok := args["username"].(string)
     password, ok1 := args["password"].(string)
-    
+
     if !ok || !ok1 {
         res.Err = e.Failure
         return *res
     }
-    
+
     // store user data
     res.Set("created", storeUser(username, password))
     return res
@@ -391,7 +391,7 @@ func (ctl UserController) Post(args response.Arguments) response.Response {
 
 Each type checker checks http request extracted values according to the type given in the api definition.
 
-The default types below are available in the `$GOPATH/src/git.xdrm.io/go/aicra/internal/checker/default`, they are loaded by default in any project. You can choose not to load them by settings `types`.`default` to `false` in the project configuration. To add custom types you must implement the [driver.Checker](https://godoc.org/git.xdrm.io/go/aicra/driver#Checker) interface and export it in order for aicra to dynamically load it. 
+The default types below are available in the `$GOPATH/src/git.xdrm.io/go/aicra/internal/checker/default`, they are loaded by default in any project. You can choose not to load them by settings `types`.`default` to `false` in the project configuration. To add custom types you must implement the [driver.Checker](https://godoc.org/git.xdrm.io/go/aicra/driver#Checker) interface and export it in order for aicra to dynamically load it.
 
 ## **1** - Default types
 

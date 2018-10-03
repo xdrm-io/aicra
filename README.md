@@ -108,7 +108,7 @@ A sample file can be found [here](https://git.xdrm.io/example/aicra/src/master/a
 
 ###### Example
 
-In this example we have the controllers inside the `controller` folder, the middle-wares in the `middleware` folder and custom type checkers inside the `checker` folder, we want to load the built-in type checkers and are using the `plugin` driver. Also our project root is the relative current path `.` ; note that it is better using an absolute path as your project root. 
+In this example we have the controllers inside the `controller` folder, the middle-wares in the `middleware` folder and custom type checkers inside the `checker` folder, we want to load the built-in type checkers and are using the `plugin` driver. Also our project root is the relative current path `.` ; note that it is better using an absolute path as your project root.
 
 ```json
 {
@@ -186,7 +186,7 @@ The `in` field in each method contains as list of arguments where the key is the
 
 > Variable names must be <u>prefixed</u> when requesting **URI** or **Query** input types.
 >
-> - The first **URI** data has to be named `URL#0`, the second one `URL#1` and so on... 
+> - The first **URI** data has to be named `URL#0`, the second one `URL#1` and so on...
 > - The variable named `somevar` in the **Query** has to be named `GET@somvar` in the configuration.
 
 **Example**
