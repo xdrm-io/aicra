@@ -23,8 +23,20 @@ func (path genericController) Get(d response.Arguments) response.Response {
 		return *res
 	}
 
+	// extract HTTP method
+	rawMethod, ok := d["_HTTP_METHOD_"]
+	if !ok {
+		res.Err = e.UncallableController
+		return *res
+	}
+	method, ok := rawMethod.(string)
+	if !ok {
+		res.Err = e.UncallableController
+		return *res
+	}
+
 	/* (2) Try to load command with <stdin> -> stdout */
-	cmd := exec.Command(string(path), string(stdin))
+	cmd := exec.Command(string(path), method, string(stdin))
 
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -126,7 +138,7 @@ type genericChecker string
 func (path genericChecker) Match(_type string) bool {
 
 	/* (1) Try to load command with <stdin> -> stdout */
-	cmd := exec.Command(string(path), _type)
+	cmd := exec.Command(string(path), "MATCH", _type)
 
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -151,7 +163,7 @@ func (path genericChecker) Check(_value interface{}) bool {
 	}
 
 	/* (2) Try to load command with <stdin> -> stdout */
-	cmd := exec.Command(string(path), string(stdin))
+	cmd := exec.Command(string(path), "CHECK", string(stdin))
 
 	stdout, err := cmd.Output()
 	if err != nil {
