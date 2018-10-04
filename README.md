@@ -245,10 +245,10 @@ In this example you can see a pretty basic user/article REST API definition. The
 
 #### 3. Controllers
 
-Controllers implement `Get`, `Post`, `Put`, and `Delete` methods, and have access to special variables surrounded by underscores :
+Controllers implement `Get`, `Post`, `Put`, and `Delete` methods, and have access to special variables injected in the argument list :
 
 - `_HTTP_METHOD_` the request's HTTP method in uppercase
-- `_SCOPE_` the scope filled by middlewares
+- `_SCOPE_` the scope filled by middle-wares
 - `_AUTHORIZATION_` the request's **Authorization** header
 
 
@@ -259,73 +259,148 @@ Also special variables found in the return data are processed with special actio
 
 
 
-###### Plugin driver
+##### 1. Plugin driver
 
 For each route, you'll have to place your implementation into the `controller` folder  (according to the *aicra.json* configuration)  following the naming convention : add `/main.go` at the end of the route.
 
-> <u>Example</u> - `/path/to/some/uri` will be inside `controller/path/to/some/uri/main.go`
-
-> <u>Exception</u> - `/` will be inside `controller/ROOT/main.go`
+> <u>Example</u> - the URI `/path/to/some/uri` is handled by the file `controller/path/to/some/uri/main.go`
+>
+> <u>Exception</u> - the URI `/` is handled by the file `controller/ROOT/main.go`
 
 A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/controller.plugin).
 
 
 
-Each controller must implement the `git.xdrm.io/go/aicra/driver.Controller` interface. In addition you must declare the function `func Export() Controller` to allow dynamic loading of your controller.
+Each controller must implement the [driver.Controller](https://godoc.org/git.xdrm.io/go/aicra/driver#Controller) interface. In addition you must declare the function `func Export() Controller` to allow dynamic loading of your controller.
 
-###### Generic driver
+**Example**
 
-This is the same as with the plugin driver but instead of without `/main.go` at the end.
+Here is a base code for any controllers
 
-> <u>Example</u> - `/path/to/some/uri` will be inside `controller/path/to/some/uri` where the **uri** file is an executable.
+```go
+package main
+import (
+	"git.xdrm.io/go/aicra/driver"
+	"git.xdrm.io/go/aicra/response"
+	e "git.xdrm.io/go/aicra/err"
+)
 
-> <u>Exception</u> - `/` will be inside `controller/ROOT`.
+// Mockup controller implementation
+type MyController interface{}
+func Export() driver.Controller { return new(MyController) }
+
+// GET method management
+func (c MyController) Get(args response.Arguments) response.Response {
+    res := response.New()
+   	res.Err = e.Success
+    return *res
+}
+
+// POST method management
+func (c MyController) Post(args response.Arguments) response.Response { /*...*/ }
+
+// PUT method management
+func (c MyController) Put(args response.Arguments) response.Response { /*...*/ }
+
+// DELETE method management
+func (c MyController) Delete(args response.Arguments) response.Response { /*...*/ }
+```
+
+
+
+##### 2. Generic driver
+
+This is the same as with the plugin driver but without `/main.go` at the end.
+
+> <u>Example</u> - The URI `/path/to/some/uri` will be handled by the executable `controller/path/to/some/uri`.
+
+> <u>Exception</u> - The URI `/` will be handled by the executable `controller/ROOT`.
 
 A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/controller.generic).
 
 
 
+The programs will be given useful data (*i.e. method and arguments*) through its input arguments :
+
+| Argument index | Description                                                  | Examble value                                                |
+| -------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 1              | Uppercase HTTP method.<br>(_e.g. **$1** in bash, **argv[1]** in php_) | `GET`, `POST`, ...                                           |
+| 2              | JSON representation of the input arguments.<br>(_e.g. **$2** in bash, **argv[2]** in php_) | `{`<br>   `"_SCOPE_": ["admin", "token"],`<br>   `"somstring": "string",`<br>   `"someint": 12`<br>`}` |
+
+The standard output you will give back must be a key-value JSON representation of all the output variables.
 
 
-#### 4. Middlewares
 
-In order for your project to manage authentication, the best solution is to create middlewares, there are programs that updates a *Scope* (*i.e. a list of strings*) according to internal or persistent (*i.e.* database) information and the actual http request. They are all run before each request is forwarded to your controller. The scope are used to match the `scope` field in the configuration file and automatically block non-authenticated requests. Scopes can also be used for implementation-specific behavior such as _CSRF_ management. Controllers have access to the scope through the variable `_SCOPE_`.
+#### 4. Middle-wares
+
+In order for your project to manage authentication, the best solution is to use middle-wares, there are programs that updates a *Scope* (*i.e. a list of strings*) according to internal or persistent (*i.e.* database) information and the actual http request. They are all run before each request is forwarded to your controller. The Scopes are used to match the `scope` field in the configuration file and automatically block access to non-authenticated method calls. Scopes can also be used for implementation-specific behavior such as _CSRF_ management. Controllers have access to the scope through the variable `_SCOPE_`.
 
 
 
-###### Plugin driver
+##### 1. Plugin driver
 
 Each middleware must be **directly** inside the `middleware` folder (according to the _aicra.json_ configuration).
 
 > Example - the `1-authentication` middleware will be inside `middleware/1-authentication/main.go`.
 
-**Note** - middleware execution will be ordered by name. Prefixing your middlewares with their order is a good practice.
+**Note** - middle-ware execution will be ordered by name. Prefixing your middle-wares with their order is a good practice.
 
 A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/middleware.plugin).
 
 
 
-Each middleware must implement the `git.xdrm.io/go/aicra/driver.Middleware` interface. In addition you must declare the function `func Export() Middleware` to allow dynamic loading of your middleware.
+Each middle-ware must implement the [driver.Middleware](https://godoc.org/git.xdrm.io/go/aicra/driver#Middleware) interface. In addition you must declare the function `func Export() Middleware` to allow dynamic loading of your middle-ware.
+
+**Example**
+
+Here is a base code for any middle-ware
+
+```go
+package main
+import (
+	"git.xdrm.io/go/aicra/driver"
+    "net/http"
+)
+
+// Mockup middle-ware implementation
+type MyMiddleware interface{}
+func Export() driver.Middleware { return new(MyMiddleware) }
+
+func (c MyMiddleware) Inspect(req http.Request, scope *[]string) {
+    // add scope according to request
+    if req.Header.Get("SomeHeader") {
+        *scope = append(*scope, "some-scope")
+    }
+}
+```
 
 
 
-###### Generic driver
+##### 2. Generic driver
 
 This is the same as with the plugin driver but instead of without `/main.go` at the end.
 
-> Example - the `1-authentication` middleware will be inside `middleware/1-authentication` where **1-authentication** is an executable
+> Example - the `1-authentication` middle-ware will be inside `middleware/1-authentication` where **1-authentication** is an executable
 
 A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/middleware.generic).
+
+The programs will be given useful data (*i.e. method and arguments*) through its input arguments :
+
+| Argument index | Description                                                  | Examble value |
+| -------------- | ------------------------------------------------------------ | ------------- |
+| 1              | JSON representation of the input arguments.<br>(_e.g. **$1** in bash, **argv[1]** in php_) | ???           |
+
+The standard output you will give back must be a JSON array containing the scope you want to add.
 
 
 
 #### 5. Type checkers
 
-In your configuration you will have to use built-in types (*e.g.* int, any, varchar), but if you want project-specific ones, you can add your own types inside the `type` folder. You can check what structure to follow by looking at the [built-in types](https://git.xdrm.io/go/aicra/src/master/internal/checker/default). Also it is not required that you use built-in types, you can ignore them by setting `types.default = false` in the _aicra.json_ configuration.
+In your configuration you can use built-in types (*e.g.* int, any, varchar, token, float, ...), but if you want project-specific ones, you can add your own types inside the `type` folder. You can check what structure to follow by looking at the [built-in types](https://git.xdrm.io/go/aicra/src/master/internal/checker/default). Also it is not required that you use built-in types, you can ignore them by setting `types.default = false` in the _aicra.json_ configuration.
 
-Each type must be **directly** inside the `type` folder. The package name is arbitrary and does not have to match the name (but it is better if it is explicit), because the `Match()` method already matches the name.
+Each type must be **directly** inside the `type` folder. The package name is arbitrary and does not have to match the name (but it is better if it is explicit), because the `Match()` method already does that.
 
-###### Plugin driver
+##### 1. Plugin driver
 
 Each type checker must be **directly** inside the `type` folder (according to the _aicra.json_ configuration).
 
@@ -333,13 +408,29 @@ Each type checker must be **directly** inside the `type` folder (according to th
 
 A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/type.plugin).
 
-###### Generic driver
+
+
+##### 2. Generic driver
 
 This is the same as with the plugin driver but instead of without `/main.go` at the end.
 
 > Example - the `number` type checker will be inside `type/number` where **number** is an executable
 
 A sample directory structure is available [here](https://git.xdrm.io/example/aicra/src/master/type.generic).
+
+
+
+The programs will be given useful data (*i.e. method and arguments*) through its input arguments :
+
+| Argument index | Description                                                  | Examble value      |
+| -------------- | ------------------------------------------------------------ | ------------------ |
+| 1              | Uppercase method.<br>(_e.g. **$1** in bash, **argv[1]** in php_) | `MATCH` or `CHECK` |
+| 2              | JSON representation of the input arguments.<br>(_e.g. **$2** in bash, **argv[2]** in php_) | ???                |
+
+The standard output you will give back must be a `1` or `0` representing `true` and `false`.
+
++ When calling the `MATCH` method, the input argument consists of a string being the type checker name, you must return `1` this name is handled by the current type checker.
++ When calling the `CHECK` method, the input argument consists of a JSON representation wrapped inside the key `value`. For instance it could be `{"value": [1,2,3]}` if the input value is an array containing 1, 2, and 3.
 
 
 
@@ -361,7 +452,7 @@ The output should look like
 
 #### IV. Main
 
-The main default program is pretty small as below :
+The main default program is pretty small as shown below :
 
 ```go
 package main
@@ -373,11 +464,11 @@ import (
 
 func main() {
 
-    // load config
+    // build from config
 	server, err := aicra.New("api.json")
 	if err != nil { panic(err) }
 
-    // bind server
+    // launch server
 	err = http.ListenAndServe("127.0.0.1:4242", server)
 	if err != nil { panic(err) }
 
