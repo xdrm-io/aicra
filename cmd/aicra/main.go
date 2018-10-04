@@ -13,6 +13,24 @@ var defaultTypeFolder = filepath.Join(os.Getenv("GOPATH"), "src/git.xdrm.io/go/a
 
 func main() {
 
+	// check argument
+	if len(os.Args) < 2 || len(os.Args[1]) < 1 {
+		fmt.Printf("missing argument: project path\n")
+		return
+	}
+
+	// get absolute path from arguments
+	root := os.Args[1]
+	rootStat, err := os.Stat(root)
+	if err != nil || !rootStat.IsDir() {
+		fmt.Printf("invalid argument: project path is invalid or not a directory\n")
+		return
+	}
+	if err := os.Chdir(root); err != nil {
+		fmt.Printf("invalid argument: cannot chdir to %s\n", root)
+		return
+	}
+
 	starttime := time.Now()
 
 	/* 1. Load config */
