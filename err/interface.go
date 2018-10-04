@@ -35,7 +35,7 @@ func (e Error) Error() string {
 
 }
 
-// MarshalJSON implements the json.Marshaler interface and is used
+// MarshalJSON implements the 'json.Marshaler' interface and is used
 // to generate the JSON representation of the error data
 func (e Error) MarshalJSON() ([]byte, error) {
 
