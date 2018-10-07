@@ -130,7 +130,7 @@ In this example we have the controllers inside the `controller` folder, the midd
 	"driver": "plugin",
 	"types": {
 		"default": true,
-		"folder": "type"
+		"folder": "checker"
 	},
 	"controllers": {
 		"folder": "controller.plugin"
@@ -231,6 +231,7 @@ In this example we want 3 arguments :
         "type": "?int",
         "name": "get-param"
     },
+    // arg 3
     "multipart-var": { /* ... */ }
 }
 ```
@@ -281,7 +282,7 @@ Here is a base code for any controllers
 package main
 import (
 	"git.xdrm.io/go/aicra/driver"
-	"git.xdrm.io/go/aicra/response"
+	"git.xdrm.io/go/aicra/api"
 	e "git.xdrm.io/go/aicra/err"
 )
 
@@ -290,20 +291,20 @@ type MyController interface{}
 func Export() driver.Controller { return new(MyController) }
 
 // GET method management
-func (c MyController) Get(args response.Arguments) response.Response {
-    res := response.New()
+func (c MyController) Get(args api.Arguments) api.Response {
+    res := api.NewResponse()
    	res.Err = e.Success
     return *res
 }
 
 // POST method management
-func (c MyController) Post(args response.Arguments) response.Response { /*...*/ }
+func (c MyController) Post(args api.Arguments) api.Response { /*...*/ }
 
 // PUT method management
-func (c MyController) Put(args response.Arguments) response.Response { /*...*/ }
+func (c MyController) Put(args api.Arguments) api.Response { /*...*/ }
 
 // DELETE method management
-func (c MyController) Delete(args response.Arguments) response.Response { /*...*/ }
+func (c MyController) Delete(args api.Arguments) api.Response { /*...*/ }
 ```
 
 
@@ -501,7 +502,7 @@ func main() {
   - [ ] `<a:b>` - map containing **only** keys of type `a` and values of type `b` (*a or b can be ommited*)
 - [x] generic controllers implementation (shared objects)
 - [x] response interface
-- [ ] devmode watcher : watch manifest, watch plugins to compile + hot reload them
+- [ ] ~~devmode watcher~~ : watch manifest, watch plugins to compile + hot reload them
 - [x] driver for Go plugins
   - [x] controllers
   - [x] middlewares
