@@ -2,8 +2,8 @@ package driver
 
 import (
 	"encoding/json"
+	"git.xdrm.io/go/aicra/api"
 	e "git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/response"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -12,9 +12,9 @@ import (
 // genericController is the mockup for returning a controller with as a string the path
 type genericController string
 
-func (path genericController) Get(d response.Arguments) response.Response {
+func (path genericController) Get(d api.Arguments) api.Response {
 
-	res := response.New()
+	res := api.NewResponse()
 
 	/* (1) Prepare stdin data */
 	stdin, err := json.Marshal(d)
@@ -79,13 +79,13 @@ func (path genericController) Get(d response.Arguments) response.Response {
 
 }
 
-func (path genericController) Post(d response.Arguments) response.Response {
+func (path genericController) Post(d api.Arguments) api.Response {
 	return path.Get(d)
 }
-func (path genericController) Put(d response.Arguments) response.Response {
+func (path genericController) Put(d api.Arguments) api.Response {
 	return path.Get(d)
 }
-func (path genericController) Delete(d response.Arguments) response.Response {
+func (path genericController) Delete(d api.Arguments) api.Response {
 	return path.Get(d)
 }
 

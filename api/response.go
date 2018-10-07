@@ -1,11 +1,11 @@
-package response
+package api
 
 import (
 	"git.xdrm.io/go/aicra/err"
 )
 
 // New creates an empty response
-func New() *Response {
+func NewResponse() *Response {
 	return &Response{
 		data: make(map[string]interface{}),
 		Err:  err.Success,

@@ -1,7 +1,7 @@
 package driver
 
 import (
-	"git.xdrm.io/go/aicra/response"
+	"git.xdrm.io/go/aicra/api"
 	"net/http"
 )
 
@@ -27,10 +27,10 @@ type Checker interface {
 // Controller is the interface that controller implementation must follow
 // it is used by the 'Import' driver
 type Controller interface {
-	Get(d response.Arguments) response.Response
-	Post(d response.Arguments) response.Response
-	Put(d response.Arguments) response.Response
-	Delete(d response.Arguments) response.Response
+	Get(d api.Arguments) api.Response
+	Post(d api.Arguments) api.Response
+	Put(d api.Arguments) api.Response
+	Delete(d api.Arguments) api.Response
 }
 
 // Middleware is the interface that middleware implementation must follow
