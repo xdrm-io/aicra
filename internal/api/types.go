@@ -2,7 +2,7 @@ package api
 
 /* (1) Configuration
 ---------------------------------------------------------*/
-
+// Parameter represents a parameter definition (from api.json)
 type Parameter struct {
 	Description string `json:"info"`
 	Type        string `json:"type"`
@@ -10,6 +10,8 @@ type Parameter struct {
 	Optional    bool
 	Default     *interface{} `json:"default"`
 }
+
+// Method represents a method definition (from api.json)
 type Method struct {
 	Description string                `json:"info"`
 	Permission  [][]string            `json:"scope"`
@@ -17,6 +19,7 @@ type Method struct {
 	Download    *bool                 `json:"download"`
 }
 
+// Controller represents a controller definition (from api.json)
 type Controller struct {
 	GET    *Method `json:"GET"`
 	POST   *Method `json:"POST"`

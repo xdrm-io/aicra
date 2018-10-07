@@ -5,7 +5,10 @@ import (
 	"git.xdrm.io/go/aicra/driver"
 )
 
+// ErrNoMatchingType is returned when the Match() method does not find any type checker
 var ErrNoMatchingType = errors.New("no matching type")
+
+// ErrDoesNotMatch is returned when the Check() method fails (invalid type value)
 var ErrDoesNotMatch = errors.New("does not match")
 
 // CreateRegistry creates an empty type registry

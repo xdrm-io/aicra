@@ -18,7 +18,7 @@ func (m *Method) CheckScope(scope middleware.Scope) bool {
 
 		for _, AND := range OR {
 
-			if !isPermInScope(AND, scope) {
+			if !scopeHasPermission(AND, scope) {
 				granted = false
 				break
 			}
@@ -35,8 +35,8 @@ func (m *Method) CheckScope(scope middleware.Scope) bool {
 	return false
 }
 
-// Returns whether @perm is present in @scope
-func isPermInScope(perm string, scope []string) bool {
+// scopeHasPermission returns whether @perm is present in a given @scope
+func scopeHasPermission(perm string, scope []string) bool {
 	for _, s := range scope {
 		if perm == s {
 			return true

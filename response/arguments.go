@@ -4,7 +4,11 @@ import (
 	"errors"
 )
 
+// ErrUnknownKey is returned when a key does not exist using a getter
 var ErrUnknownKey = errors.New("key does not exist")
+
+// ErrInvalidType is returned when a typed getter tries to get a value that cannot be
+// translated into the requested type
 var ErrInvalidType = errors.New("invalid type")
 
 // Has checks whether a key exists in the arguments
