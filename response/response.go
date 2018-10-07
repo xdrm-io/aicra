@@ -17,7 +17,7 @@ func (i *Response) Set(name string, value interface{}) {
 	i.data[name] = value
 }
 
-// Get gets a reponse field
+// Get gets a response field
 func (i *Response) Get(name string) interface{} {
 	value, _ := i.data[name]
 

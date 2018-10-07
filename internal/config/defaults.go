@@ -1,6 +1,6 @@
 package config
 
-// Default contains the default values when ommited in json
+// Default contains the default values when omitted in json
 var Default = Schema{
 	Root:       ".",
 	Host:       "0.0.0.0",

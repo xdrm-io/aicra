@@ -33,7 +33,7 @@ type Schema struct {
 	// - the type folder
 	// - whether to load the built-in types
 	//
-	// types are ommited if not set (no default)
+	// types are omitted if not set (no default)
 	Types *builder `json:"types,ommitempty"`
 
 	// Controllers defines :
