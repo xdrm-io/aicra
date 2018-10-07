@@ -2,14 +2,14 @@ package aicra
 
 import (
 	"errors"
+	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/api"
+	"git.xdrm.io/go/aicra/internal/apidef"
 	"git.xdrm.io/go/aicra/internal/checker"
 	"git.xdrm.io/go/aicra/internal/config"
 	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
-	"git.xdrm.io/go/aicra/response"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -21,7 +21,7 @@ import (
 // * its middlewares
 // * its controllers (api config)
 type Server struct {
-	controller *api.Controller     // controllers
+	controller *apidef.Controller  // controllers
 	checker    checker.Registry    // type checker registry
 	middleware middleware.Registry // middlewares
 	schema     *config.Schema
@@ -46,7 +46,7 @@ func New(_path string) (*Server, error) {
 	}
 
 	/* 3. Load configuration */
-	i.controller, err = api.Parse(_path)
+	i.controller, err = apidef.Parse(_path)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var ctlMethod func(response.Arguments) response.Response
+	var ctlMethod func(api.Arguments) api.Response
 	// select method
 	switch httpMethod {
 	case "GET":
@@ -214,7 +214,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 // extractParameters extracts parameters for the request and checks
 // every single one according to configuration options
-func (s *Server) extractParameters(req *apirequest.Request, methodParam map[string]*api.Parameter) (map[string]interface{}, e.Error) {
+func (s *Server) extractParameters(req *apirequest.Request, methodParam map[string]*apidef.Parameter) (map[string]interface{}, e.Error) {
 
 	// init vars
 	err := e.Success

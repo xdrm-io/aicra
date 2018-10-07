@@ -1,4 +1,4 @@
-package api
+package apidef
 
 import (
 	"git.xdrm.io/go/aicra/middleware"

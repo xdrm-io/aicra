@@ -1,4 +1,4 @@
-package api
+package apidef
 
 /* (1) Configuration
 ---------------------------------------------------------*/

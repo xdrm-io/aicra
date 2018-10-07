@@ -2,15 +2,15 @@ package aicra
 
 import (
 	"encoding/json"
+	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/api"
-	apirequest "git.xdrm.io/go/aicra/internal/request"
-	"git.xdrm.io/go/aicra/response"
+	"git.xdrm.io/go/aicra/internal/apidef"
+	apireq "git.xdrm.io/go/aicra/internal/request"
 	"log"
 	"net/http"
 )
 
-func (s *Server) matchController(req *apirequest.Request) *api.Controller {
+func (s *Server) matchController(req *apireq.Request) *apidef.Controller {
 
 	/* (1) Try to browse by URI */
 	pathi, ctl := s.controller.Browse(req.URI)
@@ -34,7 +34,7 @@ func httpRedirect(r http.ResponseWriter, loc string) {
 }
 
 // Prints an HTTP response
-func httpPrint(r http.ResponseWriter, res response.Response) {
+func httpPrint(r http.ResponseWriter, res api.Response) {
 	// get response data
 	formattedResponse := res.Dump()
 
