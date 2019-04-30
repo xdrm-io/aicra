@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"git.xdrm.io/go/aicra/driver"
 	"os"
 	"path/filepath"
+
+	"git.xdrm.io/go/aicra/driver"
 )
 
 // InferFromFolder fills the 'Map' by browsing recursively the

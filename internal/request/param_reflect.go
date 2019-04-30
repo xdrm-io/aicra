@@ -4,41 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 )
-
-// normaliseURI removes the trailing '/' to always
-// have the same Uri format for later processing
-func normaliseURI(uri string) string {
-
-	if len(uri) < 1 {
-		return uri
-	}
-
-	if uri[0] == '/' {
-		uri = uri[1:]
-	}
-
-	if len(uri) > 1 && uri[len(uri)-1] == '/' {
-		uri = uri[0 : len(uri)-1]
-	}
-
-	return uri
-}
-
-// nameInjection returns whether there is
-// a parameter name injection:
-// - inferred GET parameters
-// - inferred URL parameters
-func nameInjection(pName string) bool {
-	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
-}
-
-// validName returns whether a parameter name (without the GET@ or URL# prefix) is valid
-// if fails if the name begins/ends with underscores
-func validName(pName string) bool {
-	return strings.Trim(pName, "_") == pName
-}
 
 // parseParameter parses http GET/POST data
 // - []string

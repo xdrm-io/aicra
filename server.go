@@ -2,6 +2,11 @@ package aicra
 
 import (
 	"errors"
+	"log"
+	"net/http"
+	"path/filepath"
+	"strings"
+
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/driver"
 	e "git.xdrm.io/go/aicra/err"
@@ -10,10 +15,6 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 	apirequest "git.xdrm.io/go/aicra/internal/request"
 	"git.xdrm.io/go/aicra/middleware"
-	"log"
-	"net/http"
-	"path/filepath"
-	"strings"
 )
 
 // Server represents an AICRA instance featuring:
@@ -111,7 +112,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
 	/* (1) Build request */
-	apiRequest, err := apirequest.FromHTTP(req)
+	apiRequest, err := apirequest.New(req)
 	if err != nil {
 		log.Fatal(err)
 	}
