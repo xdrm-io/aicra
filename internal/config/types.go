@@ -1,50 +1,32 @@
 package config
 
-import (
-	"git.xdrm.io/go/aicra/driver"
-)
+import "net/http"
 
-type builder struct {
-	// Default tells whether or not to ignore the built-in components
-	Default bool `json:"default,ommitempty"`
+var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 
-	// Folder is used to infer the 'Map' object
-	Folder string `json:"folder,ommitempty"`
+// Service represents a service definition (from api.json)
+type Service struct {
+	GET    *Method `json:"GET"`
+	POST   *Method `json:"POST"`
+	PUT    *Method `json:"PUT"`
+	DELETE *Method `json:"DELETE"`
 
-	// Map defines the association path=>file
-	Map map[string]string
+	Children map[string]*Service `json:"/"`
 }
 
-// Schema represents an AICRA configuration (not the API, the server, drivers, etc)
-type Schema struct {
-	// Root is root of the project structure default is "." (current directory)
-	Root string `json:"root,ommitempty"`
+// Parameter represents a parameter definition (from api.json)
+type Parameter struct {
+	Description string `json:"info"`
+	Type        string `json:"type"`
+	Rename      string `json:"name,omitempty"`
+	Optional    bool
+	Default     *interface{} `json:"default"`
+}
 
-	// Host is the hostname to listen to (default is 0.0.0.0)
-	Host string `json:"host,ommitempty"`
-	// Port is the port to listen to (default is 80)
-	Port uint16 `json:"port,ommitempty"`
-
-	// DriverName is the driver used to load the controllers and middlewares
-	DriverName string `json:"driver"`
-	Driver     driver.Driver
-
-	// Types defines :
-	// - the type folder
-	// - whether to load the built-in types
-	//
-	// types are omitted if not set (no default)
-	Types *builder `json:"types,ommitempty"`
-
-	// Controllers defines :
-	// - the controller folder
-	//
-	// (default is .build/controller)
-	Controllers *builder `json:"controllers,ommitempty"`
-
-	// Middlewares defines :
-	// - the middleware folder
-	//
-	// (default is .build/middleware)
-	Middlewares *builder `json:"middlewares,ommitempty"`
+// Method represents a method definition (from api.json)
+type Method struct {
+	Description string                `json:"info"`
+	Permission  [][]string            `json:"scope"`
+	Parameters  map[string]*Parameter `json:"in"`
+	Download    *bool                 `json:"download"`
 }
