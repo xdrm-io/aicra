@@ -32,5 +32,9 @@ func (e *Error) SetArguments(arg0 interface{}, args ...interface{}) {
 
 // Implements 'error'
 func (e Error) Error() string {
-	return fmt.Sprintf("[%d] %s", e.Code, e.Reason)
+	if e.Arguments == nil || len(e.Arguments) < 1 {
+		return fmt.Sprintf("[%d] %s", e.Code, e.Reason)
+	}
+
+	return fmt.Sprintf("[%d] %s (%v)", e.Code, e.Reason, e.Arguments)
 }

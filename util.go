@@ -79,5 +79,5 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 
 // Prints an error as HTTP response
 func logError(res *api.Response) {
-	log.Printf("[http.fail] %v\n", res.Err)
+	log.Printf("[http.fail] %v\n", res)
 }

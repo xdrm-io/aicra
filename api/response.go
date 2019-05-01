@@ -13,7 +13,7 @@ type Response struct {
 	Data    ResponseData
 	Status  int
 	Headers http.Header
-	Err     Error
+	err     Error
 }
 
 // NewResponse creates an empty response. An optional error can be passed as its first argument.
@@ -21,24 +21,29 @@ func NewResponse(errors ...Error) *Response {
 	res := &Response{
 		Status:  http.StatusOK,
 		Data:    make(ResponseData),
-		Err:     ErrorFailure(),
+		err:     ErrorFailure(),
 		Headers: make(http.Header),
 	}
 
 	// optional error
 	if len(errors) == 1 {
-		res.Err = errors[0]
+		res.err = errors[0]
 	}
 
 	return res
 }
 
-// WrapError sets the error from a base error with error arguments.
-func (res *Response) WrapError(baseError Error, arguments ...interface{}) {
+// SetError sets the error from a base error with error arguments.
+func (res *Response) SetError(baseError Error, arguments ...interface{}) {
 	if len(arguments) > 0 {
 		baseError.SetArguments(arguments[0], arguments[1:])
 	}
-	res.Err = baseError
+	res.err = baseError
+}
+
+// Error implements the error interface and dispatches to internal error.
+func (res *Response) Error() string {
+	return res.err.Error()
 }
 
 // SetData adds/overrides a new response field
@@ -62,7 +67,7 @@ func (res *Response) MarshalJSON() ([]byte, error) {
 		fmt[k] = v
 	}
 
-	fmt["error"] = res.Err
+	fmt["error"] = res.err
 
 	return json.Marshal(fmt)
 }
