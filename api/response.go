@@ -36,7 +36,7 @@ func NewResponse(errors ...Error) *Response {
 // SetError sets the error from a base error with error arguments.
 func (res *Response) SetError(baseError Error, arguments ...interface{}) {
 	if len(arguments) > 0 {
-		baseError.SetArguments(arguments[0], arguments[1:])
+		baseError.SetArguments(arguments[0], arguments[1:]...)
 	}
 	res.err = baseError
 }
@@ -74,8 +74,8 @@ func (res *Response) MarshalJSON() ([]byte, error) {
 
 // Write writes to an HTTP response.
 func (res *Response) Write(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.WriteHeader(res.Status)
-	w.Header().Add("Content-Type", "application/json")
 
 	fmt, err := json.Marshal(res)
 	if err != nil {
