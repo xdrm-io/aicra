@@ -45,12 +45,6 @@ func New(configPath string) (*Server, error) {
 		return nil, err
 	}
 
-	/* 3. Load type registry */
-	// TODO: add methods on the checker to set types programmatically
-
-	/* 4. Load middleware registry */
-	// TODO: add methods to set them manually
-
 	return i, nil
 
 }
@@ -73,9 +67,9 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 	servicePath := strings.Join(apiRequest.URI[:pathIndex], "/")
 
-	// 3. check if matching method exists in config */
-	var method = serviceDef.Method(req.Method)
-	if method == nil {
+	// 3. check if matching methodDef exists in config */
+	var methodDef = serviceDef.Method(req.Method)
+	if methodDef == nil {
 		httpError(res, api.ErrorUnknownMethod())
 		return
 	}
@@ -85,7 +79,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
-	parameters, paramError := s.extractParameters(store, method.Parameters)
+	parameters, paramError := s.extractParameters(store, methodDef.Parameters)
 
 	// Fail if argument check failed
 	if paramError.Code != api.ErrorSuccess().Code {
@@ -121,6 +115,9 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	/* (6) Execute handler and return response
 	---------------------------------------------------------*/
+	// 1. feed request with configuration scope
+	apiRequest.Scope = methodDef.Permission
+
 	// 1. execute
 	apiResponse := api.NewResponse()
 	serviceHandler.Handle(*apiRequest, apiResponse)

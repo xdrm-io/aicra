@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-// RequestParam defines input parameters of an api request
-type RequestParam map[string]interface{}
-
 // Request represents an API request i.e. HTTP
 type Request struct {
 	// corresponds to the list of uri components
 	//  featured in the request URI
 	URI []string
+
+	// Scope from the configuration file of the current service
+	Scope [][]string
 
 	// original HTTP request
 	Request *http.Request
@@ -31,6 +31,7 @@ func NewRequest(req *http.Request) (*Request, error) {
 	// 3. Init request
 	inst := &Request{
 		URI:     uriparts,
+		Scope:   nil,
 		Request: req,
 		Param:   make(RequestParam),
 	}
