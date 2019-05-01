@@ -1,6 +1,7 @@
 package aicra
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -22,8 +23,10 @@ type Server struct {
 
 // New creates a framework instance from a configuration file
 func New(configPath string) (*Server, error) {
-
-	var err error
+	var (
+		err        error
+		configFile io.ReadCloser
+	)
 
 	// 1. init instance
 	var i = &Server{
@@ -33,7 +36,7 @@ func New(configPath string) (*Server, error) {
 	}
 
 	// 2. open config file
-	configFile, err := os.Open(configPath)
+	configFile, err = os.Open(configPath)
 	if err != nil {
 		return nil, err
 	}

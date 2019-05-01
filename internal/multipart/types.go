@@ -1,9 +1,5 @@
 package multipart
 
-import (
-	"bufio"
-)
-
 // ConstError is a wrapper to set constant errors
 type ConstError string
 
@@ -31,16 +27,4 @@ type Component struct {
 
 	// actual data
 	Data []byte
-}
-
-// Reader represents a multipart reader
-type Reader struct {
-	// reader used for http.Request.Body reading
-	reader *bufio.Reader
-
-	// boundary used to separate multipart MultipartDatas
-	boundary string
-
-	// result will be inside this field
-	Data map[string]*Component
 }

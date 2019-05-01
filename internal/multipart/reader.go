@@ -6,6 +6,18 @@ import (
 	"io"
 )
 
+// Reader is a multipart reader.
+type Reader struct {
+	// io.Reader used for http.Request.Body reading
+	reader *bufio.Reader
+
+	// boundary used to separate multipart MultipartDatas
+	boundary string
+
+	// result will be inside this field
+	Data map[string]*Component
+}
+
 // NewReader creates a new reader from a reader and a boundary.
 func NewReader(r io.Reader, boundary string) (*Reader, error) {
 	reader := &Reader{
@@ -21,7 +33,7 @@ func NewReader(r io.Reader, boundary string) (*Reader, error) {
 	}
 	reader.reader = dst
 
-	// 2. Place reader after the first boundary
+	// 2. "move" reader right after the first boundary
 	var err error
 	line := make([]byte, 0)
 
@@ -40,7 +52,7 @@ func NewReader(r io.Reader, boundary string) (*Reader, error) {
 // Parse parses the multipart components from the request
 func (reader *Reader) Parse() error {
 
-	/* (1) For each component (until boundary) */
+	// for each component (until boundary)
 	for {
 
 		comp := &Component{
