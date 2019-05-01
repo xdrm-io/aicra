@@ -1,8 +1,6 @@
 package builtin
 
-import (
-	"git.xdrm.io/go/aicra/internal/checker"
-)
+import "git.xdrm.io/go/aicra/typecheck"
 
 // Any is a permissive type checker
 type Any struct{}
@@ -13,7 +11,7 @@ func NewAny() *Any {
 }
 
 // Checker returns the checker function
-func (Any) Checker(typeName string) checker.Checker {
+func (Any) Checker(typeName string) typecheck.Checker {
 	// nothing if type not handled
 	if typeName != "any" {
 		return nil

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"git.xdrm.io/go/aicra/internal/checker"
+	"git.xdrm.io/go/aicra/typecheck"
 )
 
 var fixedLengthRegex = regexp.MustCompile(`^string\((\d+))$`)
@@ -19,7 +19,7 @@ func NewString() *String {
 }
 
 // Checker returns the checker function. Availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
-func (s String) Checker(typeName string) checker.Checker {
+func (s String) Checker(typeName string) typecheck.Checker {
 	isSimpleString := typeName == "string"
 	fixedLengthMatches := fixedLengthRegex.FindStringSubmatch(typeName)
 	variableLengthMatches := variableLengthRegex.FindStringSubmatch(typeName)

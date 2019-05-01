@@ -1,6 +1,6 @@
 package builtin
 
-import "git.xdrm.io/go/aicra/internal/checker"
+import "git.xdrm.io/go/aicra/typecheck"
 
 // Float64 checks if a value is a float64
 type Float64 struct{}
@@ -11,7 +11,7 @@ func NewFloat64() *Float64 {
 }
 
 // Checker returns the checker function
-func (Float64) Checker(typeName string) checker.Checker {
+func (Float64) Checker(typeName string) typecheck.Checker {
 	// nothing if type not handled
 	if typeName != "float64" && typeName != "float" {
 		return nil

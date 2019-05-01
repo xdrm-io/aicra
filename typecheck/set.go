@@ -1,4 +1,4 @@
-package checker
+package typecheck
 
 // Set of type checkers
 type Set struct {
@@ -35,9 +35,8 @@ func (s *Set) Run(typeName string, value interface{}) error {
 		// check value
 		if checkerFunc(value) {
 			return nil
-		} else {
-			return ErrDoesNotMatch
 		}
+		return ErrDoesNotMatch
 	}
 
 	return ErrNoMatchingType

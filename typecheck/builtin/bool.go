@@ -1,6 +1,6 @@
 package builtin
 
-import "git.xdrm.io/go/aicra/internal/checker"
+import "git.xdrm.io/go/aicra/typecheck"
 
 // Bool checks if a value is a boolean
 type Bool struct{}
@@ -11,7 +11,7 @@ func NewBool() *Bool {
 }
 
 // Checker returns the checker function
-func (Bool) Checker(typeName string) checker.Checker {
+func (Bool) Checker(typeName string) typecheck.Checker {
 	// nothing if type not handled
 	if typeName != "bool" {
 		return nil
