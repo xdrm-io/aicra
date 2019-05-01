@@ -23,7 +23,9 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 
 		// 2. fail if required & missing
 		if !isset && !param.Optional {
-			return nil, api.WrapError(api.ErrorMissingParam(), name)
+			apiErr := api.ErrorMissingParam()
+			apiErr.SetArguments(name)
+			return nil, apiErr
 		}
 
 		// 3. optional & missing: set default value
@@ -50,7 +52,9 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 		// 5. fail on unexpected multipart file
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
-			return nil, api.WrapError(api.ErrorInvalidParam(), param.Rename, "FILE")
+			apiErr := api.ErrorInvalidParam()
+			apiErr.SetArguments(param.Rename, "FILE")
+			return nil, apiErr
 		}
 
 		// 6. do not check if file
@@ -61,7 +65,9 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 
 		// 7. check type
 		if s.Checkers.Run(param.Type, p.Value) != nil {
-			return nil, api.WrapError(api.ErrorInvalidParam(), param.Rename, param.Type, p.Value)
+			apiErr := api.ErrorInvalidParam()
+			apiErr.SetArguments(param.Rename, param.Type, p.Value)
+			return nil, apiErr
 		}
 
 		parameters[param.Rename] = p.Value

@@ -112,13 +112,15 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// fail if found no handler
 	if serviceHandler == nil {
 		if serviceFound {
-			apiResponse := api.NewResponse(api.WrapError(api.ErrorUncallableMethod(), servicePath, req.Method))
+			apiResponse := api.NewResponse()
+			apiResponse.WrapError(api.ErrorUncallableMethod(), servicePath, req.Method)
 			apiResponse.Write(res)
 			logError(apiResponse)
 			return
 		}
 
-		apiResponse := api.NewResponse(api.WrapError(api.ErrorUncallableService(), servicePath))
+		apiResponse := api.NewResponse()
+		apiResponse.WrapError(api.ErrorUncallableService(), servicePath)
 		apiResponse.Write(res)
 		logError(apiResponse)
 		return

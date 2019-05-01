@@ -13,25 +13,20 @@ type Error struct {
 	Arguments []interface{} `json:"arguments"`
 }
 
-// WrapError returns a new error from a base error with errorarguments.
-func WrapError(baseError Error, arguments ...interface{}) Error {
-	for _, arg := range arguments {
-		baseError.Put(arg)
-	}
-	return baseError
-}
-
-// Put adds an argument to the error
+// SetArguments set one or multiple arguments to the error
 // to be displayed back to API caller
-func (e *Error) Put(arg interface{}) {
+func (e *Error) SetArguments(arg0 interface{}, args ...interface{}) {
 
-	/* (1) Make slice if not */
-	if e.Arguments == nil {
-		e.Arguments = make([]interface{}, 0)
+	// 1. clear arguments */
+	e.Arguments = make([]interface{}, 0)
+
+	// 2. add arg[0]
+	e.Arguments = append(e.Arguments, arg0)
+
+	// 3. add optional other arguments
+	for _, arg := range args {
+		e.Arguments = append(e.Arguments, arg)
 	}
-
-	/* (2) Append argument */
-	e.Arguments = append(e.Arguments, arg)
 
 }
 

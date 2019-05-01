@@ -33,38 +33,46 @@ func NewResponse(errors ...Error) *Response {
 	return res
 }
 
+// WrapError sets the error from a base error with error arguments.
+func (res *Response) WrapError(baseError Error, arguments ...interface{}) {
+	if len(arguments) > 0 {
+		baseError.SetArguments(arguments[0], arguments[1:])
+	}
+	res.Err = baseError
+}
+
 // SetData adds/overrides a new response field
-func (i *Response) SetData(name string, value interface{}) {
-	i.Data[name] = value
+func (res *Response) SetData(name string, value interface{}) {
+	res.Data[name] = value
 }
 
 // GetData gets a response field
-func (i *Response) GetData(name string) interface{} {
-	value, _ := i.Data[name]
+func (res *Response) GetData(name string) interface{} {
+	value, _ := res.Data[name]
 
 	return value
 }
 
 // MarshalJSON implements the 'json.Marshaler' interface and is used
 // to generate the JSON representation of the response
-func (i *Response) MarshalJSON() ([]byte, error) {
+func (res *Response) MarshalJSON() ([]byte, error) {
 	fmt := make(map[string]interface{})
 
-	for k, v := range i.Data {
+	for k, v := range res.Data {
 		fmt[k] = v
 	}
 
-	fmt["error"] = i.Err
+	fmt["error"] = res.Err
 
 	return json.Marshal(fmt)
 }
 
 // Write writes to an HTTP response.
-func (i *Response) Write(w http.ResponseWriter) error {
-	w.WriteHeader(i.Status)
+func (res *Response) Write(w http.ResponseWriter) error {
+	w.WriteHeader(res.Status)
 	w.Header().Add("Content-Type", "application/json")
 
-	fmt, err := json.Marshal(i)
+	fmt, err := json.Marshal(res)
 	if err != nil {
 		return err
 	}
