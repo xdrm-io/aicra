@@ -87,6 +87,7 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 
 // Prints an HTTP response
 func httpPrint(r http.ResponseWriter, res *api.Response) {
+	r.WriteHeader(res.Status)
 
 	// write this json
 	jsonResponse, _ := json.Marshal(res)

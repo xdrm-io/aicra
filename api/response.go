@@ -11,6 +11,7 @@ type ResponseData map[string]interface{}
 // Response represents an API response to be sent
 type Response struct {
 	Data    ResponseData
+	Status  int
 	Headers http.Header
 	Err     Error
 }
@@ -18,8 +19,10 @@ type Response struct {
 // NewResponse creates an empty response
 func NewResponse() *Response {
 	return &Response{
-		Data: make(ResponseData),
-		Err:  ErrorFailure(),
+		Status:  http.StatusOK,
+		Data:    make(ResponseData),
+		Err:     ErrorFailure(),
+		Headers: make(http.Header),
 	}
 }
 
