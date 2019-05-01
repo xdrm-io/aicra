@@ -1,30 +1,31 @@
-package request
+package reqdata
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"strings"
 
 	"git.xdrm.io/go/aicra/internal/multipart"
+
+	"net/http"
+	"strings"
 )
 
-// DataSet represents all data that can be caught:
+// Store represents all data that can be caught:
 // - URI (guessed from the URI by removing the controller path)
 // - GET (default url data)
 // - POST (from json, form-data, url-encoded)
-type DataSet struct {
+type Store struct {
 
 	// ordered values from the URI
 	//  catches all after the controller path
 	//
-	// points to DataSet.Data
+	// points to Store.Data
 	URI []*Parameter
 
 	// uri parameters following the QUERY format
 	//
-	// points to DataSet.Data
+	// points to Store.Data
 	Get map[string]*Parameter
 
 	// form data depending on the Content-Type:
@@ -32,7 +33,7 @@ type DataSet struct {
 	//  'application/x-www-form-urlencoded' => standard parameters as QUERY parameters
 	//  'multipart/form-data'               => parse form-data format
 	//
-	// points to DataSet.Data
+	// points to Store.Data
 	Form map[string]*Parameter
 
 	// contains URL+GET+FORM data with prefixes:
@@ -42,37 +43,33 @@ type DataSet struct {
 	Set map[string]*Parameter
 }
 
-// NewDataset creates an empty request dataset
-func NewDataset() *DataSet {
-	return &DataSet{
+// New creates a new store from an http request.
+func New(req *http.Request) *Store {
+	ds := &Store{
 		URI:  make([]*Parameter, 0),
 		Get:  make(map[string]*Parameter),
 		Form: make(map[string]*Parameter),
 		Set:  make(map[string]*Parameter),
 	}
-}
+	// 1. GET (query) data
+	ds.fetchGet(req)
 
-// Build builds a 'DataSet' from an http request
-func (i *DataSet) Build(req *http.Request) {
-
-	/* (1) GET (query) data */
-	i.fetchGet(req)
-
-	/* (2) We are done if GET method */
-	if req.Method == "GET" {
-		return
+	// 2. We are done if GET method
+	if req.Method == http.MethodGet {
+		return ds
 	}
 
-	/* (3) POST (body) data */
-	i.fetchForm(req)
+	// 2. POST (body) data
+	ds.fetchForm(req)
 
+	return ds
 }
 
-// SetURI stores URL data and fills 'Set'
+// SetURIParameters stores URL orderedURIParams and fills 'Set'
 // with creating pointers inside 'Url'
-func (i *DataSet) SetURI(data []string) {
+func (i *Store) SetURIParameters(orderedUParams []string) {
 
-	for index, value := range data {
+	for index, value := range orderedUParams {
 
 		// create set index
 		setindex := fmt.Sprintf("URL#%d", index)
@@ -91,7 +88,7 @@ func (i *DataSet) SetURI(data []string) {
 }
 
 // fetchGet stores data from the QUERY (in url parameters)
-func (i *DataSet) fetchGet(req *http.Request) {
+func (i *Store) fetchGet(req *http.Request) {
 
 	for name, value := range req.URL.Query() {
 
@@ -128,7 +125,7 @@ func (i *DataSet) fetchGet(req *http.Request) {
 // - parse 'form-data' if not supported (not POST requests)
 // - parse 'x-www-form-urlencoded'
 // - parse 'application/json'
-func (i *DataSet) fetchForm(req *http.Request) {
+func (i *Store) fetchForm(req *http.Request) {
 
 	contentType := req.Header.Get("Content-Type")
 
@@ -155,7 +152,7 @@ func (i *DataSet) fetchForm(req *http.Request) {
 
 // parseJSON parses JSON from the request body inside 'Form'
 // and 'Set'
-func (i *DataSet) parseJSON(req *http.Request) {
+func (i *Store) parseJSON(req *http.Request) {
 
 	parsed := make(map[string]interface{}, 0)
 
@@ -197,7 +194,7 @@ func (i *DataSet) parseJSON(req *http.Request) {
 
 // parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
-func (i *DataSet) parseUrlencoded(req *http.Request) {
+func (i *Store) parseUrlencoded(req *http.Request) {
 
 	// use http.Request interface
 	if err := req.ParseForm(); err != nil {
@@ -233,7 +230,7 @@ func (i *DataSet) parseUrlencoded(req *http.Request) {
 
 // parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func (i *DataSet) parseMultipart(req *http.Request) {
+func (i *Store) parseMultipart(req *http.Request) {
 
 	/* (1) Create reader */
 	boundary := req.Header.Get("Content-Type")[len("multipart/form-data; boundary="):]

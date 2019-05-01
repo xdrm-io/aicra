@@ -1,106 +1,55 @@
 package aicra
 
 import (
-	"errors"
 	"log"
 	"net/http"
-	"path/filepath"
+	"os"
 	"strings"
 
 	"git.xdrm.io/go/aicra/api"
-	"git.xdrm.io/go/aicra/driver"
-	e "git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/apidef"
-	"git.xdrm.io/go/aicra/internal/checker"
+
 	"git.xdrm.io/go/aicra/internal/config"
-	apirequest "git.xdrm.io/go/aicra/internal/request"
-	"git.xdrm.io/go/aicra/middleware"
+	"git.xdrm.io/go/aicra/internal/reqdata"
+	checker "git.xdrm.io/go/aicra/typecheck"
 )
 
-// Server represents an AICRA instance featuring:
-// * its type checkers
-// * its middlewares
-// * its controllers (api config)
+// Server represents an AICRA instance featuring: type checkers, services
 type Server struct {
-	controller *apidef.Controller  // controllers
-	checker    checker.Registry    // type checker registry
-	middleware middleware.Registry // middlewares
-	schema     *config.Schema
+	services *config.Service
+	checkers *checker.Set
+	handlers []*api.Handler
 }
 
 // New creates a framework instance from a configuration file
-// _path is the json configuration path
-// _driver is used to load/run the controllers and middlewares (default: )
-//
-func New(_path string) (*Server, error) {
+func New(configPath string) (*Server, error) {
 
-	/* 1. Load config */
-	schema, err := config.Parse("./aicra.json")
-	if err != nil {
-		return nil, err
-	}
+	var err error
 
-	/* 2. Init instance */
+	// 1. init instance
 	var i = &Server{
-		controller: nil,
-		schema:     schema,
+		services: nil,
+		checkers: checker.New(),
+		handlers: make([]*api.Handler, 0),
 	}
 
-	/* 3. Load configuration */
-	i.controller, err = apidef.Parse(_path)
+	// 2. open config file
+	configFile, err := os.Open(configPath)
+	if err != nil {
+		return nil, err
+	}
+	defer configFile.Close()
+
+	// 3. load configuration
+	i.services, err = config.Parse(configFile)
 	if err != nil {
 		return nil, err
 	}
 
-	/* 4. Load type registry */
-	i.checker = checker.CreateRegistry()
+	/* 3. Load type registry */
+	// TODO: add methods on the checker to set types programmatically
 
-	// add default types if set
-	if schema.Types.Default {
-
-		// driver is Plugin for defaults (even if generic for the controllers etc)
-		defaultTypesDriver := new(driver.Plugin)
-		files, err := filepath.Glob(filepath.Join(schema.Root, ".build/DEFAULT_TYPES/*.so"))
-		if err != nil {
-			return nil, errors.New("cannot load default types")
-		}
-		for _, path := range files {
-
-			name := strings.TrimSuffix(filepath.Base(path), ".so")
-
-			mwFunc, err := defaultTypesDriver.LoadChecker(path)
-			if err != nil {
-				log.Printf("cannot load default type checker '%s' | %s", name, err)
-			}
-			i.checker.Add(name, mwFunc)
-
-		}
-	}
-
-	// add custom types
-	for name, path := range schema.Types.Map {
-
-		fullpath := schema.Driver.Build(schema.Root, schema.Types.Folder, path)
-		mwFunc, err := schema.Driver.LoadChecker(fullpath)
-		if err != nil {
-			log.Printf("cannot load type checker '%s' | %s", name, err)
-		}
-		i.checker.Add(path, mwFunc)
-
-	}
-
-	/* 5. Load middleware registry */
-	i.middleware = middleware.CreateRegistry()
-	for name, path := range schema.Middlewares.Map {
-
-		fullpath := schema.Driver.Build(schema.Root, schema.Middlewares.Folder, path)
-		mwFunc, err := schema.Driver.LoadMiddleware(fullpath)
-		if err != nil {
-			log.Printf("cannot load middleware '%s' | %s", name, err)
-		}
-		i.middleware.Add(path, mwFunc)
-
-	}
+	/* 4. Load middleware registry */
+	// TODO: add methods to set them manually
 
 	return i, nil
 
@@ -111,179 +60,91 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	defer req.Body.Close()
 
-	/* (1) Build request */
-	apiRequest, err := apirequest.New(req)
+	// 1. build API request from HTTP request
+	apiRequest, err := api.NewRequest(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	/* (2) Launch middlewares to build the scope */
-	scope := s.middleware.Run(*req)
-
-	/* (3) Find a matching controller */
-	controller := s.matchController(apiRequest)
-	if controller == nil {
+	// 2. find a matching service for this path in the config
+	serviceDef, pathIndex := s.services.Browse(apiRequest.URI)
+	if serviceDef == nil {
 		return
 	}
+	servicePath := strings.Join(apiRequest.URI[:pathIndex], "/")
 
-	/* (4) Check if matching method exists */
-	var method = controller.Method(req.Method)
-
+	// 3. check if matching method exists in config */
+	var method = serviceDef.Method(req.Method)
 	if method == nil {
-		httpError(res, e.UnknownMethod)
+		httpError(res, api.ErrorUnknownMethod())
 		return
 	}
 
-	/* (5) Check scope permissions */
-	if !method.CheckScope(scope) {
-		httpError(res, e.Permission)
-		return
-	}
+	// 4. parse every input data from the request
+	store := reqdata.New(req)
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
-	parameters, paramError := s.extractParameters(apiRequest, method.Parameters)
+	parameters, paramError := s.extractParameters(store, method.Parameters)
 
 	// Fail if argument check failed
-	if paramError.Code != e.Success.Code {
+	if paramError.Code != api.ErrorSuccess().Code {
 		httpError(res, paramError)
 		return
 	}
 
-	/* (5) Load controller
+	apiRequest.Param = parameters
+
+	/* (5) Search a matching handler
 	---------------------------------------------------------*/
-	// get paths
-	ctlBuildPath := strings.Join(apiRequest.Path, "/")
-	ctlBuildPath = s.schema.Driver.Build(s.schema.Root, s.schema.Controllers.Folder, ctlBuildPath)
+	var serviceHandler *api.Handler
+	var serviceFound bool
 
-	// get controller
-	ctlObject, err := s.schema.Driver.LoadController(ctlBuildPath)
-	httpMethod := strings.ToUpper(req.Method)
-	if err != nil {
-		httpErr := e.UncallableController
-		httpErr.Put(err)
-		httpError(res, httpErr)
-		log.Printf("err( %s )\n", err)
-		return
-	}
-
-	var ctlMethod func(api.Arguments) api.Response
-	// select method
-	switch httpMethod {
-	case "GET":
-		ctlMethod = ctlObject.Get
-	case "POST":
-		ctlMethod = ctlObject.Post
-	case "PUT":
-		ctlMethod = ctlObject.Put
-	case "DELETE":
-		ctlMethod = ctlObject.Delete
-	default:
-		httpError(res, e.UnknownMethod)
-		return
-	}
-
-	/* (6) Execute and get response
-	---------------------------------------------------------*/
-	/* (1) Give HTTP METHOD */
-	parameters["_HTTP_METHOD_"] = httpMethod
-
-	/* (2) Give Authorization header into controller */
-	parameters["_AUTHORIZATION_"] = req.Header.Get("Authorization")
-
-	/* (3) Give Scope into controller */
-	parameters["_SCOPE_"] = scope
-
-	/* (4) Execute */
-	response := ctlMethod(parameters)
-
-	/* (5) Extract http headers */
-	for k, v := range response.Dump() {
-		if k == "_REDIRECT_" {
-			if newLocation, ok := v.(string); ok {
-				httpRedirect(res, newLocation)
+	for _, handler := range s.handlers {
+		if handler.GetPath() == servicePath {
+			serviceFound = true
+			if handler.GetMethod() == req.Method {
+				serviceHandler = handler
 			}
-			continue
 		}
 	}
 
-	/* (5) Build JSON response */
-	httpPrint(res, response)
+	// fail if found no handler
+	if serviceHandler == nil {
+		if serviceFound {
+			httpError(res, api.ErrorUnknownMethod())
+			return
+		}
+		httpError(res, api.ErrorUnknownService())
+		return
+	}
+
+	/* (6) Execute handler and return response
+	---------------------------------------------------------*/
+	// 1. execute
+	apiResponse := api.NewResponse()
+	serviceHandler.Handle(*apiRequest, apiResponse)
+
+	// 2. apply headers
+	for key, values := range apiResponse.Headers {
+		for _, value := range values {
+			res.Header().Add(key, value)
+		}
+	}
+
+	// 3. build JSON apiResponse
+	httpPrint(res, apiResponse)
 	return
 
 }
 
-// extractParameters extracts parameters for the request and checks
-// every single one according to configuration options
-func (s *Server) extractParameters(req *apirequest.Request, methodParam map[string]*apidef.Parameter) (map[string]interface{}, e.Error) {
+// HandleFunc sets a new handler for an HTTP method to a path
+func (s *Server) HandleFunc(httpMethod, path string, handlerFunc api.HandlerFunc) {
+	handler := api.NewHandler(httpMethod, path, handlerFunc)
+	s.handlers = append(s.handlers, handler)
+}
 
-	// init vars
-	err := e.Success
-	parameters := make(map[string]interface{})
-
-	// for each param of the config
-	for name, param := range methodParam {
-
-		/* (1) Extract value */
-		p, isset := req.Data.Set[name]
-
-		/* (2) Required & missing */
-		if !isset && !param.Optional {
-			err = e.MissingParam
-			err.Put(name)
-			return nil, err
-		}
-
-		/* (3) Optional & missing: set default value */
-		if !isset {
-			p = &apirequest.Parameter{
-				Parsed: true,
-				File:   param.Type == "FILE",
-				Value:  nil,
-			}
-			if param.Default != nil {
-				p.Value = *param.Default
-			}
-
-			// we are done
-			parameters[param.Rename] = p.Value
-			continue
-		}
-
-		/* (4) Parse parameter if not file */
-		if !p.File {
-			p.Parse()
-		}
-
-		/* (5) Fail on unexpected multipart file */
-		waitFile, gotFile := param.Type == "FILE", p.File
-		if gotFile && !waitFile || !gotFile && waitFile {
-			err = e.InvalidParam
-			err.Put(param.Rename)
-			err.Put("FILE")
-			return nil, err
-		}
-
-		/* (6) Do not check if file */
-		if gotFile {
-			parameters[param.Rename] = p.Value
-			continue
-		}
-
-		/* (7) Check type */
-		if s.checker.Run(param.Type, p.Value) != nil {
-
-			err = e.InvalidParam
-			err.Put(param.Rename)
-			err.Put(param.Type)
-			err.Put(p.Value)
-			break
-
-		}
-
-		parameters[param.Rename] = p.Value
-
-	}
-
-	return parameters, err
+// Handle sets a new handler
+func (s *Server) Handle(handler *api.Handler) {
+	s.handlers = append(s.handlers, handler)
 }

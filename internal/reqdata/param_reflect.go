@@ -1,4 +1,4 @@
-package request
+package reqdata
 
 import (
 	"encoding/json"

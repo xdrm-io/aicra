@@ -1,39 +1,39 @@
-package request
+package api
 
 import (
 	"net/http"
 	"strings"
 )
 
+// RequestParam defines input parameters of an api request
+type RequestParam map[string]interface{}
+
 // Request represents an API request i.e. HTTP
 type Request struct {
 	// corresponds to the list of uri components
-	//  featuring in the request URI
+	//  featured in the request URI
 	URI []string
 
-	// controller path (portion of 'Uri')
-	Path []string
+	// original HTTP request
+	Request *http.Request
 
-	// contains all data from URL, GET, and FORM
-	Data *DataSet
+	// input parameters
+	Param RequestParam
 }
 
-// New builds an interface request from a http.Request
-func New(req *http.Request) (*Request, error) {
+// NewRequest builds an interface request from a http.Request
+func NewRequest(req *http.Request) (*Request, error) {
 
-	/* (1) Get useful data */
+	// 1. get useful data
 	uri := normaliseURI(req.URL.Path)
 	uriparts := strings.Split(uri, "/")
 
-	/* (2) Init request */
+	// 3. Init request
 	inst := &Request{
-		URI:  uriparts,
-		Path: make([]string, 0, len(uriparts)),
-		Data: NewDataset(),
+		URI:     uriparts,
+		Request: req,
+		Param:   make(RequestParam),
 	}
-
-	/* (3) Build dataset */
-	inst.Data.Build(req)
 
 	return inst, nil
 }

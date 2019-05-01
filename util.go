@@ -4,59 +4,111 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"git.xdrm.io/go/aicra/api"
-	"git.xdrm.io/go/aicra/err"
-	"git.xdrm.io/go/aicra/internal/apidef"
-	apireq "git.xdrm.io/go/aicra/internal/request"
+	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
-func (s *Server) matchController(req *apireq.Request) *apidef.Controller {
+func (s *Server) findServiceDef(req *api.Request) (serviceDef *config.Service, servicePath string) {
 
-	/* (1) Try to browse by URI */
-	pathi, ctl := s.controller.Browse(req.URI)
+	// 1. try to find definition
+	serviceDef, pathi := s.services.Browse(req.URI)
 
-	/* (2) Set controller uri */
-	req.Path = make([]string, 0, pathi)
-	req.Path = append(req.Path, req.URI[:pathi]...)
+	// 2. set service uri
+	servicePath = strings.Join(req.URI[:pathi], "/")
 
-	/* (3) Extract & store URI params */
-	req.Data.SetURI(req.URI[pathi:])
-
-	/* (4) Return controller */
-	return ctl
-
+	return
 }
 
-// Redirects to another location (http protocol)
-func httpRedirect(r http.ResponseWriter, loc string) {
-	r.Header().Add("Location", loc)
-	r.WriteHeader(308) // permanent redirect
+// extractParameters extracts parameters for the request and checks
+// every single one according to configuration options
+func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]*config.Parameter) (map[string]interface{}, api.Error) {
+
+	// init vars
+	apiError := api.ErrorSuccess()
+	parameters := make(map[string]interface{})
+
+	// for each param of the config
+	for name, param := range methodParam {
+
+		/* (1) Extract value */
+		p, isset := store.Set[name]
+
+		/* (2) Required & missing */
+		if !isset && !param.Optional {
+			apiError = api.ErrorMissingParam()
+			apiError.Put(name)
+			return nil, apiError
+		}
+
+		/* (3) Optional & missing: set default value */
+		if !isset {
+			p = &reqdata.Parameter{
+				Parsed: true,
+				File:   param.Type == "FILE",
+				Value:  nil,
+			}
+			if param.Default != nil {
+				p.Value = *param.Default
+			}
+
+			// we are done
+			parameters[param.Rename] = p.Value
+			continue
+		}
+
+		/* (4) Parse parameter if not file */
+		if !p.File {
+			p.Parse()
+		}
+
+		/* (5) Fail on unexpected multipart file */
+		waitFile, gotFile := param.Type == "FILE", p.File
+		if gotFile && !waitFile || !gotFile && waitFile {
+			apiError = api.ErrorInvalidParam()
+			apiError.Put(param.Rename)
+			apiError.Put("FILE")
+			return nil, apiError
+		}
+
+		/* (6) Do not check if file */
+		if gotFile {
+			parameters[param.Rename] = p.Value
+			continue
+		}
+
+		/* (7) Check type */
+		if s.checkers.Run(param.Type, p.Value) != nil {
+
+			apiError = api.ErrorInvalidParam()
+			apiError.Put(param.Rename)
+			apiError.Put(param.Type)
+			apiError.Put(p.Value)
+			break
+
+		}
+
+		parameters[param.Rename] = p.Value
+
+	}
+
+	return parameters, apiError
 }
 
 // Prints an HTTP response
-func httpPrint(r http.ResponseWriter, res api.Response) {
-	// get response data
-	formattedResponse := res.Dump()
-
-	// add error fields
-	formattedResponse["error"] = res.Err.Code
-	formattedResponse["reason"] = res.Err.Reason
-
-	// add arguments if any
-	if res.Err.Arguments != nil && len(res.Err.Arguments) > 0 {
-		formattedResponse["args"] = res.Err.Arguments
-	}
+func httpPrint(r http.ResponseWriter, res *api.Response) {
 
 	// write this json
-	jsonResponse, _ := json.Marshal(formattedResponse)
+	jsonResponse, _ := json.Marshal(res)
 	r.Header().Add("Content-Type", "application/json")
 	r.Write(jsonResponse)
 }
 
 // Prints an error as HTTP response
-func httpError(r http.ResponseWriter, e err.Error) {
-	JSON, _ := e.MarshalJSON()
+func httpError(r http.ResponseWriter, e api.Error) {
+	JSON, _ := json.Marshal(e)
 	r.Header().Add("Content-Type", "application/json")
 	r.Write(JSON)
 	log.Printf("[http.fail] %s\n", e.Reason)

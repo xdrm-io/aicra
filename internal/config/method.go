@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 	"strings"
-
-	"git.xdrm.io/go/aicra/middleware"
 )
 
 // checkAndFormat checks for errors and missing fields and sets default values for optional fields.
@@ -82,29 +80,6 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 	}
 
 	return nil
-}
-
-// CheckScope returns whether a given scope matches the method configuration.
-// The scope format is: `[ [a,b], [c], [d,e] ]` where the first level is a bitwise `OR` and the second a bitwise `AND`
-func (methodDef *Method) CheckScope(scope middleware.Scope) bool {
-
-	for _, OR := range methodDef.Permission {
-		granted := true
-
-		for _, AND := range OR {
-			if !scopeHasPermission(AND, scope) {
-				granted = false
-				break
-			}
-		}
-
-		// if one is valid -> grant
-		if granted {
-			return true
-		}
-	}
-
-	return false
 }
 
 // scopeHasPermission returns whether the permission fulfills a given scope

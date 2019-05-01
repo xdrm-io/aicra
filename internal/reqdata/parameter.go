@@ -1,4 +1,4 @@
-package request
+package reqdata
 
 // Parameter represents an http request parameter
 // that can be of type URL, GET, or FORM (multipart, json, urlencoded)

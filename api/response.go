@@ -1,30 +1,47 @@
 package api
 
 import (
-	"git.xdrm.io/go/aicra/err"
+	"encoding/json"
+	"net/http"
 )
 
-// New creates an empty response
+// ResponseData defines format for response parameters to return
+type ResponseData map[string]interface{}
+
+// Response represents an API response to be sent
+type Response struct {
+	Data    ResponseData
+	Headers http.Header
+	Err     Error
+}
+
+// NewResponse creates an empty response
 func NewResponse() *Response {
 	return &Response{
-		data: make(map[string]interface{}),
-		Err:  err.Success,
+		Data: make(ResponseData),
+		Err:  ErrorFailure(),
 	}
 }
 
-// Set adds/overrides a new response field
-func (i *Response) Set(name string, value interface{}) {
-	i.data[name] = value
+// SetData adds/overrides a new response field
+func (i *Response) SetData(name string, value interface{}) {
+	i.Data[name] = value
 }
 
-// Get gets a response field
-func (i *Response) Get(name string) interface{} {
-	value, _ := i.data[name]
+// GetData gets a response field
+func (i *Response) GetData(name string) interface{} {
+	value, _ := i.Data[name]
 
 	return value
 }
 
-// Dump gets all key/value pairs
-func (i *Response) Dump() map[string]interface{} {
-	return i.data
+type jsonResponse struct {
+	Error
+	ResponseData
+}
+
+// MarshalJSON implements the 'json.Marshaler' interface and is used
+// to generate the JSON representation of the response
+func (i *Response) MarshalJSON() ([]byte, error) {
+	return json.Marshal(jsonResponse{i.Err, i.Data})
 }
