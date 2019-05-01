@@ -8,9 +8,9 @@ import (
 // These are used by the controllers to set the *execution status*
 // directly into the response as JSON alongside response output fields.
 type Error struct {
-	Code      int           `json:"error"`
+	Code      int           `json:"code"`
 	Reason    string        `json:"reason"`
-	Arguments []interface{} `json:"error_args"`
+	Arguments []interface{} `json:"arguments"`
 }
 
 // Put adds an argument to the error

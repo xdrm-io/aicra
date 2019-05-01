@@ -1,6 +1,11 @@
 package builtin
 
-import "git.xdrm.io/go/aicra/typecheck"
+import (
+	"log"
+	"strconv"
+
+	"git.xdrm.io/go/aicra/typecheck"
+)
 
 // Float64 checks if a value is a float64
 type Float64 struct{}
@@ -17,7 +22,24 @@ func (Float64) Checker(typeName string) typecheck.Checker {
 		return nil
 	}
 	return func(value interface{}) bool {
-		_, isFloat64 := value.(bool)
-		return isFloat64
+		strVal, isString := value.(string)
+		_, isFloat64 := value.(float64)
+
+		log.Printf("1")
+
+		// raw float
+		if isFloat64 {
+			return true
+		}
+
+		// string float
+		if !isString {
+			return false
+		}
+		_, err := strconv.ParseFloat(strVal, 64)
+		if err != nil {
+			return false
+		}
+		return true
 	}
 }

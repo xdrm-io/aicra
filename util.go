@@ -4,23 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/reqdata"
 )
-
-func (s *Server) findServiceDef(req *api.Request) (serviceDef *config.Service, servicePath string) {
-
-	// 1. try to find definition
-	serviceDef, pathi := s.services.Browse(req.URI)
-
-	// 2. set service uri
-	servicePath = strings.Join(req.URI[:pathi], "/")
-
-	return
-}
 
 // extractParameters extracts parameters for the request and checks
 // every single one according to configuration options
@@ -80,7 +68,7 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 		}
 
 		/* (7) Check type */
-		if s.checkers.Run(param.Type, p.Value) != nil {
+		if s.Checkers.Run(param.Type, p.Value) != nil {
 
 			apiError = api.ErrorInvalidParam()
 			apiError.Put(param.Rename)

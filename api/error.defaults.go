@@ -48,11 +48,11 @@ var (
 
 	// ErrorUncallableService is set when there the requested controller's
 	// implementation (plugin file) is not found/callable
-	// ErrorUncallableService = func() Error { return Error{202, "uncallable service", nil} }
+	ErrorUncallableService = func() Error { return Error{202, "uncallable service", nil} }
 
 	// ErrorUncallableMethod is set when there the requested controller's
 	// implementation does not features the requested method
-	// ErrorUncallableMethod = func() Error { return Error{203, "uncallable method", nil} }
+	ErrorUncallableMethod = func() Error { return Error{203, "uncallable method", nil} }
 
 	// ErrorPermission is set when there is a permission error by default
 	// the api returns a permission error when the current scope (built

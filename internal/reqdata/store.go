@@ -44,30 +44,35 @@ type Store struct {
 }
 
 // New creates a new store from an http request.
-func New(req *http.Request) *Store {
+// URI params is required because it only takes into account after service path
+// we do not know in this scope.
+func New(uriParams []string, req *http.Request) *Store {
 	ds := &Store{
 		URI:  make([]*Parameter, 0),
 		Get:  make(map[string]*Parameter),
 		Form: make(map[string]*Parameter),
 		Set:  make(map[string]*Parameter),
 	}
-	// 1. GET (query) data
+
+	// 1. set URI parameters
+	ds.setURIParams(uriParams)
+
+	// 2. GET (query) data
 	ds.fetchGet(req)
 
-	// 2. We are done if GET method
+	// 3. We are done if GET method
 	if req.Method == http.MethodGet {
 		return ds
 	}
 
-	// 2. POST (body) data
+	// 4. POST (body) data
 	ds.fetchForm(req)
 
 	return ds
 }
 
-// SetURIParameters stores URL orderedURIParams and fills 'Set'
-// with creating pointers inside 'Url'
-func (i *Store) SetURIParameters(orderedUParams []string) {
+// setURIParameters fills 'Set' with creating pointers inside 'Url'
+func (i *Store) setURIParams(orderedUParams []string) {
 
 	for index, value := range orderedUParams {
 

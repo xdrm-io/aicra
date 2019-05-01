@@ -7,7 +7,7 @@ import (
 	"git.xdrm.io/go/aicra/typecheck"
 )
 
-var fixedLengthRegex = regexp.MustCompile(`^string\((\d+))$`)
+var fixedLengthRegex = regexp.MustCompile(`^string\((\d+)\)$`)
 var variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
 
 // String checks if a value is a string

@@ -35,13 +35,16 @@ func (i *Response) GetData(name string) interface{} {
 	return value
 }
 
-type jsonResponse struct {
-	Error
-	ResponseData
-}
-
 // MarshalJSON implements the 'json.Marshaler' interface and is used
 // to generate the JSON representation of the response
 func (i *Response) MarshalJSON() ([]byte, error) {
-	return json.Marshal(jsonResponse{i.Err, i.Data})
+	fmt := make(map[string]interface{})
+
+	for k, v := range i.Data {
+		fmt[k] = v
+	}
+
+	fmt["error"] = i.Err
+
+	return json.Marshal(fmt)
 }

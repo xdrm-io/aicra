@@ -16,7 +16,7 @@ import (
 // Server represents an AICRA instance featuring: type checkers, services
 type Server struct {
 	services *config.Service
-	checkers *checker.Set
+	Checkers *checker.Set
 	handlers []*api.Handler
 }
 
@@ -28,7 +28,7 @@ func New(configPath string) (*Server, error) {
 	// 1. init instance
 	var i = &Server{
 		services: nil,
-		checkers: checker.New(),
+		Checkers: checker.New(),
 		handlers: make([]*api.Handler, 0),
 	}
 
@@ -81,7 +81,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// 4. parse every input data from the request
-	store := reqdata.New(req)
+	store := reqdata.New(apiRequest.URI[pathIndex:], req)
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
@@ -112,10 +112,10 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// fail if found no handler
 	if serviceHandler == nil {
 		if serviceFound {
-			httpError(res, api.ErrorUnknownMethod())
+			httpError(res, api.ErrorUncallableMethod())
 			return
 		}
-		httpError(res, api.ErrorUnknownService())
+		httpError(res, api.ErrorUncallableService())
 		return
 	}
 
