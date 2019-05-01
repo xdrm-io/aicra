@@ -66,6 +66,9 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	servicePath := strings.Join(apiRequest.URI[:pathIndex], "/")
+	if !strings.HasPrefix(servicePath, "/") {
+		servicePath = "/" + servicePath
+	}
 
 	// 3. check if matching methodDef exists in config */
 	var methodDef = serviceDef.Method(req.Method)
