@@ -106,10 +106,16 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// fail if found no handler
 	if serviceHandler == nil {
 		if serviceFound {
-			httpError(res, api.ErrorUncallableMethod())
+			apiError := api.ErrorUncallableMethod()
+			apiError.Put(servicePath)
+			apiError.Put(req.Method)
+			httpError(res, apiError)
 			return
 		}
-		httpError(res, api.ErrorUncallableService())
+
+		apiError := api.ErrorUncallableService()
+		apiError.Put(servicePath)
+		httpError(res, apiError)
 		return
 	}
 
