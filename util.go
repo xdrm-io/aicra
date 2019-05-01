@@ -13,7 +13,6 @@ import (
 func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]*config.Parameter) (map[string]interface{}, api.Error) {
 
 	// init vars
-	apiError := api.ErrorSuccess()
 	parameters := make(map[string]interface{})
 
 	// for each param of the config
@@ -24,9 +23,7 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 
 		// 2. fail if required & missing
 		if !isset && !param.Optional {
-			apiError = api.ErrorMissingParam()
-			apiError.Put(name)
-			return nil, apiError
+			return nil, api.WrapError(api.ErrorMissingParam(), name)
 		}
 
 		// 3. optional & missing: set default value
@@ -53,10 +50,7 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 		// 5. fail on unexpected multipart file
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
-			apiError = api.ErrorInvalidParam()
-			apiError.Put(param.Rename)
-			apiError.Put("FILE")
-			return nil, apiError
+			return nil, api.WrapError(api.ErrorInvalidParam(), param.Rename, "FILE")
 		}
 
 		// 6. do not check if file
@@ -67,20 +61,14 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 
 		// 7. check type
 		if s.Checkers.Run(param.Type, p.Value) != nil {
-
-			apiError = api.ErrorInvalidParam()
-			apiError.Put(param.Rename)
-			apiError.Put(param.Type)
-			apiError.Put(p.Value)
-			break
-
+			return nil, api.WrapError(api.ErrorInvalidParam(), param.Rename, param.Type, p.Value)
 		}
 
 		parameters[param.Rename] = p.Value
 
 	}
 
-	return parameters, apiError
+	return parameters, api.ErrorSuccess()
 }
 
 // Prints an error as HTTP response

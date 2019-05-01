@@ -13,8 +13,8 @@ type Error struct {
 	Arguments []interface{} `json:"arguments"`
 }
 
-// NewError returns a new error from a base error with errorarguments.
-func NewError(baseError Error, arguments ...interface{}) Error {
+// WrapError returns a new error from a base error with errorarguments.
+func WrapError(baseError Error, arguments ...interface{}) Error {
 	for _, arg := range arguments {
 		baseError.Put(arg)
 	}
