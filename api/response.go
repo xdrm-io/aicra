@@ -16,14 +16,21 @@ type Response struct {
 	Err     Error
 }
 
-// NewResponse creates an empty response
-func NewResponse() *Response {
-	return &Response{
+// NewResponse creates an empty response. An optional error can be passed as its first argument.
+func NewResponse(errors ...Error) *Response {
+	res := &Response{
 		Status:  http.StatusOK,
 		Data:    make(ResponseData),
 		Err:     ErrorFailure(),
 		Headers: make(http.Header),
 	}
+
+	// optional error
+	if len(errors) == 1 {
+		res.Err = errors[0]
+	}
+
+	return res
 }
 
 // SetData adds/overrides a new response field
@@ -50,4 +57,18 @@ func (i *Response) MarshalJSON() ([]byte, error) {
 	fmt["error"] = i.Err
 
 	return json.Marshal(fmt)
+}
+
+// Write writes to an HTTP response.
+func (i *Response) Write(w http.ResponseWriter) error {
+	w.WriteHeader(i.Status)
+	w.Header().Add("Content-Type", "application/json")
+
+	fmt, err := json.Marshal(i)
+	if err != nil {
+		return err
+	}
+	w.Write(fmt)
+
+	return nil
 }

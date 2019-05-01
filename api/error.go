@@ -13,6 +13,14 @@ type Error struct {
 	Arguments []interface{} `json:"arguments"`
 }
 
+// NewError returns a new error from a base error with errorarguments.
+func NewError(baseError Error, arguments ...interface{}) Error {
+	for _, arg := range arguments {
+		baseError.Put(arg)
+	}
+	return baseError
+}
+
 // Put adds an argument to the error
 // to be displayed back to API caller
 func (e *Error) Put(arg interface{}) {

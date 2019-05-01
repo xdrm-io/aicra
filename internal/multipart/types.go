@@ -2,17 +2,24 @@ package multipart
 
 import (
 	"bufio"
-	"errors"
 )
 
+// ConstError is a wrapper to set constant errors
+type ConstError string
+
+// Error implements error
+func (err ConstError) Error() string {
+	return string(err)
+}
+
 // ErrMissingDataName is set when a multipart variable/file has no name="..."
-var ErrMissingDataName = errors.New("data has no name")
+var ErrMissingDataName = ConstError("data has no name")
 
 // ErrDataNameConflict is set when a multipart variable/file name is already used
-var ErrDataNameConflict = errors.New("data name conflict")
+var ErrDataNameConflict = ConstError("data name conflict")
 
 // ErrNoHeader is set when a multipart variable/file has no (valid) header
-var ErrNoHeader = errors.New("data has no header")
+var ErrNoHeader = ConstError("data has no header")
 
 // Component represents a multipart variable/file
 type Component struct {

@@ -1,9 +1,7 @@
 package aicra
 
 import (
-	"encoding/json"
 	"log"
-	"net/http"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
@@ -21,17 +19,17 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 	// for each param of the config
 	for name, param := range methodParam {
 
-		/* (1) Extract value */
+		// 1. extract value
 		p, isset := store.Set[name]
 
-		/* (2) Required & missing */
+		// 2. fail if required & missing
 		if !isset && !param.Optional {
 			apiError = api.ErrorMissingParam()
 			apiError.Put(name)
 			return nil, apiError
 		}
 
-		/* (3) Optional & missing: set default value */
+		// 3. optional & missing: set default value
 		if !isset {
 			p = &reqdata.Parameter{
 				Parsed: true,
@@ -47,12 +45,12 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 			continue
 		}
 
-		/* (4) Parse parameter if not file */
+		// 4. parse parameter if not file
 		if !p.File {
 			p.Parse()
 		}
 
-		/* (5) Fail on unexpected multipart file */
+		// 5. fail on unexpected multipart file
 		waitFile, gotFile := param.Type == "FILE", p.File
 		if gotFile && !waitFile || !gotFile && waitFile {
 			apiError = api.ErrorInvalidParam()
@@ -61,13 +59,13 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 			return nil, apiError
 		}
 
-		/* (6) Do not check if file */
+		// 6. do not check if file
 		if gotFile {
 			parameters[param.Rename] = p.Value
 			continue
 		}
 
-		/* (7) Check type */
+		// 7. check type
 		if s.Checkers.Run(param.Type, p.Value) != nil {
 
 			apiError = api.ErrorInvalidParam()
@@ -85,20 +83,7 @@ func (s *Server) extractParameters(store *reqdata.Store, methodParam map[string]
 	return parameters, apiError
 }
 
-// Prints an HTTP response
-func httpPrint(r http.ResponseWriter, res *api.Response) {
-	r.WriteHeader(res.Status)
-
-	// write this json
-	jsonResponse, _ := json.Marshal(res)
-	r.Header().Add("Content-Type", "application/json")
-	r.Write(jsonResponse)
-}
-
 // Prints an error as HTTP response
-func httpError(r http.ResponseWriter, e api.Error) {
-	JSON, _ := json.Marshal(e)
-	r.Header().Add("Content-Type", "application/json")
-	r.Write(JSON)
-	log.Printf("[http.fail] %s\n", e.Reason)
+func logError(res *api.Response) {
+	log.Printf("[http.fail] %v\n", res.Err)
 }

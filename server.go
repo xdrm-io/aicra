@@ -51,7 +51,6 @@ func New(configPath string) (*Server, error) {
 
 // ServeHTTP implements http.Handler and has to be called on each request
 func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-
 	defer req.Body.Close()
 
 	// 1. build API request from HTTP request
@@ -73,7 +72,9 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 3. check if matching methodDef exists in config */
 	var methodDef = serviceDef.Method(req.Method)
 	if methodDef == nil {
-		httpError(res, api.ErrorUnknownMethod())
+		apiResponse := api.NewResponse(api.ErrorUnknownMethod())
+		apiResponse.Write(res)
+		logError(apiResponse)
 		return
 	}
 
@@ -86,7 +87,9 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	// Fail if argument check failed
 	if paramError.Code != api.ErrorSuccess().Code {
-		httpError(res, paramError)
+		apiResponse := api.NewResponse(paramError)
+		apiResponse.Write(res)
+		logError(apiResponse)
 		return
 	}
 
@@ -109,16 +112,17 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// fail if found no handler
 	if serviceHandler == nil {
 		if serviceFound {
-			apiError := api.ErrorUncallableMethod()
-			apiError.Put(servicePath)
-			apiError.Put(req.Method)
-			httpError(res, apiError)
+			apiError := api.NewError(api.ErrorUncallableMethod(), servicePath, req.Method)
+			apiResponse := api.NewResponse(apiError)
+			apiResponse.Write(res)
+			logError(apiResponse)
 			return
 		}
 
-		apiError := api.ErrorUncallableService()
-		apiError.Put(servicePath)
-		httpError(res, apiError)
+		apiError := api.NewError(api.ErrorUncallableService(), servicePath)
+		apiResponse := api.NewResponse(apiError)
+		apiResponse.Write(res)
+		logError(apiResponse)
 		return
 	}
 
@@ -138,8 +142,8 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// 3. build JSON apiResponse
-	httpPrint(res, apiResponse)
+	// 3. write to response
+	apiResponse.Write(res)
 	return
 
 }

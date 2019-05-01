@@ -6,19 +6,18 @@ import (
 	"io"
 )
 
-// NewReader craetes a new reader
-func NewReader(_src io.Reader, _boundary string) (*Reader, error) {
-
+// NewReader creates a new reader from a reader and a boundary.
+func NewReader(r io.Reader, boundary string) (*Reader, error) {
 	reader := &Reader{
 		reader:   nil,
-		boundary: fmt.Sprintf("--%s", _boundary),
+		boundary: fmt.Sprintf("--%s", boundary),
 		Data:     make(map[string]*Component),
 	}
 
 	// 1. Create reader
-	dst, ok := _src.(*bufio.Reader)
+	dst, ok := r.(*bufio.Reader)
 	if !ok {
-		dst = bufio.NewReader(_src)
+		dst = bufio.NewReader(r)
 	}
 	reader.reader = dst
 
