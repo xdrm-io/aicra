@@ -11,7 +11,7 @@ func NewBool() *Bool {
 }
 
 // Checker returns the checker function
-func (Bool) Checker(typeName string) typecheck.Checker {
+func (Bool) Checker(typeName string) typecheck.CheckerFunc {
 	// nothing if type not handled
 	if typeName != "bool" {
 		return nil

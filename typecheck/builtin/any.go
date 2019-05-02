@@ -11,7 +11,7 @@ func NewAny() *Any {
 }
 
 // Checker returns the checker function
-func (Any) Checker(typeName string) typecheck.Checker {
+func (Any) Checker(typeName string) typecheck.CheckerFunc {
 	// nothing if type not handled
 	if typeName != "any" {
 		return nil

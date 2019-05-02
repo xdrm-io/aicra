@@ -19,7 +19,7 @@ func NewString() *String {
 }
 
 // Checker returns the checker function. Availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
-func (s String) Checker(typeName string) typecheck.Checker {
+func (s String) Checker(typeName string) typecheck.CheckerFunc {
 	isSimpleString := typeName == "string"
 	fixedLengthMatches := fixedLengthRegex.FindStringSubmatch(typeName)
 	variableLengthMatches := variableLengthRegex.FindStringSubmatch(typeName)
@@ -38,6 +38,7 @@ func (s String) Checker(typeName string) typecheck.Checker {
 
 		// check fixed length
 		if fixedLengthMatches != nil {
+
 			// incoherence fail
 			if len(fixedLengthMatches) < 2 {
 				return false

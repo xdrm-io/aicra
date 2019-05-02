@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"log"
 	"strconv"
 
 	"git.xdrm.io/go/aicra/typecheck"
@@ -16,30 +15,38 @@ func NewFloat64() *Float64 {
 }
 
 // Checker returns the checker function
-func (Float64) Checker(typeName string) typecheck.Checker {
+func (Float64) Checker(typeName string) typecheck.CheckerFunc {
 	// nothing if type not handled
 	if typeName != "float64" && typeName != "float" {
 		return nil
 	}
 	return func(value interface{}) bool {
-		strVal, isString := value.(string)
-		_, isFloat64 := value.(float64)
+		_, isFloat := readFloat(value)
+		return isFloat
+	}
+}
 
-		log.Printf("1")
+// readFloat tries to read a serialized float and returns whether it succeeded.
+func readFloat(value interface{}) (float64, bool) {
+	switch cast := value.(type) {
 
-		// raw float
-		if isFloat64 {
-			return true
-		}
+	case int:
+		return float64(cast), true
 
-		// string float
-		if !isString {
-			return false
-		}
-		_, err := strconv.ParseFloat(strVal, 64)
-		if err != nil {
-			return false
-		}
-		return true
+	case uint:
+		return float64(cast), true
+
+	case float64:
+		return cast, true
+
+		// serialized string -> try to convert to float
+	case string:
+		floatVal, err := strconv.ParseFloat(cast, 64)
+		return floatVal, err == nil
+
+		// unknown type
+	default:
+		return 0, false
+
 	}
 }
