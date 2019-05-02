@@ -6,7 +6,15 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"git.xdrm.io/go/aicra/internal/cerr"
 )
+
+// ErrReadConfig - a problem ocurred when trying to read the configuration file
+const ErrReadConfig = cerr.Error("cannot read config")
+
+// ErrFormatConfig - a invalid format has been detected
+const ErrFormatConfig = cerr.Error("invalid config format")
 
 // Parse builds a service from a json reader and checks for most format errors.
 func Parse(r io.Reader) (*Service, error) {
@@ -15,12 +23,13 @@ func Parse(r io.Reader) (*Service, error) {
 
 	err := json.NewDecoder(r).Decode(receiver)
 	if err != nil {
-		return nil, err
+		return nil, ErrReadConfig.Wrap(err)
 	}
 
+	ErrFormatConfig.Wrap(fmt.Errorf("blable"))
 	err = receiver.checkAndFormat("/")
 	if err != nil {
-		return nil, err
+		return nil, ErrFormatConfig.Wrap(err)
 	}
 
 	return receiver, nil

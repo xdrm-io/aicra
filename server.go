@@ -132,7 +132,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* (6) Execute handler and return response
 	---------------------------------------------------------*/
 	// 1. feed request with configuration scope
-	request.Scope = methodDef.Permission
+	request.Scope = methodDef.Scope
 
 	// 1. execute
 	response := api.NewResponse()

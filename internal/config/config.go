@@ -26,7 +26,7 @@ type Parameter struct {
 // Method represents a method definition (from api.json)
 type Method struct {
 	Description string                `json:"info"`
-	Permission  [][]string            `json:"scope"`
+	Scope       [][]string            `json:"scope"`
 	Parameters  map[string]*Parameter `json:"in"`
 	Download    *bool                 `json:"download"`
 }
