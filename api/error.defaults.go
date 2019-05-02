@@ -1,7 +1,7 @@
 package api
 
 var (
-	// ErrorSuccess represents a generic successful controller execution
+	// ErrorSuccess represents a generic successful service execution
 	ErrorSuccess = func() Error { return Error{0, "all right", nil} }
 
 	// ErrorFailure is the most generic error
@@ -29,16 +29,16 @@ var (
 	ErrorDownload = func() Error { return Error{101, "download failed", nil} }
 
 	// MissingDownloadHeaders has to be set when the implementation
-	// of a controller of type 'download' (which returns a file instead of
+	// of a service of type 'download' (which returns a file instead of
 	// a set or output fields) is missing its HEADER field
 	MissingDownloadHeaders = func() Error { return Error{102, "download headers are missing", nil} }
 
 	// ErrorMissingDownloadBody has to be set when the implementation
-	// of a controller of type 'download' (which returns a file instead of
+	// of a service of type 'download' (which returns a file instead of
 	// a set or output fields) is missing its BODY field
 	ErrorMissingDownloadBody = func() Error { return Error{103, "download body is missing", nil} }
 
-	// ErrorUnknownService is set when there is no controller matching
+	// ErrorUnknownService is set when there is no service matching
 	// the http request URI.
 	ErrorUnknownService = func() Error { return Error{200, "unknown service", nil} }
 
@@ -46,11 +46,11 @@ var (
 	// request's http method
 	ErrorUnknownMethod = func() Error { return Error{201, "unknown method", nil} }
 
-	// ErrorUncallableService is set when there the requested controller's
+	// ErrorUncallableService is set when there the requested service's
 	// implementation (plugin file) is not found/callable
 	ErrorUncallableService = func() Error { return Error{202, "uncallable service", nil} }
 
-	// ErrorUncallableMethod is set when there the requested controller's
+	// ErrorUncallableMethod is set when there the requested service's
 	// implementation does not features the requested method
 	ErrorUncallableMethod = func() Error { return Error{203, "uncallable method", nil} }
 

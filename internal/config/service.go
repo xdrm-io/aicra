@@ -86,12 +86,12 @@ func (svc *Service) checkAndFormat(servicePath string) error {
 		return nil
 	}
 
-	// 2. for each controller */
+	// 2. for each service */
 	for childService, ctl := range svc.Children {
 
 		// 3. invalid name */
 		if strings.ContainsAny(childService, "/-") {
-			return fmt.Errorf("Controller '%s' must not contain any slash '/' nor '-' symbols", childService)
+			return fmt.Errorf("service '%s' must not contain any slash '/' nor '-' symbols", childService)
 		}
 
 		// 4. check recursively */

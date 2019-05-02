@@ -5,7 +5,7 @@ package reqdata
 type Parameter struct {
 	// whether the value has been json-parsed
 	// for optimisation purpose, parameters are only parsed
-	// if they are required by the current controller
+	// if they are required by the current service
 	Parsed bool
 
 	// whether the value is a file

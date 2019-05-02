@@ -12,13 +12,13 @@ import (
 )
 
 // Store represents all data that can be caught:
-// - URI (guessed from the URI by removing the controller path)
+// - URI (guessed from the URI by removing the service path)
 // - GET (default url data)
 // - POST (from json, form-data, url-encoded)
 type Store struct {
 
 	// ordered values from the URI
-	//  catches all after the controller path
+	//  catches all after the service path
 	//
 	// points to Store.Data
 	URI []*Parameter
@@ -58,7 +58,7 @@ func New(uriParams []string, req *http.Request) *Store {
 	ds.setURIParams(uriParams)
 
 	// 2. GET (query) data
-	ds.fetchGet(req)
+	ds.readQuery(req)
 
 	// 3. We are done if GET method
 	if req.Method == http.MethodGet {
@@ -66,7 +66,7 @@ func New(uriParams []string, req *http.Request) *Store {
 	}
 
 	// 4. POST (body) data
-	ds.fetchForm(req)
+	ds.readForm(req)
 
 	return ds
 }
@@ -92,19 +92,19 @@ func (i *Store) setURIParams(orderedUParams []string) {
 
 }
 
-// fetchGet stores data from the QUERY (in url parameters)
-func (i *Store) fetchGet(req *http.Request) {
+// readQuery stores data from the QUERY (in url parameters)
+func (i *Store) readQuery(req *http.Request) {
 
 	for name, value := range req.URL.Query() {
 
 		// prevent invalid names
-		if !validName(name) {
+		if !isNameValid(name) {
 			log.Printf("invalid variable name: '%s'\n", name)
 			continue
 		}
 
 		// prevent injections
-		if nameInjection(name) {
+		if hasNameInjection(name) {
 			log.Printf("get.injection: '%s'\n", name)
 			continue
 		}
@@ -125,12 +125,12 @@ func (i *Store) fetchGet(req *http.Request) {
 
 }
 
-// fetchForm stores FORM data
+// readForm stores FORM data
 //
 // - parse 'form-data' if not supported (not POST requests)
 // - parse 'x-www-form-urlencoded'
 // - parse 'application/json'
-func (i *Store) fetchForm(req *http.Request) {
+func (i *Store) readForm(req *http.Request) {
 
 	contentType := req.Header.Get("Content-Type")
 
@@ -173,13 +173,13 @@ func (i *Store) parseJSON(req *http.Request) {
 	for name, value := range parsed {
 
 		// prevent invalid names
-		if !validName(name) {
+		if !isNameValid(name) {
 			log.Printf("invalid variable name: '%s'\n", name)
 			continue
 		}
 
 		// prevent injections
-		if nameInjection(name) {
+		if hasNameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
 			continue
 		}
@@ -210,13 +210,13 @@ func (i *Store) parseUrlencoded(req *http.Request) {
 	for name, value := range req.PostForm {
 
 		// prevent invalid names
-		if !validName(name) {
+		if !isNameValid(name) {
 			log.Printf("invalid variable name: '%s'\n", name)
 			continue
 		}
 
 		// prevent injections
-		if nameInjection(name) {
+		if hasNameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
 			continue
 		}
@@ -254,13 +254,13 @@ func (i *Store) parseMultipart(req *http.Request) {
 	for name, data := range mpr.Data {
 
 		// prevent invalid names
-		if !validName(name) {
+		if !isNameValid(name) {
 			log.Printf("invalid variable name: '%s'\n", name)
 			continue
 		}
 
 		// prevent injections
-		if nameInjection(name) {
+		if hasNameInjection(name) {
 			log.Printf("post.injection: '%s'\n", name)
 			continue
 		}
@@ -281,16 +281,16 @@ func (i *Store) parseMultipart(req *http.Request) {
 
 }
 
-// nameInjection returns whether there is
+// hasNameInjection returns whether there is
 // a parameter name injection:
 // - inferred GET parameters
 // - inferred URL parameters
-func nameInjection(pName string) bool {
+func hasNameInjection(pName string) bool {
 	return strings.HasPrefix(pName, "GET@") || strings.HasPrefix(pName, "URL#")
 }
 
-// validName returns whether a parameter name (without the GET@ or URL# prefix) is valid
+// isNameValid returns whether a parameter name (without the GET@ or URL# prefix) is valid
 // if fails if the name begins/ends with underscores
-func validName(pName string) bool {
+func isNameValid(pName string) bool {
 	return strings.Trim(pName, "_") == pName
 }

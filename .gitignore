@@ -1,6 +1,4 @@
 *.so
-/types
-/controllers
 /test
 /aicra
 /.vscode

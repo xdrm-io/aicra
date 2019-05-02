@@ -5,7 +5,7 @@ import (
 )
 
 // Error represents an http response error following the api format.
-// These are used by the controllers to set the *execution status*
+// These are used by the services to set the *execution status*
 // directly into the response as JSON alongside response output fields.
 type Error struct {
 	Code      int           `json:"code"`
