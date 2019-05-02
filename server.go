@@ -53,36 +53,36 @@ func New(configPath string) (*Server, error) {
 }
 
 // ServeHTTP implements http.Handler and has to be called on each request
-func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	defer req.Body.Close()
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
 	// 1. build API request from HTTP request
-	apiRequest, err := api.NewRequest(req)
+	request, err := api.NewRequest(r)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 2. find a matching service for this path in the config
-	serviceDef, pathIndex := s.services.Browse(apiRequest.URI)
+	serviceDef, pathIndex := s.services.Browse(request.URI)
 	if serviceDef == nil {
 		return
 	}
-	servicePath := strings.Join(apiRequest.URI[:pathIndex], "/")
+	servicePath := strings.Join(request.URI[:pathIndex], "/")
 	if !strings.HasPrefix(servicePath, "/") {
 		servicePath = "/" + servicePath
 	}
 
 	// 3. check if matching methodDef exists in config */
-	var methodDef = serviceDef.Method(req.Method)
+	var methodDef = serviceDef.Method(r.Method)
 	if methodDef == nil {
-		apiResponse := api.NewResponse(api.ErrorUnknownMethod())
-		apiResponse.Write(res)
-		logError(apiResponse)
+		response := api.NewResponse(api.ErrorUnknownMethod())
+		response.ServeHTTP(w, r)
+		logError(response)
 		return
 	}
 
 	// 4. parse every input data from the request
-	store := reqdata.New(apiRequest.URI[pathIndex:], req)
+	store := reqdata.New(request.URI[pathIndex:], r)
 
 	/* (4) Check parameters
 	---------------------------------------------------------*/
@@ -90,13 +90,13 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	// Fail if argument check failed
 	if paramError.Code != api.ErrorSuccess().Code {
-		apiResponse := api.NewResponse(paramError)
-		apiResponse.Write(res)
-		logError(apiResponse)
+		response := api.NewResponse(paramError)
+		response.ServeHTTP(w, r)
+		logError(response)
 		return
 	}
 
-	apiRequest.Param = parameters
+	request.Param = parameters
 
 	/* (5) Search a matching handler
 	---------------------------------------------------------*/
@@ -106,7 +106,7 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	for _, handler := range s.handlers {
 		if handler.GetPath() == servicePath {
 			serviceFound = true
-			if handler.GetMethod() == req.Method {
+			if handler.GetMethod() == r.Method {
 				serviceHandler = handler
 			}
 		}
@@ -115,38 +115,38 @@ func (s *Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// fail if found no handler
 	if serviceHandler == nil {
 		if serviceFound {
-			apiResponse := api.NewResponse()
-			apiResponse.SetError(api.ErrorUncallableMethod(), servicePath, req.Method)
-			apiResponse.Write(res)
-			logError(apiResponse)
+			response := api.NewResponse()
+			response.SetError(api.ErrorUncallableMethod(), servicePath, r.Method)
+			response.ServeHTTP(w, r)
+			logError(response)
 			return
 		}
 
-		apiResponse := api.NewResponse()
-		apiResponse.SetError(api.ErrorUncallableService(), servicePath)
-		apiResponse.Write(res)
-		logError(apiResponse)
+		response := api.NewResponse()
+		response.SetError(api.ErrorUncallableService(), servicePath)
+		response.ServeHTTP(w, r)
+		logError(response)
 		return
 	}
 
 	/* (6) Execute handler and return response
 	---------------------------------------------------------*/
 	// 1. feed request with configuration scope
-	apiRequest.Scope = methodDef.Permission
+	request.Scope = methodDef.Permission
 
 	// 1. execute
-	apiResponse := api.NewResponse()
-	serviceHandler.Handle(*apiRequest, apiResponse)
+	response := api.NewResponse()
+	serviceHandler.Handle(*request, response)
 
 	// 2. apply headers
-	for key, values := range apiResponse.Headers {
+	for key, values := range response.Headers {
 		for _, value := range values {
-			res.Header().Add(key, value)
+			w.Header().Add(key, value)
 		}
 	}
 
 	// 3. write to response
-	apiResponse.Write(res)
+	response.ServeHTTP(w, r)
 	return
 
 }

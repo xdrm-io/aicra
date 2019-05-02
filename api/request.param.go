@@ -17,11 +17,20 @@ const ErrReqParamNotType = ConstError("request parameter does not fulfills type"
 // RequestParam defines input parameters of an api request
 type RequestParam map[string]interface{}
 
-// GetString returns a string and an error if not found or string
-func (rp RequestParam) GetString(key string) (string, error) {
+// Get returns the raw value (not typed) and an error if not found
+func (rp RequestParam) Get(key string) (interface{}, error) {
 	rawValue, found := rp[key]
 	if !found {
 		return "", ErrReqParamNotFound
+	}
+	return rawValue, nil
+}
+
+// GetString returns a string and an error if not found or string
+func (rp RequestParam) GetString(key string) (string, error) {
+	rawValue, err := rp.Get(key)
+	if err != nil {
+		return "", err
 	}
 
 	convertedValue, canConvert := rawValue.(string)
