@@ -2,21 +2,15 @@ package api
 
 import (
 	"fmt"
+
+	"git.xdrm.io/go/aicra/internal/cerr"
 )
 
-// ConstError is a wrapper to set constant errors
-type ConstError string
-
-// Error implements error
-func (err ConstError) Error() string {
-	return string(err)
-}
-
 // ErrReqParamNotFound is thrown when a request parameter is not found
-const ErrReqParamNotFound = ConstError("request parameter not found")
+const ErrReqParamNotFound = cerr.Error("request parameter not found")
 
 // ErrReqParamNotType is thrown when a request parameter is not asked with the right type
-const ErrReqParamNotType = ConstError("request parameter does not fulfills type")
+const ErrReqParamNotType = cerr.Error("request parameter does not fulfills type")
 
 // RequestParam defines input parameters of an api request
 type RequestParam map[string]interface{}
