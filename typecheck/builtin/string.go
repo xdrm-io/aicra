@@ -29,45 +29,49 @@ func (s String) Checker(typeName string) typecheck.CheckerFunc {
 		return nil
 	}
 
+	var (
+		mustFail bool
+		min, max int
+	)
+
+	// extract fixed length
+	if fixedLengthMatches != nil {
+		exLen, ok := s.getFixedLength(fixedLengthMatches)
+		if !ok {
+			mustFail = true
+		}
+		min = exLen
+		max = exLen
+
+		// extract variable length
+	} else if variableLengthMatches != nil {
+		exMin, exMax, ok := s.getVariableLength(variableLengthMatches)
+		if !ok {
+			mustFail = true
+		}
+		min = exMin
+		max = exMax
+	}
+
 	return func(value interface{}) bool {
+		// preprocessing error
+		if mustFail {
+			return false
+		}
+
 		// check type
 		strValue, isString := value.(string)
 		if !isString {
 			return false
 		}
 
-		// check fixed length
-		if fixedLengthMatches != nil {
-
-			// incoherence fail
-			if len(fixedLengthMatches) < 2 {
-				return false
-			}
-
-			// extract length
-			fixedLen, err := strconv.ParseUint(fixedLengthMatches[1], 10, 64)
-			if err != nil {
-				return false
-			}
-
-			// check against value
-			return len(strValue) == int(fixedLen)
+		if isSimpleString {
+			return true
 		}
 
-		// check variable length
-		if variableLengthMatches != nil {
-
-			minLen, maxLen, ok := s.getVariableLength(variableLengthMatches)
-			if !ok {
-				return false
-			}
-
-			// check against value
-			return len(strValue) >= minLen && len(strValue) <= maxLen
-		}
-
-		// if should NEVER be here ; so fail
-		return false
+		// check length against previously extracted length
+		l := len(strValue)
+		return l >= min && l <= max
 	}
 }
 
@@ -79,8 +83,8 @@ func (String) getFixedLength(regexMatches []string) (int, bool) {
 	}
 
 	// extract length
-	fixedLength, err := strconv.ParseUint(regexMatches[1], 10, 64)
-	if err != nil {
+	fixedLength, err := strconv.ParseInt(regexMatches[1], 10, 64)
+	if err != nil || fixedLength < 0 {
 		return 0, false
 	}
 
@@ -95,13 +99,13 @@ func (String) getVariableLength(regexMatches []string) (int, int, bool) {
 	}
 
 	// extract minimum length
-	minLen, err := strconv.ParseUint(regexMatches[1], 10, 64)
-	if err != nil {
+	minLen, err := strconv.ParseInt(regexMatches[1], 10, 64)
+	if err != nil || minLen < 0 {
 		return 0, 0, false
 	}
 	// extract maximum length
-	maxLen, err := strconv.ParseUint(regexMatches[2], 10, 64)
-	if err != nil {
+	maxLen, err := strconv.ParseInt(regexMatches[2], 10, 64)
+	if err != nil || maxLen < 0 {
 		return 0, 0, false
 	}
 

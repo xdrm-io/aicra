@@ -1,7 +1,7 @@
 package builtin
 
 import (
-	"strconv"
+	"encoding/json"
 
 	"git.xdrm.io/go/aicra/typecheck"
 )
@@ -41,7 +41,8 @@ func readFloat(value interface{}) (float64, bool) {
 
 		// serialized string -> try to convert to float
 	case string:
-		floatVal, err := strconv.ParseFloat(cast, 64)
+		num := json.Number(cast)
+		floatVal, err := num.Float64()
 		return floatVal, err == nil
 
 		// unknown type
