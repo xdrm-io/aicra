@@ -6,6 +6,8 @@ import (
 )
 
 func TestSimple(t *testing.T) {
+	t.Parallel()
+
 	test := struct {
 		Input    []byte
 		Boundary string
@@ -72,6 +74,7 @@ facebook.com
 }
 
 func TestSimpleWithCRLF(t *testing.T) {
+	t.Parallel()
 
 	type tcase struct {
 		Input    []byte
@@ -156,6 +159,8 @@ facebook.com
 }
 
 func TestNoName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		Input    []byte
 		Boundary string
@@ -198,6 +203,8 @@ func TestNoName(t *testing.T) {
 }
 
 func TestNoHeader(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		Input    []byte
 		Boundary string
@@ -236,6 +243,8 @@ func TestNoHeader(t *testing.T) {
 }
 
 func TestNameConflict(t *testing.T) {
+	t.Parallel()
+
 	test := struct {
 		Input    []byte
 		Boundary string
@@ -266,6 +275,8 @@ facebook.com
 }
 
 func TestGetterNil(t *testing.T) {
+	t.Parallel()
+
 	test := struct {
 		Input    []byte
 		Boundary string

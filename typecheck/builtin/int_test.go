@@ -8,6 +8,8 @@ import (
 )
 
 func TestInt_New(t *testing.T) {
+	t.Parallel()
+
 	inst := interface{}(builtin.NewInt())
 
 	switch cast := inst.(type) {
@@ -19,6 +21,7 @@ func TestInt_New(t *testing.T) {
 }
 
 func TestInt_AvailableTypes(t *testing.T) {
+	t.Parallel()
 
 	inst := builtin.NewInt()
 
@@ -52,6 +55,8 @@ func TestInt_AvailableTypes(t *testing.T) {
 }
 
 func TestInt_Values(t *testing.T) {
+	t.Parallel()
+
 	const typeName = "int"
 
 	checker := builtin.NewInt().Checker(typeName)

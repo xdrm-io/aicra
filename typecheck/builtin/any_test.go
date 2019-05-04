@@ -7,6 +7,8 @@ import (
 )
 
 func TestAny_New(t *testing.T) {
+	t.Parallel()
+
 	inst := interface{}(builtin.NewAny())
 
 	switch cast := inst.(type) {
@@ -18,6 +20,7 @@ func TestAny_New(t *testing.T) {
 }
 
 func TestAny_AvailableTypes(t *testing.T) {
+	t.Parallel()
 
 	inst := builtin.NewAny()
 
@@ -52,6 +55,8 @@ func TestAny_AvailableTypes(t *testing.T) {
 }
 
 func TestAny_AlwaysTrue(t *testing.T) {
+	t.Parallel()
+
 	const typeName = "any"
 
 	checker := builtin.NewAny().Checker(typeName)

@@ -7,6 +7,8 @@ import (
 )
 
 func TestString_New(t *testing.T) {
+	t.Parallel()
+
 	inst := interface{}(builtin.NewString())
 
 	switch cast := inst.(type) {
@@ -18,6 +20,7 @@ func TestString_New(t *testing.T) {
 }
 
 func TestString_AvailableTypes(t *testing.T) {
+	t.Parallel()
 
 	inst := builtin.NewString()
 
@@ -66,6 +69,8 @@ func TestString_AvailableTypes(t *testing.T) {
 }
 
 func TestString_AnyLength(t *testing.T) {
+	t.Parallel()
+
 	const typeName = "string"
 
 	checker := builtin.NewString().Checker(typeName)
@@ -102,6 +107,7 @@ func TestString_AnyLength(t *testing.T) {
 
 }
 func TestString_FixedLength(t *testing.T) {
+	t.Parallel()
 
 	tests := []struct {
 		Type  string
@@ -145,6 +151,7 @@ func TestString_FixedLength(t *testing.T) {
 
 }
 func TestString_VariableLength(t *testing.T) {
+	t.Parallel()
 
 	tests := []struct {
 		Type  string
