@@ -2,6 +2,7 @@ package multipart
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -186,17 +187,20 @@ func TestNoName(t *testing.T) {
 
 	for i, test := range tests {
 
-		mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-		if err != nil {
-			t.Errorf("%d: unexpected error <%s>", i, err)
-			continue
-		}
+			mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
-		if err = mpr.Parse(); err != ErrMissingDataName {
-			t.Errorf("%d: expected the error <%s>, got <%s>", i, ErrMissingDataName, err)
-			continue
-		}
+			if err != nil {
+				t.Errorf("unexpected error <%s>", err)
+				return
+			}
+
+			if err = mpr.Parse(); err != ErrMissingDataName {
+				t.Errorf("expected the error <%s>, got <%s>", ErrMissingDataName, err)
+				return
+			}
+		})
 
 	}
 
@@ -225,18 +229,20 @@ func TestNoHeader(t *testing.T) {
 	}
 
 	for i, test := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 
-		mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
+			mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
-		if err != nil {
-			t.Errorf("%d: unexpected error <%s>", i, err)
-			continue
-		}
+			if err != nil {
+				t.Errorf("unexpected error <%s>", err)
+				return
+			}
 
-		if err = mpr.Parse(); err != ErrNoHeader {
-			t.Errorf("%d: expected the error <%s>, got <%s>", i, ErrNoHeader, err)
-			continue
-		}
+			if err = mpr.Parse(); err != ErrNoHeader {
+				t.Errorf("expected the error <%s>, got <%s>", ErrNoHeader, err)
+				return
+			}
+		})
 
 	}
 

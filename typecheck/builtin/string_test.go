@@ -1,6 +1,7 @@
 package builtin_test
 
 import (
+	"fmt"
 	"testing"
 
 	"git.xdrm.io/go/aicra/typecheck/builtin"
@@ -52,18 +53,20 @@ func TestString_AvailableTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		checker := inst.Checker(test.Type)
+		t.Run(test.Type, func(t *testing.T) {
+			checker := inst.Checker(test.Type)
 
-		if checker == nil {
-			if test.Handled {
-				t.Errorf("expect %q to be handled", test.Type)
+			if checker == nil {
+				if test.Handled {
+					t.Errorf("expect %q to be handled", test.Type)
+				}
+				return
 			}
-			continue
-		}
 
-		if !test.Handled {
-			t.Errorf("expect %q NOT to be handled", test.Type)
-		}
+			if !test.Handled {
+				t.Errorf("expect %q NOT to be handled", test.Type)
+			}
+		})
 	}
 
 }
@@ -91,18 +94,20 @@ func TestString_AnyLength(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		if checker(test.Value) {
-			if !test.Valid {
-				t.Errorf("%d: expect value to be invalid", i)
-				t.Fail()
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			if checker(test.Value) {
+				if !test.Valid {
+					t.Errorf("expect value to be invalid")
+					t.Fail()
+				}
+				return
 			}
-			continue
-		}
-		if test.Valid {
-			t.Errorf("%d: expect value to be valid", i)
-			t.Fail()
+			if test.Valid {
+				t.Errorf("expect value to be valid")
+				t.Fail()
 
-		}
+			}
+		})
 	}
 
 }
@@ -128,25 +133,27 @@ func TestString_FixedLength(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		checker := builtin.NewString().Checker(test.Type)
-		if checker == nil {
-			t.Errorf("%d: expect %q to be handled", i, test.Type)
-			t.Fail()
-			continue
-		}
-
-		if checker(test.Value) {
-			if !test.Valid {
-				t.Errorf("%d: expect value to be invalid", i)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			checker := builtin.NewString().Checker(test.Type)
+			if checker == nil {
+				t.Errorf("expect %q to be handled", test.Type)
 				t.Fail()
+				return
 			}
-			continue
-		}
-		if test.Valid {
-			t.Errorf("%d: expect value to be valid", i)
-			t.Fail()
 
-		}
+			if checker(test.Value) {
+				if !test.Valid {
+					t.Errorf("expect value to be invalid")
+					t.Fail()
+				}
+				return
+			}
+			if test.Valid {
+				t.Errorf("expect value to be valid")
+				t.Fail()
+
+			}
+		})
 	}
 
 }
@@ -187,25 +194,27 @@ func TestString_VariableLength(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		checker := builtin.NewString().Checker(test.Type)
-		if checker == nil {
-			t.Errorf("%d: expect %q to be handled", i, test.Type)
-			t.Fail()
-			continue
-		}
-
-		if checker(test.Value) {
-			if !test.Valid {
-				t.Errorf("%d: expect value to be invalid", i)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			checker := builtin.NewString().Checker(test.Type)
+			if checker == nil {
+				t.Errorf("expect %q to be handled", test.Type)
 				t.Fail()
+				return
 			}
-			continue
-		}
-		if test.Valid {
-			t.Errorf("%d: expect value to be valid", i)
-			t.Fail()
 
-		}
+			if checker(test.Value) {
+				if !test.Valid {
+					t.Errorf("expect value to be invalid")
+					t.Fail()
+				}
+				return
+			}
+			if test.Valid {
+				t.Errorf("expect value to be valid")
+				t.Fail()
+
+			}
+		})
 	}
 
 }

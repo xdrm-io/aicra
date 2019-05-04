@@ -1,6 +1,7 @@
 package builtin_test
 
 import (
+	"fmt"
 	"testing"
 
 	"git.xdrm.io/go/aicra/typecheck/builtin"
@@ -74,10 +75,12 @@ func TestAny_AlwaysTrue(t *testing.T) {
 	}
 
 	for i, value := range values {
-		if !checker(value) {
-			t.Errorf("%d: expect value to be valid", i)
-			t.Fail()
-		}
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			if !checker(value) {
+				t.Errorf("expect value to be valid")
+				t.Fail()
+			}
+		})
 	}
 
 }

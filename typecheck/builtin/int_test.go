@@ -1,6 +1,7 @@
 package builtin_test
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -38,18 +39,21 @@ func TestInt_AvailableTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		checker := inst.Checker(test.Type)
-
-		if checker == nil {
-			if test.Handled {
-				t.Errorf("expect %q to be handled", test.Type)
+		t.Run(test.Type, func(t *testing.T) {
+			checker := inst.Checker(test.Type)
+			if checker == nil {
+				if test.Handled {
+					t.Errorf("expect %q to be handled", test.Type)
+					t.Fail()
+				}
+				return
 			}
-			continue
-		}
 
-		if !test.Handled {
-			t.Errorf("expect %q NOT to be handled", test.Type)
-		}
+			if !test.Handled {
+				t.Errorf("expect %q NOT to be handled", test.Type)
+				t.Fail()
+			}
+		})
 	}
 
 }
@@ -96,17 +100,19 @@ func TestInt_Values(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		if checker(test.Value) {
-			if !test.Valid {
-				t.Errorf("%d: expect value to be invalid", i)
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			if checker(test.Value) {
+				if !test.Valid {
+					t.Errorf("expect value to be invalid")
+					t.Fail()
+				}
+				return
+			}
+			if test.Valid {
+				t.Errorf("expect value to be valid")
 				t.Fail()
 			}
-			continue
-		}
-		if test.Valid {
-			t.Errorf("%d: expect value to be valid", i)
-			t.Fail()
-		}
+		})
 	}
 
 }
