@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// parseHeaders parses a component headers.
 func (comp *Component) parseHeaders(_raw []byte) error {
 
 	// 1. Extract lines
@@ -59,10 +60,9 @@ func (comp *Component) parseHeaders(_raw []byte) error {
 	}
 
 	return nil
-
 }
 
-// GetHeader returns the header value associated with a key, empty string if not found
+// GetHeader returns the header value associated with a key.
 func (comp *Component) GetHeader(_key string) string {
 	value, ok := comp.Headers[_key]
 

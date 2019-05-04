@@ -8,17 +8,17 @@ import (
 
 // Reader is a multipart reader.
 type Reader struct {
-	// io.Reader used for http.Request.Body reading
+	// io.Reader used for reading multipart components reading.
 	reader *bufio.Reader
 
-	// boundary used to separate multipart MultipartDatas
+	// boundary used to separate multipart components.
 	boundary string
 
-	// result will be inside this field
+	// data will contain parsed components.
 	Data map[string]*Component
 }
 
-// NewReader creates a new reader from a reader and a boundary.
+// NewReader creates a new multipart reader for a reader and a boundary.
 func NewReader(r io.Reader, boundary string) (*Reader, error) {
 	reader := &Reader{
 		reader:   nil,
@@ -49,7 +49,7 @@ func NewReader(r io.Reader, boundary string) (*Reader, error) {
 
 }
 
-// Parse parses the multipart components from the request
+// Parse parses the multipart components from the reader.
 func (reader *Reader) Parse() error {
 
 	// for each component (until boundary)
@@ -88,7 +88,7 @@ func (reader *Reader) Parse() error {
 
 }
 
-// Get returns a multipart data by name, nil if not found
+// Get returns a multipart component by its name.
 func (reader *Reader) Get(_key string) *Component {
 	data, ok := reader.Data[_key]
 	if !ok {

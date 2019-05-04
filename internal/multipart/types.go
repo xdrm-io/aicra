@@ -9,13 +9,13 @@ func (err ConstError) Error() string {
 }
 
 // ErrMissingDataName is set when a multipart variable/file has no name="..."
-var ErrMissingDataName = ConstError("data has no name")
+const ErrMissingDataName = ConstError("data has no name")
 
 // ErrDataNameConflict is set when a multipart variable/file name is already used
-var ErrDataNameConflict = ConstError("data name conflict")
+const ErrDataNameConflict = ConstError("data name conflict")
 
 // ErrNoHeader is set when a multipart variable/file has no (valid) header
-var ErrNoHeader = ConstError("data has no header")
+const ErrNoHeader = ConstError("data has no header")
 
 // Component represents a multipart variable/file
 type Component struct {

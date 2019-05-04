@@ -24,47 +24,49 @@ facebook.com
 	}
 
 	mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
-
 	if err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	if err = mpr.Parse(); err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error: %s", err)
 	}
 
 	// 1. Check var
 	somevar := mpr.Get("somevar")
 	if somevar == nil {
-		t.Fatalf("Expected data {%s} to exist", "somevar")
+		t.Fatalf("expected data %q to exist", "somevar")
 	}
 	if somevar.ContentType != "raw" {
-		t.Fatalf("Expected ContentType to be {raw}, got {%s}", somevar.ContentType)
+		t.Fatalf("expected ContentType to be %q, got %q", "raw", somevar.ContentType)
 	}
 
 	if string(somevar.Data) != "google.com" {
-		t.Fatalf("Expected data to be {%s}, got {%s}", "google.com", somevar.Data)
+		t.Fatalf("expected data to be %q, got %q", "google.com", somevar.Data)
 	}
 
 	// 2. Check file
 	somefile := mpr.Get("somefile")
 	if somefile == nil {
-		t.Fatalf("Expected data {%s} to exist", "somefile")
+		t.Fatalf("expected data %q to exist", "somefile")
 	}
-	if somefile.ContentType != "application/pdf" {
-		t.Fatalf("Expected ContentType to be {application/pdf}, got {%s}", somevar.ContentType)
-	}
-
-	if string(somefile.Data) != "facebook.com" {
-		t.Fatalf("Expected data to be {%s}, got {%s}", "facebook.com", somefile.Data)
+	const fileCT = "application/pdf"
+	if somefile.ContentType != fileCT {
+		t.Fatalf("expected ContentType to be %q, got %q", fileCT, somevar.ContentType)
 	}
 
+	const fileData = "facebook.com"
+	if string(somefile.Data) != fileData {
+		t.Fatalf("expected data to be %q, got %q", fileData, somefile.Data)
+	}
+
+	const fileHeader = "somefilename.pdf"
 	filename := somefile.GetHeader("filename")
 	if len(filename) < 1 {
-		t.Fatalf("Expected data to have header 'filename'")
+		t.Fatalf("expected data to have header 'filename'")
 	}
-	if filename != "somefilename.pdf" {
-		t.Fatalf("Expected filename to be {%s}, got {%s}", "somefilename.pdf", filename)
+	if filename != fileHeader {
+		t.Fatalf("expected filename to be %q, got %q", fileHeader, filename)
 	}
 
 }
@@ -107,45 +109,48 @@ facebook.com
 	mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
 	if err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error <%s>", err)
 	}
 
 	if err = mpr.Parse(); err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error <%s>", err)
 	}
 
 	// 1. Check var
 	somevar := mpr.Get("somevar")
 	if somevar == nil {
-		t.Fatalf("Expected data {%s} to exist", "somevar")
+		t.Fatalf("expected data %q to exist", "somevar")
 	}
 	if somevar.ContentType != "raw" {
-		t.Fatalf("Expected ContentType to be {raw}, got {%s}", somevar.ContentType)
+		t.Fatalf("expected ContentType to be %q, got %q", "raw", somevar.ContentType)
 	}
 
 	if string(somevar.Data) != "google.com" {
-		t.Fatalf("Expected data to be {%s}, got {%s}", "google.com", somevar.Data)
+		t.Fatalf("expected data to be %q, got %q", "google.com", somevar.Data)
 	}
 
 	// 2. Check file
+	const fileCT = "application/pdf"
 	somefile := mpr.Get("somefile")
 	if somefile == nil {
-		t.Fatalf("Expected data {%s} to exist", "somefile")
+		t.Fatalf("expected data %q to exist", "somefile")
 	}
-	if somefile.ContentType != "application/pdf" {
-		t.Fatalf("Expected ContentType to be {application/pdf}, got {%s}", somevar.ContentType)
-	}
-
-	if string(somefile.Data) != "facebook.com" {
-		t.Fatalf("Expected data to be {%s}, got {%s}", "facebook.com", somefile.Data)
+	if somefile.ContentType != fileCT {
+		t.Fatalf("expected ContentType to be %q, got %q", fileCT, somevar.ContentType)
 	}
 
+	const fileData = "facebook.com"
+	if string(somefile.Data) != fileData {
+		t.Fatalf("expected data to be %q, got %q", fileData, somefile.Data)
+	}
+
+	const fileHeader = "somefilename.pdf"
 	filename := somefile.GetHeader("filename")
 	if len(filename) < 1 {
-		t.Fatalf("Expected data to have header 'filename'")
+		t.Fatalf("expected data to have header 'filename'")
 	}
-	if filename != "somefilename.pdf" {
-		t.Fatalf("Expected filename to be {%s}, got {%s}", "somefilename.pdf", filename)
+	if filename != fileHeader {
+		t.Fatalf("expected filename to be %q, got %q", fileHeader, filename)
 	}
 
 }
@@ -179,12 +184,12 @@ func TestNoName(t *testing.T) {
 		mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
 		if err != nil {
-			t.Errorf("(%d) Unexpected error <%s>", i, err)
+			t.Errorf("%d: unexpected error <%s>", i, err)
 			continue
 		}
 
 		if err = mpr.Parse(); err != ErrMissingDataName {
-			t.Errorf("(%d) Expected the error <%s>, got <%s>", i, ErrMissingDataName, err)
+			t.Errorf("%d: expected the error <%s>, got <%s>", i, ErrMissingDataName, err)
 			continue
 		}
 
@@ -217,12 +222,12 @@ func TestNoHeader(t *testing.T) {
 		mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
 		if err != nil {
-			t.Errorf("(%d) Unexpected error <%s>", i, err)
+			t.Errorf("%d: unexpected error <%s>", i, err)
 			continue
 		}
 
 		if err = mpr.Parse(); err != ErrNoHeader {
-			t.Errorf("(%d) Expected the error <%s>, got <%s>", i, ErrNoHeader, err)
+			t.Errorf("%d: expected the error <%s>, got <%s>", i, ErrNoHeader, err)
 			continue
 		}
 
@@ -251,11 +256,11 @@ facebook.com
 	mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
 	if err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error <%s>", err)
 	}
 
 	if err = mpr.Parse(); err != ErrDataNameConflict {
-		t.Fatalf("Expected the error <%s>, got <%s>", ErrDataNameConflict, err)
+		t.Fatalf("expected the error <%s>, got <%s>", ErrDataNameConflict, err)
 	}
 
 }
@@ -281,15 +286,15 @@ facebook.com
 	mpr, err := NewReader(bytes.NewReader(test.Input), test.Boundary)
 
 	if err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error <%s>", err)
 	}
 
 	if err = mpr.Parse(); err != nil {
-		t.Fatalf("Unexpected error <%s>", err)
+		t.Fatalf("unexpected error <%s>", err)
 	}
 
 	if mpr.Get("unknown_key") != nil {
-		t.Fatalf("Expected 'unknown_key' not to exist, got {%v}", mpr.Get("unknown_key"))
+		t.Fatalf("expected 'unknown_key' not to exist, got <%v>", mpr.Get("unknown_key"))
 	}
 
 }

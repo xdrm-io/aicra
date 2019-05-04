@@ -10,30 +10,27 @@ import (
 	"git.xdrm.io/go/aicra/internal/cerr"
 )
 
-// ErrReadConfig - a problem ocurred when trying to read the configuration file
-const ErrReadConfig = cerr.Error("cannot read config")
+// ErrRead - a problem ocurred when trying to read the configuration file
+const ErrRead = cerr.Error("cannot read config")
 
-// ErrFormatConfig - a invalid format has been detected
-const ErrFormatConfig = cerr.Error("invalid config format")
+// ErrFormat - a invalid format has been detected
+const ErrFormat = cerr.Error("invalid config format")
 
 // Parse builds a service from a json reader and checks for most format errors.
 func Parse(r io.Reader) (*Service, error) {
-
 	receiver := &Service{}
 
 	err := json.NewDecoder(r).Decode(receiver)
 	if err != nil {
-		return nil, ErrReadConfig.Wrap(err)
+		return nil, ErrRead.Wrap(err)
 	}
 
-	ErrFormatConfig.Wrap(fmt.Errorf("blable"))
 	err = receiver.checkAndFormat("/")
 	if err != nil {
-		return nil, ErrFormatConfig.Wrap(err)
+		return nil, ErrFormat.Wrap(err)
 	}
 
 	return receiver, nil
-
 }
 
 // Method returns the actual method from the http method.
@@ -54,7 +51,7 @@ func (svc *Service) Method(httpMethod string) *Method {
 	return nil
 }
 
-// Browse the service childtree and returns the farthest matching child. The `path` is a formatted URL split by '/'
+// Browse the service childtree and returns the deepest matching child. The `path` is a formatted URL split by '/'
 func (svc *Service) Browse(path []string) (*Service, int) {
 	currentService := svc
 	var depth int
