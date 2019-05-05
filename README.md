@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/git.xdrm.io/go/aicra)](https://goreportcard.com/report/git.xdrm.io/go/aicra)
 [![Go doc](https://godoc.org/git.xdrm.io/go/aicra?status.svg)](https://godoc.org/git.xdrm.io/go/aicra)
+[![Build Status](https://ci.migration.xdrm.io/buildStatus/icon?job=aicra%2F0.2.0)](.)
 
 
 **Aicra** is a *configuration-driven* REST **API engine**  in *Go* that allows you to create a fully featured API.
