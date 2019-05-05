@@ -1,0 +1,21 @@
+pipeline{
+	agent {
+		docker {
+			image 'golang:alpine'
+		}
+	}
+	stages {
+		stage('Test'){
+			environment {
+				GO111MODULE = 'on'
+				GOCACHE = '/tmp/.cache'
+				CGO_ENABLED = 0
+			}
+			steps {
+				sh 'go version'
+				sh 'go get -v ./...'
+				sh 'go test -cover -parallel 10 -v ./... -coverprofile=coverage.out'
+			}
+		}
+	}
+}
