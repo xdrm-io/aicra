@@ -1,6 +1,9 @@
 package builtin
 
 import (
+	"encoding/json"
+	"math"
+
 	"git.xdrm.io/go/aicra/typecheck"
 )
 
@@ -19,12 +22,40 @@ func (Uint) Checker(typeName string) typecheck.CheckerFunc {
 		return nil
 	}
 	return func(value interface{}) bool {
-		cast, isFloat := readFloat(value)
+		_, isInt := readUint(value)
 
-		if !isFloat {
-			return false
+		return isInt
+	}
+}
+
+// readUint tries to read a serialized uint and returns whether it succeeded.
+func readUint(value interface{}) (uint, bool) {
+	switch cast := value.(type) {
+
+	case int:
+		return uint(cast), cast >= 0
+
+	case uint:
+		return cast, true
+
+	case float64:
+		uintVal := uint(cast)
+		overflows := cast < 0 || cast > math.MaxUint64
+		return uintVal, cast == float64(uintVal) && !overflows
+
+		// serialized string -> try to convert to float
+	case string:
+		num := json.Number(cast)
+		floatVal, err := num.Float64()
+		if err != nil {
+			return 0, false
 		}
+		overflows := floatVal < 0 || floatVal > math.MaxUint64
+		return uint(floatVal), !overflows
 
-		return cast >= 0 && cast == float64(int(cast))
+		// unknown type
+	default:
+		return 0, false
+
 	}
 }
