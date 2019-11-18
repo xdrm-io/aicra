@@ -1,0 +1,11 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: test
+  image: golang:1.13
+  commands:
+  - go get ./...
+  - go test -v -race -cover -coverprofile ./coverage.out ./...
