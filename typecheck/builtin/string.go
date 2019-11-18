@@ -61,6 +61,12 @@ func (s String) Checker(typeName string) typecheck.CheckerFunc {
 
 		// check type
 		strValue, isString := value.(string)
+		byteSliceValue, isByteSlice := value.([]byte)
+		if !isString && isByteSlice {
+			strValue = string(byteSliceValue)
+			isString = true
+		}
+
 		if !isString {
 			return false
 		}

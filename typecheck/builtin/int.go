@@ -49,6 +49,12 @@ func readInt(value interface{}) (int, bool) {
 		num := json.Number(cast)
 		intVal, err := num.Int64()
 		return int(intVal), err == nil
+		// serialized string -> try to convert to float
+
+	case []byte:
+		num := json.Number(cast)
+		intVal, err := num.Int64()
+		return int(intVal), err == nil
 
 		// unknown type
 	default:

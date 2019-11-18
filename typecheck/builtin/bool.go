@@ -17,7 +17,28 @@ func (Bool) Checker(typeName string) typecheck.CheckerFunc {
 		return nil
 	}
 	return func(value interface{}) bool {
-		_, isBool := value.(bool)
+		_, isBool := readBool(value)
 		return isBool
 	}
+}
+
+// readBool tries to read a serialized boolean and returns whether it succeeded.
+func readBool(value interface{}) (bool, bool) {
+	switch cast := value.(type) {
+	case bool:
+		return cast, true
+
+	case string:
+		strVal := string(cast)
+		return strVal == "true", strVal == "true" || strVal == "false"
+
+	case []byte:
+		strVal := string(cast)
+		return strVal == "true", strVal == "true" || strVal == "false"
+
+	default:
+		return false, false
+	}
+
+	return false, false
 }
