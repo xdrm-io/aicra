@@ -463,6 +463,13 @@ func TestJsonParameters(t *testing.T) {
 			ParamNames:   []string{"a", "URL#injection"},
 			ParamValues:  []interface{}{"b", nil},
 		},
+		// json parse error
+		{
+			RawJson:      "{ \"a\": \"b\", }",
+			InvalidNames: []string{},
+			ParamNames:   []string{},
+			ParamValues:  []interface{}{},
+		},
 	}
 
 	for i, test := range tests {
