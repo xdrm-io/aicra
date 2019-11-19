@@ -46,7 +46,7 @@ func New(configPath string) (*Server, error) {
 	}
 
 	// 4. log configuration services
-	log.Printf("=== Aicra configuration ===\n")
+	log.Printf("🔧   Reading configuration '%s'\n", configPath)
 	logService(*i.services, "")
 
 	return i, nil
@@ -68,9 +68,9 @@ func (s *Server) Handle(handler *api.Handler) {
 func (s Server) HTTP() httpServer {
 
 	// 1. log available handlers
-	log.Printf("=== Mapped handlers ===\n")
+	log.Printf("🔗	 Mapping handlers\n")
 	for i := 0; i < len(s.handlers); i++ {
-		log.Printf("* [rest] %s\t'%s'\n", s.handlers[i].GetMethod(), s.handlers[i].GetPath())
+		log.Printf("    ->\t%s\t'%s'\n", s.handlers[i].GetMethod(), s.handlers[i].GetPath())
 	}
 
 	// 2. cast to http server
