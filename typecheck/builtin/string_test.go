@@ -87,7 +87,7 @@ func TestString_AnyLength(t *testing.T) {
 		Valid bool
 	}{
 		{"string", true},
-		{[]byte("bytes"), false},
+		{[]byte("bytes"), true},
 		{1, false},
 		{0.1, false},
 		{nil, false},

@@ -53,6 +53,15 @@ func readUint(value interface{}) (uint, bool) {
 		overflows := floatVal < 0 || floatVal > math.MaxUint64
 		return uint(floatVal), !overflows
 
+	case []byte:
+		num := json.Number(cast)
+		floatVal, err := num.Float64()
+		if err != nil {
+			return 0, false
+		}
+		overflows := floatVal < 0 || floatVal > math.MaxUint64
+		return uint(floatVal), !overflows
+
 		// unknown type
 	default:
 		return 0, false

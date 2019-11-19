@@ -45,6 +45,11 @@ func readFloat(value interface{}) (float64, bool) {
 		floatVal, err := num.Float64()
 		return floatVal, err == nil
 
+	case []byte:
+		num := json.Number(cast)
+		floatVal, err := num.Float64()
+		return floatVal, err == nil
+
 		// unknown type
 	default:
 		return 0, false
