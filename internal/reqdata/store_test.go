@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -370,6 +371,166 @@ func TestStoreWithUrlEncodedForm(t *testing.T) {
 							}
 						})
 					}
+				})
+
+			}
+		})
+	}
+
+}
+
+func TestJsonParameters(t *testing.T) {
+	tests := []struct {
+		RawJson string
+
+		InvalidNames []string
+		ParamNames   []string
+		ParamValues  []interface{}
+	}{
+		// no need to fully check json because it is parsed with the standard library
+		{
+			RawJson:      "",
+			InvalidNames: []string{},
+			ParamNames:   []string{},
+			ParamValues:  []interface{}{},
+		},
+		{
+			RawJson:      "{}",
+			InvalidNames: []string{},
+			ParamNames:   []string{},
+			ParamValues:  []interface{}{},
+		},
+		{
+			RawJson:      "{ \"a\": \"b\" }",
+			InvalidNames: []string{},
+			ParamNames:   []string{"a"},
+			ParamValues:  []interface{}{"b"},
+		},
+		{
+			RawJson:      "{ \"a\": \"b\", \"c\": \"d\" }",
+			InvalidNames: []string{},
+			ParamNames:   []string{"a", "c"},
+			ParamValues:  []interface{}{"b", "d"},
+		},
+		{
+			RawJson:      "{ \"_invalid\": \"x\" }",
+			InvalidNames: []string{"_invalid"},
+			ParamNames:   []string{"_invalid"},
+			ParamValues:  []interface{}{nil},
+		},
+		{
+			RawJson:      "{ \"a\": \"b\", \"_invalid\": \"x\" }",
+			InvalidNames: []string{"_invalid"},
+			ParamNames:   []string{"a", "_invalid"},
+			ParamValues:  []interface{}{"b", nil},
+		},
+
+		{
+			RawJson:      "{ \"invalid_\": \"x\" }",
+			InvalidNames: []string{"invalid_"},
+			ParamNames:   []string{"invalid_"},
+			ParamValues:  []interface{}{nil},
+		},
+		{
+			RawJson:      "{ \"a\": \"b\", \"invalid_\": \"x\" }",
+			InvalidNames: []string{"invalid_"},
+			ParamNames:   []string{"a", "invalid_"},
+			ParamValues:  []interface{}{"b", nil},
+		},
+
+		{
+			RawJson:      "{ \"GET@injection\": \"x\" }",
+			InvalidNames: []string{"GET@injection"},
+			ParamNames:   []string{"GET@injection"},
+			ParamValues:  []interface{}{nil},
+		},
+		{
+			RawJson:      "{ \"a\": \"b\", \"GET@injection\": \"x\" }",
+			InvalidNames: []string{"GET@injection"},
+			ParamNames:   []string{"a", "GET@injection"},
+			ParamValues:  []interface{}{"b", nil},
+		},
+
+		{
+			RawJson:      "{ \"URL#injection\": \"x\" }",
+			InvalidNames: []string{"URL#injection"},
+			ParamNames:   []string{"URL#injection"},
+			ParamValues:  []interface{}{nil},
+		},
+		{
+			RawJson:      "{ \"a\": \"b\", \"URL#injection\": \"x\" }",
+			InvalidNames: []string{"URL#injection"},
+			ParamNames:   []string{"a", "URL#injection"},
+			ParamValues:  []interface{}{"b", nil},
+		},
+	}
+
+	for i, test := range tests {
+		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
+			body := bytes.NewBufferString(test.RawJson)
+			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
+			req.Header.Add("Content-Type", "application/json")
+			defer req.Body.Close()
+			store := New(nil, req)
+
+			if test.ParamNames == nil || test.ParamValues == nil {
+				if len(store.Set) != 0 {
+					t.Errorf("expected no JSON parameters and got %d", len(store.Get))
+					t.Failed()
+				}
+
+				// no param to check
+				return
+			}
+
+			if len(test.ParamNames) != len(test.ParamValues) {
+				t.Errorf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
+				t.Failed()
+			}
+
+			for pi, pName := range test.ParamNames {
+				key := pName
+				value := test.ParamValues[pi]
+
+				isNameValid := true
+				for _, invalid := range test.InvalidNames {
+					if pName == invalid {
+						isNameValid = false
+					}
+				}
+
+				t.Run(key, func(t *testing.T) {
+
+					param, isset := store.Set[key]
+					if !isset {
+						if isNameValid {
+							t.Errorf("store should contain element with key '%s'", key)
+							t.Failed()
+						}
+						return
+					}
+
+					// if should be invalid
+					if isset && !isNameValid {
+						t.Errorf("store should NOT contain element with key '%s' (invalid name)", key)
+						t.Failed()
+					}
+
+					valueType := reflect.TypeOf(value)
+
+					paramValue := param.Value
+					paramValueType := reflect.TypeOf(param.Value)
+
+					if valueType != paramValueType {
+						t.Errorf("should be of type %v (got '%v')", valueType, paramValueType)
+						t.Failed()
+					}
+
+					if paramValue != value {
+						t.Errorf("should return %v (got '%v')", value, paramValue)
+						t.Failed()
+					}
+
 				})
 
 			}
