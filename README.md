@@ -88,7 +88,7 @@ func main() {
     })
 
     // 4. launch server
-    log.Fatal( http.ListenAndServer("localhost:8181", server) )
+    log.Fatal( http.ListenAndServe("localhost:8181", server) )
 }
 ```
 
