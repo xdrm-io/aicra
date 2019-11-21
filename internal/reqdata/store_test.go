@@ -1,11 +1,11 @@
 package reqdata
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -301,7 +301,7 @@ func TestStoreWithUrlEncodedForm(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
-			body := bytes.NewBufferString(test.URLEncoded)
+			body := strings.NewReader(test.URLEncoded)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 			defer req.Body.Close()
@@ -474,7 +474,7 @@ func TestJsonParameters(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
-			body := bytes.NewBufferString(test.RawJson)
+			body := strings.NewReader(test.RawJson)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/json")
 			defer req.Body.Close()
@@ -709,7 +709,7 @@ x
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
-			body := bytes.NewBufferString(test.RawMultipart)
+			body := strings.NewReader(test.RawMultipart)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "multipart/form-data; boundary=xxx")
 			defer req.Body.Close()
