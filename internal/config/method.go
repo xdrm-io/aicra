@@ -75,13 +75,3 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 
 	return nil
 }
-
-// scopeHasPermission returns whether the permission fulfills a given scope
-func scopeHasPermission(permission string, scope []string) bool {
-	for _, s := range scope {
-		if permission == s {
-			return true
-		}
-	}
-	return false
-}
