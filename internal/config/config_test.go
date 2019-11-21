@@ -209,6 +209,35 @@ func TestParseMissingMethodDescription(t *testing.T) {
 
 }
 
+func TestParamEmptyRenameNoRename(t *testing.T) {
+	reader := strings.NewReader(`{
+		"GET": {
+			"info": "info",
+			"in": {
+				"original": { "info": "valid-desc", "type": "valid-type", "name": "" }
+			}
+		}
+	}`)
+	srv, err := Parse(reader)
+	if err != nil {
+		t.Errorf("unexpected error: '%s'", err)
+		t.FailNow()
+	}
+
+	method := srv.Method(http.MethodGet)
+	if method == nil {
+		t.Errorf("expected GET method not to be nil")
+		t.FailNow()
+	}
+	for _, param := range method.Parameters {
+
+		if param.Rename != "original" {
+			t.Errorf("expected the parameter 'original' not to be renamed to '%s'", param.Rename)
+			t.FailNow()
+		}
+	}
+
+}
 func TestOptionalParam(t *testing.T) {
 	reader := strings.NewReader(`{
 		"GET": {
