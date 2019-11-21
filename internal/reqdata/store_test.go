@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -222,7 +223,28 @@ func TestStoreWithGet(t *testing.T) {
 	}
 
 }
+func TestStoreWithUrlEncodedFormParseError(t *testing.T) {
+	// http.Request.ParseForm() fails when:
+	// - http.Request.Method is one of [POST,PUT,PATCH]
+	// - http.Request.Form     is not nil (created manually)
+	// - http.Request.PostForm is nil (deleted manually)
+	// - http.Request.Body     is nil (deleted manually)
 
+	req := httptest.NewRequest(http.MethodPost, "http://host.com/", nil)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// break everything
+	req.Body = nil
+	req.Form = make(url.Values)
+	req.PostForm = nil
+
+	// defer req.Body.Close()
+	store := New(nil, req)
+	if len(store.Form) > 0 {
+		t.Errorf("expected malformed urlencoded to have failed being parsed (got %d elements)", len(store.Form))
+		t.FailNow()
+	}
+}
 func TestStoreWithUrlEncodedForm(t *testing.T) {
 	tests := []struct {
 		URLEncoded string
