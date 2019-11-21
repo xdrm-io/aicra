@@ -2,19 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
-
-	"git.xdrm.io/go/aicra/internal/cerr"
 )
-
-// ErrRead - a problem ocurred when trying to read the configuration file
-const ErrRead = cerr.Error("cannot read config")
-
-// ErrFormat - a invalid format has been detected
-const ErrFormat = cerr.Error("invalid config format")
 
 // Parse builds a service from a json reader and checks for most format errors.
 func Parse(r io.Reader) (*Service, error) {
@@ -87,20 +78,20 @@ func (svc *Service) checkAndFormat(servicePath string) error {
 		}
 	}
 
-	// 1. stop if no child */
+	// 2. stop if no child */
 	if svc.Children == nil || len(svc.Children) < 1 {
 		return nil
 	}
 
-	// 2. for each service */
+	// 3. for each service */
 	for childService, ctl := range svc.Children {
 
-		// 3. invalid name */
+		// 3.1. invalid name */
 		if strings.ContainsAny(childService, "/-") {
-			return fmt.Errorf("service '%s' must not contain any slash '/' nor '-' symbols", childService)
+			return ErrIllegalServiceName.WrapString(childService)
 		}
 
-		// 4. check recursively */
+		// 3.2. check recursively */
 		err := ctl.checkAndFormat(childService)
 		if err != nil {
 			return err
