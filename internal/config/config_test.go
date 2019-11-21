@@ -490,7 +490,9 @@ func TestParseParameters(t *testing.T) {
 
 			if err != nil && test.Error != nil {
 				if err.Error() != test.Error.Error() && err.Error() != test.ErrorAlternative.Error() {
-					t.Errorf("expected the error '%s' (got '%s')", test.Error.Error(), err.Error())
+					t.Errorf("got the error: '%s'", err.Error())
+					t.Errorf("expected error (alternative 1): '%s'", test.Error.Error())
+					t.Errorf("expected error (alternative 2): '%s'", test.ErrorAlternative.Error())
 					t.FailNow()
 				}
 			}

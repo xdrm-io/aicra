@@ -39,17 +39,9 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 			}
 
 			// 3.2.1. Same rename field
-			if pData.Rename == param.Rename {
-				return ErrParamNameConflict.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
-			}
-
 			// 3.2.2. Not-renamed field matches a renamed field
-			if pName == param.Rename {
-				return ErrParamNameConflict.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
-			}
-
 			// 3.2.3. Renamed field matches name
-			if pData.Rename == paramName {
+			if pData.Rename == param.Rename || pName == param.Rename || pData.Rename == paramName {
 				return ErrParamNameConflict.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
 			}
 
