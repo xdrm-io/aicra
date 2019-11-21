@@ -386,3 +386,137 @@ func TestParseParameters(t *testing.T) {
 	}
 
 }
+
+func TestBrowseSimple(t *testing.T) {
+	tests := []struct {
+		Raw         string
+		Path        []string
+		BrowseDepth int
+		ValidDepth  bool
+	}{
+		{ // false positive -1
+			`{
+				"/" : {
+					"parent": {
+						"/": {
+							"subdir": {}
+						}
+					}
+				}
+			}`,
+			[]string{"parent", "subdir"},
+			1,
+			false,
+		},
+		{ // false positive +1
+			`{
+				"/" : {
+					"parent": {
+						"/": {
+							"subdir": {}
+						}
+					}
+				}
+			}`,
+			[]string{"parent", "subdir"},
+			3,
+			false,
+		},
+
+		{
+			`{
+				"/" : {
+					"parent": {
+						"/": {
+							"subdir": {}
+						}
+					}
+				}
+			}`,
+			[]string{"parent", "subdir"},
+			2,
+			true,
+		},
+		{ // unknown path
+			`{
+				"/" : {
+					"parent": {
+						"/": {
+							"subdir": {}
+						}
+					}
+				}
+			}`,
+			[]string{"x", "y"},
+			2,
+			false,
+		},
+		{ // unknown path
+			`{
+				"/" : {
+					"parent": {
+						"/": {
+							"subdir": {}
+						}
+					}
+				}
+			}`,
+			[]string{"parent", "y"},
+			1,
+			true,
+		},
+		{ // Warning: this case is important to understand the precedence of service paths over
+			// the value of some variables. Here if we send a string parameter in the GET method that
+			// unfortunately is equal to 'subdir', it will call the sub-service /parent/subdir' instead
+			// of the service /parent with its parameter set to the value 'subdir'.
+			`{
+				"/" : {
+					"parent": {
+						"/": {
+							"subdir": {}
+						},
+						"GET": {
+							"info": "valid-desc",
+							"in": {
+								"some-value": {
+									"info": "valid-desc",
+									"type": "valid-type"
+								}
+							}
+						}
+					}
+				}
+			}`,
+			[]string{"parent", "subdir"},
+			2,
+			true,
+		},
+	}
+
+	for i, test := range tests {
+
+		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+			srv, err := Parse(strings.NewReader(test.Raw))
+
+			if err != nil {
+				t.Errorf("unexpected error: '%s'", err)
+				t.FailNow()
+			}
+
+			_, depth := srv.Browse(test.Path)
+			if test.ValidDepth {
+				if depth != test.BrowseDepth {
+					t.Errorf("expected a depth of %d (got %d)", test.BrowseDepth, depth)
+					t.FailNow()
+				}
+			} else {
+				if depth == test.BrowseDepth {
+					t.Errorf("expected a depth NOT %d (got %d)", test.BrowseDepth, depth)
+					t.FailNow()
+				}
+
+			}
+		})
+	}
+
+}
