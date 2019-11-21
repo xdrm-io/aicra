@@ -146,6 +146,18 @@ func TestParseMissingMethodDescription(t *testing.T) {
 			}`,
 			ErrFormat.Wrap(ErrMissingMethodDesc.WrapString("GET /")),
 		},
+		{ // missing description
+			`{
+				"/": {
+					"subservice": {
+						"GET": {
+
+						}
+					}
+				}
+			}`,
+			ErrFormat.Wrap(ErrMissingMethodDesc.WrapString("GET subservice")),
+		},
 		{ // empty description
 			`{
 				"GET": {
@@ -197,6 +209,46 @@ func TestParseMissingMethodDescription(t *testing.T) {
 
 }
 
+func TestOptionalParam(t *testing.T) {
+	reader := strings.NewReader(`{
+		"GET": {
+			"info": "info",
+			"in": {
+				"optional": { "info": "valid-desc", "type": "?optional-type" },
+				"required": { "info": "valid-desc", "type": "required-type" },
+				"required2": { "info": "valid-desc", "type": "a" },
+				"optional2": { "info": "valid-desc", "type": "?a" }
+			}
+		}
+	}`)
+	srv, err := Parse(reader)
+	if err != nil {
+		t.Errorf("unexpected error: '%s'", err)
+		t.FailNow()
+	}
+
+	method := srv.Method(http.MethodGet)
+	if method == nil {
+		t.Errorf("expected GET method not to be nil")
+		t.FailNow()
+	}
+	for pName, param := range method.Parameters {
+
+		if pName == "optional" || pName == "optional2" {
+			if !param.Optional {
+				t.Errorf("expected parameter '%s' to be optional", pName)
+				t.Failed()
+			}
+		}
+		if pName == "required" || pName == "required2" {
+			if param.Optional {
+				t.Errorf("expected parameter '%s' to be required", pName)
+				t.Failed()
+			}
+		}
+	}
+
+}
 func TestParseParameters(t *testing.T) {
 	tests := []struct {
 		Raw              string
@@ -284,6 +336,22 @@ func TestParseParameters(t *testing.T) {
 			ErrFormat.Wrap(ErrMissingParamType.WrapString("GET / {param1}")),
 			nil,
 		},
+		{ // invalid type (optional mark only)
+			`{
+				"GET": {
+					"info": "info",
+					"in": {
+						"param1": {
+							"info": "valid",
+							"type": "?"
+						}
+					}
+				}
+			}`,
+
+			ErrFormat.Wrap(ErrMissingParamType.WrapString("GET / {param1}")),
+			ErrFormat.Wrap(ErrMissingParamType.WrapString("GET / {param1}")),
+		},
 		{ // valid description + valid type
 			`{
 				"GET": {
@@ -291,7 +359,22 @@ func TestParseParameters(t *testing.T) {
 					"in": {
 						"param1": {
 							"info": "valid",
-							"type": "valid"
+							"type": "a"
+						}
+					}
+				}
+			}`,
+			nil,
+			nil,
+		},
+		{ // valid description + valid OPTIONAL type
+			`{
+				"GET": {
+					"info": "info",
+					"in": {
+						"param1": {
+							"info": "valid",
+							"type": "?valid"
 						}
 					}
 				}

@@ -61,7 +61,7 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 		}
 
 		// 3.4. Manage invalid type
-		if len(pData.Type) < 1 {
+		if len(pData.Type) < 1 || pData.Type == "?" {
 			return ErrMissingParamType.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
 		}
 
