@@ -4,7 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"git.xdrm.io/go/aicra/internal/cerr"
 )
+
+// ErrUnknownType is returned when encountering an unknown type
+const ErrUnknownType = cerr.Error("unknown type")
+
+// ErrInvalidJSON is returned when json parse failed
+const ErrInvalidJSON = cerr.Error("invalid json")
+
+// ErrInvalidRootType is returned when json is a map
+const ErrInvalidRootType = cerr.Error("invalid json root type")
 
 // Parameter represents an http request parameter
 // that can be of type URL, GET, or FORM (multipart, json, urlencoded)
@@ -22,16 +33,22 @@ type Parameter struct {
 }
 
 // Parse parameter (json-like) if not already done
-func (i *Parameter) Parse() {
+func (i *Parameter) Parse() error {
 
 	/* (1) Stop if already parsed or nil*/
 	if i.Parsed || i.Value == nil {
-		return
+		return nil
 	}
 
 	/* (2) Try to parse value */
-	i.Value = parseParameter(i.Value)
+	parsed, err := parseParameter(i.Value)
 
+	if err != nil {
+		return err
+	}
+	i.Value = parsed
+
+	return nil
 }
 
 // parseParameter parses http GET/POST data
@@ -39,7 +56,7 @@ func (i *Parameter) Parse() {
 //		- size = 1 : return json of first element
 //		- size > 1 : return array of json elements
 // - string : return json if valid, else return raw string
-func parseParameter(data interface{}) interface{} {
+func parseParameter(data interface{}) (interface{}, error) {
 	dtype := reflect.TypeOf(data)
 	dvalue := reflect.ValueOf(data)
 
@@ -50,17 +67,21 @@ func parseParameter(data interface{}) interface{} {
 
 		// 1. Return nothing if empty
 		if dvalue.Len() == 0 {
-			return nil
+			return data, nil
 		}
 
 		// 2. only return first element if alone
 		if dvalue.Len() == 1 {
 
 			element := dvalue.Index(0)
-			if element.Kind() != reflect.String {
-				return nil
+
+			// try to parse if a string (containing json)
+			if element.Kind() == reflect.String {
+				return parseParameter(element.String())
 			}
-			return parseParameter(element.String())
+
+			// already typed
+			return data, nil
 
 		}
 
@@ -72,12 +93,17 @@ func parseParameter(data interface{}) interface{} {
 
 			// ignore non-string
 			if element.Kind() != reflect.String {
+				result[i] = nil
 				continue
 			}
 
-			result[i] = parseParameter(element.String())
+			parsed, err := parseParameter(element.String())
+			if err != nil {
+				return data, err
+			}
+			result[i] = parsed
 		}
-		return result
+		return result, nil
 
 	/* (2) string -> parse */
 	case reflect.String:
@@ -94,23 +120,23 @@ func parseParameter(data interface{}) interface{} {
 
 			mapval, ok := result.(map[string]interface{})
 			if !ok {
-				return dvalue.String()
+				return dvalue.String(), ErrInvalidRootType
 			}
 
 			wrapped, ok := mapval["wrapped"]
 			if !ok {
-				return dvalue.String()
+				return dvalue.String(), ErrInvalidJSON
 			}
 
-			return wrapped
+			return wrapped, nil
 		}
 
 		// else return as string
-		return dvalue.String()
+		return dvalue.String(), nil
 
 	}
 
 	/* (3) NIL if unknown type */
-	return dvalue
+	return dvalue, ErrUnknownType
 
 }
