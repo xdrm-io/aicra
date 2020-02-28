@@ -42,10 +42,11 @@ func (i *Parameter) Parse() error {
 
 	/* (2) Try to parse value */
 	parsed, err := parseParameter(i.Value)
-
 	if err != nil {
 		return err
 	}
+
+	i.Parsed = true
 	i.Value = parsed
 
 	return nil
