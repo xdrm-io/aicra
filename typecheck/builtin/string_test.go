@@ -41,6 +41,18 @@ func TestString_AvailableTypes(t *testing.T) {
 		{"string(1 )", false},
 		{"string( 1 )", false},
 
+		{"string()", false},
+		{"string(a)", false},
+		{"string(-1)", false},
+
+		{"string(,)", false},
+		{"string(1,b)", false},
+		{"string(a,b)", false},
+		{"string(a,1)", false},
+		{"string(-1,1)", false},
+		{"string(1,-1)", false},
+		{"string(-1,-1)", false},
+
 		{"string(1,2)", true},
 		{"string(1, 2)", true},
 		{"string(1,  2)", false},
