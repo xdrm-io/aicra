@@ -66,27 +66,12 @@ func parseParameter(data interface{}) (interface{}, error) {
 	/* (1) []string -> recursive */
 	case reflect.Slice:
 
-		// 1. Return nothing if empty
+		// 1. ignore empty
 		if dvalue.Len() == 0 {
 			return data, nil
 		}
 
-		// 2. only return first element if alone
-		if dvalue.Len() == 1 {
-
-			element := dvalue.Index(0)
-
-			// try to parse if a string (containing json)
-			if element.Kind() == reflect.String {
-				return parseParameter(element.String())
-			}
-
-			// already typed
-			return element.Interface(), nil
-
-		}
-
-		// 3. Return all elements if more than 1
+		// 2. parse each element recursively
 		result := make([]interface{}, dvalue.Len())
 
 		for i, l := 0, dvalue.Len(); i < l; i++ {
