@@ -206,3 +206,91 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 	}
 
 }
+
+func TestJsonBoolSlice(t *testing.T) {
+	p := Parameter{Parsed: false, File: false, Value: []string{"true", "false"}}
+
+	err := p.Parse()
+
+	if err != nil {
+		t.Errorf("unexpected error: <%s>", err)
+		t.FailNow()
+	}
+
+	if !p.Parsed {
+		t.Errorf("expected parameter to be parsed")
+		t.FailNow()
+	}
+
+	slice, canCast := p.Value.([]interface{})
+	if !canCast {
+		t.Errorf("expected parameter to be a []interface{}")
+		t.FailNow()
+	}
+
+	if len(slice) != 2 {
+		t.Errorf("expected 2 values, got %d", len(slice))
+		t.FailNow()
+	}
+
+	results := []bool{true, false}
+
+	for i, res := range results {
+
+		cast, canCast := slice[i].(bool)
+		if !canCast {
+			t.Errorf("expected parameter %d to be a []bool", i)
+			continue
+		}
+		if cast != res {
+			t.Errorf("expected first value to be '%t', got '%t'", res, cast)
+			continue
+		}
+
+	}
+
+}
+
+func TestBoolSlice(t *testing.T) {
+	p := Parameter{Parsed: false, File: false, Value: []bool{true, false}}
+
+	err := p.Parse()
+
+	if err != nil {
+		t.Errorf("unexpected error: <%s>", err)
+		t.FailNow()
+	}
+
+	if !p.Parsed {
+		t.Errorf("expected parameter to be parsed")
+		t.FailNow()
+	}
+
+	slice, canCast := p.Value.([]interface{})
+	if !canCast {
+		t.Errorf("expected parameter to be a []interface{}")
+		t.FailNow()
+	}
+
+	if len(slice) != 2 {
+		t.Errorf("expected 2 values, got %d", len(slice))
+		t.FailNow()
+	}
+
+	results := []bool{true, false}
+
+	for i, res := range results {
+
+		cast, canCast := slice[i].(bool)
+		if !canCast {
+			t.Errorf("expected parameter %d to be a bool, got %v", i, slice[i])
+			continue
+		}
+		if cast != res {
+			t.Errorf("expected first value to be '%t', got '%t'", res, cast)
+			continue
+		}
+
+	}
+
+}
