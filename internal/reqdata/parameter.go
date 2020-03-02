@@ -79,7 +79,7 @@ func parseParameter(data interface{}) (interface{}, error) {
 
 			// ignore non-string
 			if element.Kind() != reflect.String {
-				result[i] = nil
+				result[i] = element.Interface()
 				continue
 			}
 
