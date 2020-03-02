@@ -30,6 +30,7 @@ func TestSimpleString(t *testing.T) {
 		t.FailNow()
 	}
 }
+
 func TestStringSlice(t *testing.T) {
 	p := Parameter{Parsed: false, File: false, Value: `["str1", "str2"]`}
 
@@ -70,6 +71,45 @@ func TestStringSlice(t *testing.T) {
 			continue
 		}
 
+	}
+
+}
+
+func TestJsonPrimitiveBool(t *testing.T) {
+	tcases := []struct {
+		Raw       string
+		BoolValue bool
+	}{
+		{"true", true},
+		{"false", false},
+	}
+
+	for i, tcase := range tcases {
+		t.Run("case "+string(i), func(t *testing.T) {
+			p := Parameter{Parsed: false, File: false, Value: tcase.Raw}
+
+			err := p.Parse()
+			if err != nil {
+				t.Errorf("unexpected error: <%s>", err)
+				t.FailNow()
+			}
+
+			if !p.Parsed {
+				t.Errorf("expected parameter to be parsed")
+				t.FailNow()
+			}
+
+			cast, canCast := p.Value.(bool)
+			if !canCast {
+				t.Errorf("expected parameter to be a bool")
+				t.FailNow()
+			}
+
+			if cast != tcase.BoolValue {
+				t.Errorf("expected a value of %T, got %T", tcase.BoolValue, cast)
+				t.FailNow()
+			}
+		})
 	}
 
 }
