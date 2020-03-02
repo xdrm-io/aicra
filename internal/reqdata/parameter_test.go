@@ -106,7 +106,13 @@ func TestJsonPrimitiveBool(t *testing.T) {
 			}
 
 			if cast != tcase.BoolValue {
-				t.Errorf("expected a value of %T, got %T", tcase.BoolValue, cast)
+				t.Errorf("expected a value of %t, got %t", tcase.BoolValue, cast)
+				t.FailNow()
+			}
+		})
+	}
+
+}
 				t.FailNow()
 			}
 		})
