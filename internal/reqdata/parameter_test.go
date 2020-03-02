@@ -1,6 +1,7 @@
 package reqdata
 
 import (
+	"math"
 	"testing"
 )
 
@@ -113,6 +114,48 @@ func TestJsonPrimitiveBool(t *testing.T) {
 	}
 
 }
+
+func TestJsonPrimitiveFloat(t *testing.T) {
+	tcases := []struct {
+		Raw        string
+		FloatValue float64
+	}{
+		{"1", 1},
+		{"-1", -1},
+
+		{"0.001", 0.001},
+		{"-0.001", -0.001},
+
+		{"1.9992", 1.9992},
+		{"-1.9992", -1.9992},
+
+		{"19992", 19992},
+		{"-19992", -19992},
+	}
+
+	for i, tcase := range tcases {
+		t.Run("case "+string(i), func(t *testing.T) {
+			p := Parameter{Parsed: false, File: false, Value: tcase.Raw}
+
+			err := p.Parse()
+			if err != nil {
+				t.Errorf("unexpected error: <%s>", err)
+				t.FailNow()
+			}
+
+			if !p.Parsed {
+				t.Errorf("expected parameter to be parsed")
+				t.FailNow()
+			}
+
+			cast, canCast := p.Value.(float64)
+			if !canCast {
+				t.Errorf("expected parameter to be a float64")
+				t.FailNow()
+			}
+
+			if math.Abs(cast-tcase.FloatValue) > 0.00001 {
+				t.Errorf("expected a value of %f, got %f", tcase.FloatValue, cast)
 				t.FailNow()
 			}
 		})
