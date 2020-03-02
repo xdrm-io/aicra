@@ -123,6 +123,6 @@ func parseParameter(data interface{}) (interface{}, error) {
 	}
 
 	/* (3) NIL if unknown type */
-	return dvalue, ErrUnknownType
+	return dvalue.Interface(), nil
 
 }
