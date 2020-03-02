@@ -32,6 +32,68 @@ func TestSimpleString(t *testing.T) {
 	}
 }
 
+func TestSimpleFloat(t *testing.T) {
+	tcases := []float64{12.3456789, -12.3456789, 0.0000001, -0.0000001}
+
+	for i, tcase := range tcases {
+		t.Run("case "+string(i), func(t *testing.T) {
+			p := Parameter{Parsed: false, File: false, Value: tcase}
+
+			if err := p.Parse(); err != nil {
+				t.Errorf("unexpected error: <%s>", err)
+				t.FailNow()
+			}
+
+			if !p.Parsed {
+				t.Errorf("expected parameter to be parsed")
+				t.FailNow()
+			}
+
+			cast, canCast := p.Value.(float64)
+			if !canCast {
+				t.Errorf("expected parameter to be a float64")
+				t.FailNow()
+			}
+
+			if math.Abs(cast-tcase) > 0.00000001 {
+				t.Errorf("expected parameter to equal '%f', got '%f'", tcase, cast)
+				t.FailNow()
+			}
+		})
+	}
+}
+
+func TestSimpleBool(t *testing.T) {
+	tcases := []bool{true, false}
+
+	for i, tcase := range tcases {
+		t.Run("case "+string(i), func(t *testing.T) {
+			p := Parameter{Parsed: false, File: false, Value: tcase}
+
+			if err := p.Parse(); err != nil {
+				t.Errorf("unexpected error: <%s>", err)
+				t.FailNow()
+			}
+
+			if !p.Parsed {
+				t.Errorf("expected parameter to be parsed")
+				t.FailNow()
+			}
+
+			cast, canCast := p.Value.(bool)
+			if !canCast {
+				t.Errorf("expected parameter to be a bool")
+				t.FailNow()
+			}
+
+			if cast != tcase {
+				t.Errorf("expected parameter to equal '%t', got '%t'", tcase, cast)
+				t.FailNow()
+			}
+		})
+	}
+}
+
 func TestJsonStringSlice(t *testing.T) {
 	p := Parameter{Parsed: false, File: false, Value: `["str1", "str2"]`}
 
