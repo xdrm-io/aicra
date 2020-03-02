@@ -82,7 +82,7 @@ func parseParameter(data interface{}) (interface{}, error) {
 			}
 
 			// already typed
-			return data, nil
+			return element.Interface(), nil
 
 		}
 
