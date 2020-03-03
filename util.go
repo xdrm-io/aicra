@@ -58,7 +58,7 @@ func (s *httpServer) extractParameters(store *reqdata.Store, methodParam map[str
 			return nil, apiErr
 		}
 
-		// 6. do not check if file
+		// 6. ignore type check if file
 		if gotFile {
 			parameters[param.Rename] = p.Value
 			continue

@@ -13,7 +13,7 @@ import (
 
 // Server represents an AICRA instance featuring: type checkers, services
 type Server struct {
-	services *config.Service
+	config   *config.Service
 	Checkers *checker.Set
 	handlers []*api.Handler
 }
@@ -27,7 +27,7 @@ func New(configPath string) (*Server, error) {
 
 	// 1. init instance
 	var i = &Server{
-		services: nil,
+		config:   nil,
 		Checkers: checker.New(),
 		handlers: make([]*api.Handler, 0),
 	}
@@ -40,14 +40,14 @@ func New(configPath string) (*Server, error) {
 	defer configFile.Close()
 
 	// 3. load configuration
-	i.services, err = config.Parse(configFile)
+	i.config, err = config.Parse(configFile)
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. log configuration services
 	log.Printf("🔧   Reading configuration '%s'\n", configPath)
-	logService(*i.services, "")
+	logService(*i.config, "")
 
 	return i, nil
 
