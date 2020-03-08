@@ -57,6 +57,11 @@ func New(uriParams []string, req *http.Request) *Store {
 	// 1. set URI parameters
 	ds.setURIParams(uriParams)
 
+	// ignore nil requests
+	if req == nil {
+		return ds
+	}
+
 	// 2. GET (query) data
 	ds.readQuery(req)
 

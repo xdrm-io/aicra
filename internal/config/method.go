@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -10,7 +9,7 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 
 	// 1. fail on missing description
 	if len(methodDef.Description) < 1 {
-		return fmt.Errorf("missing %s.%s description", servicePath, httpMethod)
+		return ErrMissingMethodDesc.WrapString(httpMethod + " " + servicePath)
 	}
 
 	// 2. stop if no parameter
@@ -22,16 +21,16 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 	// 3. for each parameter
 	for pName, pData := range methodDef.Parameters {
 
-		// check name
+		// 3.1. check name
 		if strings.Trim(pName, "_") != pName {
-			return fmt.Errorf("invalid name '%s' must not begin/end with '_'", pName)
+			return ErrIllegalParamName.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
 		}
 
 		if len(pData.Rename) < 1 {
 			pData.Rename = pName
 		}
 
-		// 5. Check for name/rename conflict
+		// 3.2. Check for name/rename conflict
 		for paramName, param := range methodDef.Parameters {
 
 			// ignore self
@@ -39,39 +38,26 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 				continue
 			}
 
-			// 1. Same rename field
-			if pData.Rename == param.Rename {
-				return fmt.Errorf("rename conflict for %s.%s parameter '%s'", servicePath, httpMethod, pData.Rename)
-			}
-
-			// 2. Not-renamed field matches a renamed field
-			if pName == param.Rename {
-				return fmt.Errorf("name conflict for %s.%s parameter '%s'", servicePath, httpMethod, pName)
-			}
-
-			// 3. Renamed field matches name
-			if pData.Rename == paramName {
-				return fmt.Errorf("name conflict for %s.%s parameter '%s'", servicePath, httpMethod, pName)
+			// 3.2.1. Same rename field
+			// 3.2.2. Not-renamed field matches a renamed field
+			// 3.2.3. Renamed field matches name
+			if pData.Rename == param.Rename || pName == param.Rename || pData.Rename == paramName {
+				return ErrParamNameConflict.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
 			}
 
 		}
 
-		// 6. Manage invalid type
-		if len(pData.Type) < 1 {
-			return fmt.Errorf("invalid type for %s.%s parameter '%s'", servicePath, httpMethod, pName)
-		}
-
-		// 7. Fail on missing description
+		// 3.3. Fail on missing description
 		if len(pData.Description) < 1 {
-			return fmt.Errorf("missing description for %s.%s parameter '%s'", servicePath, httpMethod, pName)
+			return ErrMissingParamDesc.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
 		}
 
-		// 8. Fail on missing type
-		if len(pData.Type) < 1 {
-			return fmt.Errorf("missing type for %s.%s parameter '%s'", servicePath, httpMethod, pName)
+		// 3.4. Manage invalid type
+		if len(pData.Type) < 1 || pData.Type == "?" {
+			return ErrMissingParamType.WrapString(httpMethod + " " + servicePath + " {" + pName + "}")
 		}
 
-		// 9. Set optional + type
+		// 3.5. Set optional + type
 		if pData.Type[0] == '?' {
 			pData.Optional = true
 			pData.Type = pData.Type[1:]
@@ -80,14 +66,4 @@ func (methodDef *Method) checkAndFormat(servicePath string, httpMethod string) e
 	}
 
 	return nil
-}
-
-// scopeHasPermission returns whether the permission fulfills a given scope
-func scopeHasPermission(permission string, scope []string) bool {
-	for _, s := range scope {
-		if permission == s {
-			return true
-		}
-	}
-	return false
 }

@@ -96,6 +96,11 @@ func TestUint_Values(t *testing.T) {
 		// strane offset because of how precision works
 		{fmt.Sprintf("%f", float64(math.MaxUint64+1024*3)), false},
 
+		{[]byte(fmt.Sprintf("%d", math.MaxInt64)), true},
+		{[]byte(fmt.Sprintf("%d", uint(math.MaxUint64))), true},
+		// strane offset because of how precision works
+		{[]byte(fmt.Sprintf("%f", float64(math.MaxUint64+1024*3))), false},
+
 		{"string", false},
 		{[]byte("bytes"), false},
 		{-0.1, false},

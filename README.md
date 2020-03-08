@@ -82,13 +82,13 @@ func main() {
     server.Checkers.Add( builtin.NewFloat64() );
 
     // 3. bind your implementations
-    server.HandleFunc(http.MethodGet, func(req api.Request, res *api.Response){
+    server.HandleFunc(http.MethodGet, "/path", func(req api.Request, res *api.Response){
         // ... process stuff ...
         res.SetError(api.ErrorSuccess());
     })
 
     // 4. launch server
-    log.Fatal( http.ListenAndServer("localhost:8181", server) )
+    log.Fatal( http.ListenAndServe("localhost:8181", server) )
 }
 ```
 
@@ -210,6 +210,6 @@ In this example we want 3 arguments :
   - [ ] `[a:b]` - map containing **only** keys of type `a` and values of type `b` (*a or b can be ommited*)
 - [x] generic controllers implementation (shared objects)
 - [x] response interface
-- [ ] log bound resources when building the aicra server
+- [x] log bound resources when building the aicra server
 - [ ] fail on check for unimplemented resources at server boot.
 - [ ] fail on check for unavailable types in api.json at server boot.

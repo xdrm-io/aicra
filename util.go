@@ -58,7 +58,7 @@ func (s *httpServer) extractParameters(store *reqdata.Store, methodParam map[str
 			return nil, apiErr
 		}
 
-		// 6. do not check if file
+		// 6. ignore type check if file
 		if gotFile {
 			parameters[param.Rename] = p.Value
 			continue
@@ -90,9 +90,9 @@ func logService(s config.Service, path string) {
 	for _, method := range handledMethods {
 		if m := s.Method(method); m != nil {
 			if path == "" {
-				log.Printf("* [rest] %s\t'/'\n", method)
+				log.Printf("    ->\t%s\t'/'\n", method)
 			} else {
-				log.Printf("* [rest] %s\t'%s'\n", method, path)
+				log.Printf("    ->\t%s\t'%s'\n", method, path)
 			}
 		}
 	}

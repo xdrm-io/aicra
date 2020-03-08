@@ -13,100 +13,103 @@ import (
 type httpServer Server
 
 // ServeHTTP implements http.Handler and has to be called on each request
-func (s httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (server httpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	// 1. build API request from HTTP request
+	/* (1) create api.Request from http.Request
+	---------------------------------------------------------*/
 	request, err := api.NewRequest(r)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 2. find a matching service for this path in the config
-	serviceDef, pathIndex := s.services.Browse(request.URI)
-	if serviceDef == nil {
+	serviceConf, pathIndex := server.config.Browse(request.URI)
+	if serviceConf == nil {
 		return
 	}
+
+	// 3. extract the service path from request URI
 	servicePath := strings.Join(request.URI[:pathIndex], "/")
 	if !strings.HasPrefix(servicePath, "/") {
 		servicePath = "/" + servicePath
 	}
 
-	// 3. check if matching methodDef exists in config */
-	var methodDef = serviceDef.Method(r.Method)
-	if methodDef == nil {
-		response := api.NewResponse(api.ErrorUnknownMethod())
-		response.ServeHTTP(w, r)
-		logError(response)
+	// 4. find method configuration from http method */
+	var methodConf = serviceConf.Method(r.Method)
+	if methodConf == nil {
+		res := api.NewResponse(api.ErrorUnknownMethod())
+		res.ServeHTTP(w, r)
+		logError(res)
 		return
 	}
 
-	// 4. parse every input data from the request
-	store := reqdata.New(request.URI[pathIndex:], r)
+	// 5. parse data from the request (uri, query, form, json)
+	data := reqdata.New(request.URI[pathIndex:], r)
 
-	/* (4) Check parameters
+	/* (2) check parameters
 	---------------------------------------------------------*/
-	parameters, paramError := s.extractParameters(store, methodDef.Parameters)
+	parameters, paramError := server.extractParameters(data, methodConf.Parameters)
 
 	// Fail if argument check failed
 	if paramError.Code != api.ErrorSuccess().Code {
-		response := api.NewResponse(paramError)
-		response.ServeHTTP(w, r)
-		logError(response)
+		res := api.NewResponse(paramError)
+		res.ServeHTTP(w, r)
+		logError(res)
 		return
 	}
 
 	request.Param = parameters
 
-	/* (5) Search a matching handler
+	/* (3) search for the handler
 	---------------------------------------------------------*/
-	var serviceHandler *api.Handler
-	var serviceFound bool
+	var foundHandler *api.Handler
+	var found bool
 
-	for _, handler := range s.handlers {
+	for _, handler := range server.handlers {
 		if handler.GetPath() == servicePath {
-			serviceFound = true
+			found = true
 			if handler.GetMethod() == r.Method {
-				serviceHandler = handler
+				foundHandler = handler
 			}
 		}
 	}
 
 	// fail if found no handler
-	if serviceHandler == nil {
-		if serviceFound {
-			response := api.NewResponse()
-			response.SetError(api.ErrorUncallableMethod(), servicePath, r.Method)
-			response.ServeHTTP(w, r)
-			logError(response)
+	if foundHandler == nil {
+		if found {
+			res := api.NewResponse()
+			res.SetError(api.ErrorUncallableMethod(), servicePath, r.Method)
+			res.ServeHTTP(w, r)
+			logError(res)
 			return
 		}
 
-		response := api.NewResponse()
-		response.SetError(api.ErrorUncallableService(), servicePath)
-		response.ServeHTTP(w, r)
-		logError(response)
+		res := api.NewResponse()
+		res.SetError(api.ErrorUncallableService(), servicePath)
+		res.ServeHTTP(w, r)
+		logError(res)
 		return
 	}
 
-	/* (6) Execute handler and return response
+	/* (4) execute handler and return response
 	---------------------------------------------------------*/
 	// 1. feed request with configuration scope
-	request.Scope = methodDef.Scope
+	request.Scope = methodConf.Scope
 
-	// 1. execute
-	response := api.NewResponse()
-	serviceHandler.Handle(*request, response)
+	// 2. execute
+	res := api.NewResponse()
+	foundHandler.Handle(*request, res)
 
-	// 2. apply headers
-	for key, values := range response.Headers {
+	// 3. apply headers
+	for key, values := range res.Headers {
 		for _, value := range values {
 			w.Header().Add(key, value)
 		}
 	}
 
-	// 3. write to response
-	response.ServeHTTP(w, r)
+	// 4. write to response
+	res.ServeHTTP(w, r)
 	return
 
 }

@@ -16,6 +16,14 @@ func (err Error) Wrap(e error) *WrapError {
 	}
 }
 
+// WrapString returns a new error which wraps a new error created from a string.
+func (err Error) WrapString(e string) *WrapError {
+	return &WrapError{
+		base: err,
+		wrap: Error(e),
+	}
+}
+
 // WrapError is way to wrap errors recursively.
 type WrapError struct {
 	base error
