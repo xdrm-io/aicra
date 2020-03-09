@@ -74,14 +74,13 @@ func (res *Response) MarshalJSON() ([]byte, error) {
 
 // ServeHTTP implements http.Handler and writes the API response.
 func (res *Response) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
-	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.WriteHeader(res.Status)
 
-	fmt, err := json.Marshal(res)
+	encoded, err := json.Marshal(res)
 	if err != nil {
 		return err
 	}
-	w.Write(fmt)
+	w.Write(encoded)
 
 	return nil
 }
