@@ -1,6 +1,10 @@
 package config
 
-import "net/http"
+import (
+	"net/http"
+
+	"git.xdrm.io/go/aicra/config/datatype"
+)
 
 var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 
@@ -10,7 +14,9 @@ type Parameter struct {
 	Type        string `json:"type"`
 	Rename      string `json:"name,omitempty"`
 	Optional    bool
-	// Default     *interface{} `json:"default"`
+
+	// validator is set from the @Type
+	validator datatype.Validator
 }
 
 // Service represents a service definition (from api.json)
@@ -22,7 +28,6 @@ type Service struct {
 	Download    *bool                 `json:"download"`
 	Input       map[string]*Parameter `json:"in"`
 	// Output map[string]*Parameter `json:"out"`
-
 }
 
 // Services contains every service that represents a server configuration
