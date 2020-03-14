@@ -38,6 +38,9 @@ const ErrMissingDescription = Error("missing description")
 // ErrMissingParamDesc - a parameter is missing its description
 const ErrMissingParamDesc = Error("missing parameter description")
 
+// ErrUnknownDataType - a parameter has an unknown datatype name
+const ErrUnknownDataType = Error("unknown data type")
+
 // ErrIllegalParamName - a parameter has an illegal name
 const ErrIllegalParamName = Error("parameter name must not begin/end with '_'")
 

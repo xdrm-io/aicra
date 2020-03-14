@@ -3,8 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"git.xdrm.io/go/aicra/config/datatype/builtin"
 )
 
 func TestLegalServiceName(t *testing.T) {
@@ -219,22 +223,22 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 			"path": "/",
 			"info": "valid-description",
 			"in": {
-				"original": { "info": "valid-desc", "type": "valid-type", "name": "" }
+				"original": { "info": "valid-desc", "type": "any", "name": "" }
 			}
 		}
 	]`)
-	srv, err := Parse(reader)
+	srv, err := Parse(reader, builtin.AnyDataType{})
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
 		t.FailNow()
 	}
 
-	if len(srv) < 1 {
+	if len(srv.services) < 1 {
 		t.Errorf("expected a service")
 		t.FailNow()
 	}
 
-	for _, param := range (srv)[0].Input {
+	for _, param := range srv.services[0].Input {
 		if param.Rename != "original" {
 			t.Errorf("expected the parameter 'original' not to be renamed to '%s'", param.Rename)
 			t.FailNow()
@@ -249,24 +253,24 @@ func TestOptionalParam(t *testing.T) {
 			"path": "/",
 			"info": "valid-description",
 			"in": {
-				"optional": { "info": "valid-desc", "type": "?optional-type" },
-				"required": { "info": "valid-desc", "type": "required-type" },
-				"required2": { "info": "valid-desc", "type": "a" },
-				"optional2": { "info": "valid-desc", "type": "?a" }
+				"optional": { "info": "optional-type", "type": "?bool" },
+				"required": { "info": "required-type", "type": "bool" },
+				"required2": { "info": "required", "type": "any" },
+				"optional2": { "info": "optional", "type": "?any" }
 			}
 		}
 	]`)
-	srv, err := Parse(reader)
+	srv, err := Parse(reader, builtin.AnyDataType{}, builtin.BoolDataType{})
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
 		t.FailNow()
 	}
 
-	if len(srv) < 1 {
+	if len(srv.services) < 1 {
 		t.Errorf("expected a service")
 		t.FailNow()
 	}
-	for pName, param := range (srv)[0].Input {
+	for pName, param := range srv.services[0].Input {
 
 		if pName == "optional" || pName == "optional2" {
 			if !param.Optional {
@@ -389,7 +393,7 @@ func TestParseParameters(t *testing.T) {
 					"path": "/",
 					"info": "info",
 					"in": {
-						"param1": { "info": "valid", "type": "a" }
+						"param1": { "info": "valid", "type": "any" }
 					}
 				}
 			]`,
@@ -402,7 +406,7 @@ func TestParseParameters(t *testing.T) {
 					"path": "/",
 					"info": "info",
 					"in": {
-						"param1": { "info": "valid", "type": "?valid" }
+						"param1": { "info": "valid", "type": "?any" }
 					}
 				}
 			]`,
@@ -416,8 +420,8 @@ func TestParseParameters(t *testing.T) {
 					"path": "/",
 					"info": "info",
 					"in": {
-						"param1": { "info": "valid", "type": "valid" },
-						"param2": { "info": "valid", "type": "valid", "name": "param1" }
+						"param1": { "info": "valid", "type": "any" },
+						"param2": { "info": "valid", "type": "any", "name": "param1" }
 					}
 				}
 			]`,
@@ -431,8 +435,8 @@ func TestParseParameters(t *testing.T) {
 					"path": "/",
 					"info": "info",
 					"in": {
-						"param1": { "info": "valid", "type": "valid", "name": "param2" },
-						"param2": { "info": "valid", "type": "valid" }
+						"param1": { "info": "valid", "type": "any", "name": "param2" },
+						"param2": { "info": "valid", "type": "any" }
 					}
 				}
 			]`,
@@ -446,8 +450,8 @@ func TestParseParameters(t *testing.T) {
 					"path": "/",
 					"info": "info",
 					"in": {
-						"param1": { "info": "valid", "type": "valid", "name": "conflict" },
-						"param2": { "info": "valid", "type": "valid", "name": "conflict" }
+						"param1": { "info": "valid", "type": "any", "name": "conflict" },
+						"param2": { "info": "valid", "type": "any", "name": "conflict" }
 					}
 				}
 			]`,
@@ -462,8 +466,8 @@ func TestParseParameters(t *testing.T) {
 					"path": "/",
 					"info": "info",
 					"in": {
-						"param1": { "info": "valid", "type": "valid", "name": "freename" },
-						"param2": { "info": "valid", "type": "valid", "name": "freename2" }
+						"param1": { "info": "valid", "type": "any", "name": "freename" },
+						"param2": { "info": "valid", "type": "any", "name": "freename2" }
 					}
 				}
 			]`,
@@ -474,7 +478,7 @@ func TestParseParameters(t *testing.T) {
 	for i, test := range tests {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
-			_, err := Parse(strings.NewReader(test.Raw))
+			_, err := Parse(strings.NewReader(test.Raw), builtin.AnyDataType{})
 
 			if err == nil && test.Error != nil {
 				t.Errorf("expected an error: '%s'", test.Error.Error())
@@ -497,136 +501,141 @@ func TestParseParameters(t *testing.T) {
 }
 
 // todo: rewrite with new api format
-// func TestMatchSimple(t *testing.T) {
-// 	tests := []struct {
-// 		Raw         string
-// 		Path        []string
-// 		BrowseDepth int
-// 		ValidDepth  bool
-// 	}{
-// 		{ // false positive -1
-// 			`{
-// 				"/" : {
-// 					"parent": {
-// 						"/": {
-// 							"subdir": {}
-// 						}
-// 					}
-// 				}
-// 			}`,
-// 			[]string{"parent", "subdir"},
-// 			1,
-// 			false,
-// 		},
-// 		{ // false positive +1
-// 			`{
-// 				"/" : {
-// 					"parent": {
-// 						"/": {
-// 							"subdir": {}
-// 						}
-// 					}
-// 				}
-// 			}`,
-// 			[]string{"parent", "subdir"},
-// 			3,
-// 			false,
-// 		},
+func TestMatchSimple(t *testing.T) {
+	tests := []struct {
+		Config string
+		URL    string
+		Match  bool
+	}{
+		{ // false positive -1
+			`[ {
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/",
+			false,
+		},
+		{ // false positive +1
+			`[ {
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/a",
+			false,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/a",
+			true,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/a/",
+			true,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a/{id}",
+					"info": "info",
+					"in": {
+						"{id}": {
+							"info": "info",
+							"type": "bool"
+						}
+					}
+			} ]`,
+			"/a/12/",
+			false,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a/{id}",
+					"info": "info",
+					"in": {
+						"{id}": {
+							"info": "info",
+							"type": "int"
+						}
+					}
+			} ]`,
+			"/a/12/",
+			true,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a/{valid}",
+					"info": "info",
+					"in": {
+						"{id}": {
+							"info": "info",
+							"type": "bool"
+						}
+					}
+			} ]`,
+			"/a/12/",
+			false,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a/{valid}",
+					"info": "info",
+					"in": {
+						"{id}": {
+							"info": "info",
+							"type": "bool"
+						}
+					}
+			} ]`,
+			"/a/true/",
+			true,
+		},
+	}
 
-// 		{
-// 			`{
-// 				"/" : {
-// 					"parent": {
-// 						"/": {
-// 							"subdir": {}
-// 						}
-// 					}
-// 				}
-// 			}`,
-// 			[]string{"parent", "subdir"},
-// 			2,
-// 			true,
-// 		},
-// 		{ // unknown path
-// 			`{
-// 				"/" : {
-// 					"parent": {
-// 						"/": {
-// 							"subdir": {}
-// 						}
-// 					}
-// 				}
-// 			}`,
-// 			[]string{"x", "y"},
-// 			2,
-// 			false,
-// 		},
-// 		{ // unknown path
-// 			`{
-// 				"/" : {
-// 					"parent": {
-// 						"/": {
-// 							"subdir": {}
-// 						}
-// 					}
-// 				}
-// 			}`,
-// 			[]string{"parent", "y"},
-// 			1,
-// 			true,
-// 		},
-// 		{ // Warning: this case is important to understand the precedence of service paths over
-// 			// the value of some variables. Here if we send a string parameter in the GET method that
-// 			// unfortunately is equal to 'subdir', it will call the sub-service /parent/subdir' instead
-// 			// of the service /parent with its parameter set to the value 'subdir'.
-// 			`{
-// 				"/" : {
-// 					"parent": {
-// 						"/": {
-// 							"subdir": {}
-// 						},
-// 						"GET": {
-// 							"info": "valid-desc",
-// 							"in": {
-// 								"some-value": {
-// 									"info": "valid-desc",
-// 									"type": "valid-type"
-// 								}
-// 							}
-// 						}
-// 					}
-// 				}
-// 			}`,
-// 			[]string{"parent", "subdir"},
-// 			2,
-// 			true,
-// 		},
-// 	}
+	for i, test := range tests {
 
-// 	for i, test := range tests {
+		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+			srv, err := Parse(strings.NewReader(test.Config), builtin.AnyDataType{}, builtin.IntDataType{}, builtin.BoolDataType{})
 
-// 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
-// 			srv, err := Parse(strings.NewReader(test.Raw))
+			if err != nil {
+				t.Errorf("unexpected error: '%s'", err)
+				t.FailNow()
+			}
 
-// 			if err != nil {
-// 				t.Errorf("unexpected error: '%s'", err)
-// 				t.FailNow()
-// 			}
+			if len(srv.services) != 1 {
+				t.Errorf("expected to have 1 service, got %d", len(srv.services))
+				t.FailNow()
+			}
 
-// 			_, depth := srv.Match(test.Path)
-// 			if test.ValidDepth {
-// 				if depth != test.BrowseDepth {
-// 					t.Errorf("expected a depth of %d (got %d)", test.BrowseDepth, depth)
-// 					t.FailNow()
-// 				}
-// 			} else {
-// 				if depth == test.BrowseDepth {
-// 					t.Errorf("expected a depth NOT %d (got %d)", test.BrowseDepth, depth)
-// 					t.FailNow()
-// 				}
+			req := httptest.NewRequest(http.MethodGet, test.URL, nil)
 
-// 			}
-// 		})
-// 	}
+			match := srv.services[0].Match(req)
+			if test.Match && !match {
+				t.Errorf("expected '%s' to match", test.URL)
+				t.FailNow()
+			}
+			if !test.Match && match {
+				t.Errorf("expected '%s' NOT to match", test.URL)
+				t.FailNow()
+			}
+		})
+	}
 
-// }
+}

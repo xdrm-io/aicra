@@ -13,10 +13,11 @@ type Parameter struct {
 	Description string `json:"info"`
 	Type        string `json:"type"`
 	Rename      string `json:"name,omitempty"`
-	Optional    bool
+	// Optional is set to true when the type is prefixed with '?'
+	Optional bool
 
-	// validator is set from the @Type
-	validator datatype.Validator
+	// Validator is inferred from @Type
+	Validator datatype.Validator
 }
 
 // Service represents a service definition (from api.json)
@@ -25,10 +26,13 @@ type Service struct {
 	Pattern     string                `json:"path"`
 	Scope       [][]string            `json:"scope"`
 	Description string                `json:"info"`
-	Download    *bool                 `json:"download"`
 	Input       map[string]*Parameter `json:"in"`
+	// Download    *bool                 `json:"download"`
 	// Output map[string]*Parameter `json:"out"`
 }
 
-// Services contains every service that represents a server configuration
-type Services []*Service
+// Server represents a full server configuration
+type Server struct {
+	types    []datatype.DataType
+	services []*Service
+}

@@ -6,38 +6,123 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"git.xdrm.io/go/aicra/config/datatype"
 )
 
 // Parse builds a server configuration from a json reader and checks for most format errors.
-func Parse(r io.Reader) (Services, error) {
-	services := make(Services, 0)
+// you can provide additional DataTypes as variadic arguments
+func Parse(r io.Reader, dtypes ...datatype.DataType) (*Server, error) {
+	server := &Server{
+		types:    make([]datatype.DataType, 0),
+		services: make([]*Service, 0),
+	}
+	// add data types
+	for _, dtype := range dtypes {
+		server.types = append(server.types, dtype)
+	}
 
-	err := json.NewDecoder(r).Decode(&services)
-	if err != nil {
+	// parse JSON
+	if err := json.NewDecoder(r).Decode(&server.services); err != nil {
 		return nil, fmt.Errorf("%s: %w", ErrRead, err)
 	}
 
-	err = services.checkAndFormat()
-	if err != nil {
+	// check services
+	if err := server.checkAndFormat(); err != nil {
 		return nil, fmt.Errorf("%s: %w", ErrFormat, err)
 	}
 
-	if services.collide() {
-		return nil, fmt.Errorf("%s: %w", ErrFormat, ErrPatternCollision)
+	// check collisions
+	if err := server.collide(); err != nil {
+		return nil, fmt.Errorf("%s: %w", ErrFormat, err)
 	}
 
-	return services, nil
+	return server, nil
 }
 
 // collide returns if there is collision between services
-func (svc Services) collide() bool {
-	// todo: implement pattern collision using types to check if braces can be equal to fixed uri parts
-	return false
+func (server *Server) collide() error {
+	length := len(server.services)
+
+	// for each service combination
+	for a := 0; a < length; a++ {
+		for b := a + 1; b < length; b++ {
+			aService := server.services[a]
+			bService := server.services[b]
+
+			// ignore different method
+			if aService.Method != bService.Method {
+				continue
+			}
+
+			aParts := splitURL(aService.Pattern)
+			bParts := splitURL(bService.Pattern)
+
+			// not same size
+			if len(aParts) != len(bParts) {
+				continue
+			}
+
+			// for each part
+			for pi, aPart := range aParts {
+				bPart := bParts[pi]
+
+				aIsCapture := len(aPart) > 1 && aPart[0] == '{'
+				bIsCapture := len(bPart) > 1 && bPart[0] == '{'
+
+				// both captures -> as we cannot check, consider a collision
+				if aIsCapture && bIsCapture {
+					return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+				}
+
+				// no capture -> check equal
+				if !aIsCapture && !bIsCapture {
+					if aPart == bPart {
+						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					}
+					continue
+				}
+
+				// A captures B -> check type (B is A ?)
+				if aIsCapture {
+					input, exists := aService.Input[aPart]
+
+					// fail if no type or no validator
+					if !exists || input.Validator == nil {
+						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					}
+
+					// fail if not valid
+					if _, valid := input.Validator(aPart); !valid {
+						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					}
+
+					// B captures A -> check type (A is B ?)
+				} else {
+					input, exists := bService.Input[bPart]
+
+					// fail if no type or no validator
+					if !exists || input.Validator == nil {
+						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					}
+
+					// fail if not valid
+					if _, valid := input.Validator(bPart); !valid {
+						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					}
+				}
+
+			}
+
+		}
+	}
+
+	return nil
 }
 
 // Find a service matching an incoming HTTP request
-func (svc Services) Find(r *http.Request) *Service {
-	for _, service := range svc {
+func (server Server) Find(r *http.Request) *Service {
+	for _, service := range server.services {
 		if service.Match(r) {
 			return service
 		}
@@ -47,8 +132,8 @@ func (svc Services) Find(r *http.Request) *Service {
 }
 
 // checkAndFormat checks for errors and missing fields and sets default values for optional fields.
-func (svc Services) checkAndFormat() error {
-	for _, service := range svc {
+func (server Server) checkAndFormat() error {
+	for _, service := range server.services {
 
 		// check method
 		err := service.checkMethod()
@@ -69,7 +154,7 @@ func (svc Services) checkAndFormat() error {
 		}
 
 		// check input parameters
-		err = service.checkAndFormatInput()
+		err = service.checkAndFormatInput(server.types)
 		if err != nil {
 			return fmt.Errorf("%s '%s' [in]: %w", service.Method, service.Pattern, err)
 		}
