@@ -5,26 +5,13 @@ import (
 	"math"
 	"testing"
 
-	"git.xdrm.io/go/aicra/typecheck/builtin"
+	"git.xdrm.io/go/aicra/config/datatype/builtin"
 )
-
-func TestUint_New(t *testing.T) {
-	t.Parallel()
-
-	inst := interface{}(builtin.NewUint())
-
-	switch cast := inst.(type) {
-	case *builtin.Uint:
-		return
-	default:
-		t.Errorf("expect %T ; got %T", &builtin.Uint{}, cast)
-	}
-}
 
 func TestUint_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	inst := builtin.NewUint()
+	dt := builtin.UintDataType{}
 
 	tests := []struct {
 		Type    string
@@ -40,8 +27,8 @@ func TestUint_AvailableTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Type, func(t *testing.T) {
-			checker := inst.Checker(test.Type)
-			if checker == nil {
+			validator := dt.Build(test.Type)
+			if validator == nil {
 				if test.Handled {
 					t.Errorf("expect %q to be handled", test.Type)
 					t.Fail()
@@ -63,8 +50,8 @@ func TestUint_Values(t *testing.T) {
 
 	const typeName = "uint"
 
-	checker := builtin.NewUint().Checker(typeName)
-	if checker == nil {
+	validator := builtin.UintDataType{}.Build(typeName)
+	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
 	}
@@ -110,7 +97,7 @@ func TestUint_Values(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			if checker(test.Value) {
+			if _, isValid := validator(test.Value); isValid {
 				if !test.Valid {
 					t.Errorf("expect value to be invalid")
 					t.Fail()

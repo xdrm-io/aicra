@@ -4,26 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"git.xdrm.io/go/aicra/typecheck/builtin"
+	"git.xdrm.io/go/aicra/config/datatype/builtin"
 )
-
-func TestString_New(t *testing.T) {
-	t.Parallel()
-
-	inst := interface{}(builtin.NewString())
-
-	switch cast := inst.(type) {
-	case *builtin.String:
-		return
-	default:
-		t.Errorf("expect %T ; got %T", &builtin.String{}, cast)
-	}
-}
 
 func TestString_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	inst := builtin.NewString()
+	dt := builtin.StringDataType{}
 
 	tests := []struct {
 		Type    string
@@ -66,9 +53,9 @@ func TestString_AvailableTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Type, func(t *testing.T) {
-			checker := inst.Checker(test.Type)
+			validator := dt.Build(test.Type)
 
-			if checker == nil {
+			if validator == nil {
 				if test.Handled {
 					t.Errorf("expect %q to be handled", test.Type)
 				}
@@ -88,8 +75,8 @@ func TestString_AnyLength(t *testing.T) {
 
 	const typeName = "string"
 
-	checker := builtin.NewString().Checker(typeName)
-	if checker == nil {
+	validator := builtin.StringDataType{}.Build(typeName)
+	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
 	}
@@ -107,7 +94,7 @@ func TestString_AnyLength(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			if checker(test.Value) {
+			if _, isValid := validator(test.Value); isValid {
 				if !test.Valid {
 					t.Errorf("expect value to be invalid")
 					t.Fail()
@@ -146,14 +133,14 @@ func TestString_FixedLength(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			checker := builtin.NewString().Checker(test.Type)
-			if checker == nil {
+			validator := builtin.StringDataType{}.Build(test.Type)
+			if validator == nil {
 				t.Errorf("expect %q to be handled", test.Type)
 				t.Fail()
 				return
 			}
 
-			if checker(test.Value) {
+			if _, isValid := validator(test.Value); isValid {
 				if !test.Valid {
 					t.Errorf("expect value to be invalid")
 					t.Fail()
@@ -207,14 +194,14 @@ func TestString_VariableLength(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			checker := builtin.NewString().Checker(test.Type)
-			if checker == nil {
+			validator := builtin.StringDataType{}.Build(test.Type)
+			if validator == nil {
 				t.Errorf("expect %q to be handled", test.Type)
 				t.Fail()
 				return
 			}
 
-			if checker(test.Value) {
+			if _, isValid := validator(test.Value); isValid {
 				if !test.Valid {
 					t.Errorf("expect value to be invalid")
 					t.Fail()

@@ -4,28 +4,24 @@ import (
 	"regexp"
 	"strconv"
 
-	"git.xdrm.io/go/aicra/typecheck"
+	"git.xdrm.io/go/aicra/config/datatype"
 )
 
 var fixedLengthRegex = regexp.MustCompile(`^string\((\d+)\)$`)
 var variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
 
-// String checks if a value is a string
-type String struct{}
+// StringDataType is what its name tells
+type StringDataType struct{}
 
-// NewString returns a bare string type checker
-func NewString() *String {
-	return &String{}
-}
-
-// Checker returns the checker function. Availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
-func (s String) Checker(typeName string) typecheck.CheckerFunc {
-	isSimpleString := typeName == "string"
+// Build returns the validator.
+// availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
+func (s StringDataType) Build(typeName string) datatype.Validator {
+	simple := typeName == "string"
 	fixedLengthMatches := fixedLengthRegex.FindStringSubmatch(typeName)
 	variableLengthMatches := variableLengthRegex.FindStringSubmatch(typeName)
 
 	// nothing if type not handled
-	if !isSimpleString && fixedLengthMatches == nil && variableLengthMatches == nil {
+	if !simple && fixedLengthMatches == nil && variableLengthMatches == nil {
 		return nil
 	}
 
@@ -53,10 +49,10 @@ func (s String) Checker(typeName string) typecheck.CheckerFunc {
 		max = exMax
 	}
 
-	return func(value interface{}) bool {
+	return func(value interface{}) (interface{}, bool) {
 		// preprocessing error
 		if mustFail {
-			return false
+			return "", false
 		}
 
 		// check type
@@ -68,21 +64,21 @@ func (s String) Checker(typeName string) typecheck.CheckerFunc {
 		}
 
 		if !isString {
-			return false
+			return "", false
 		}
 
-		if isSimpleString {
-			return true
+		if simple {
+			return strValue, true
 		}
 
 		// check length against previously extracted length
 		l := len(strValue)
-		return l >= min && l <= max
+		return strValue, l >= min && l <= max
 	}
 }
 
 // getFixedLength returns the fixed length from regex matches and a success state.
-func (String) getFixedLength(regexMatches []string) (int, bool) {
+func (StringDataType) getFixedLength(regexMatches []string) (int, bool) {
 	// incoherence error
 	if regexMatches == nil || len(regexMatches) < 2 {
 		return 0, false
@@ -98,7 +94,7 @@ func (String) getFixedLength(regexMatches []string) (int, bool) {
 }
 
 // getVariableLength returns the length min and max from regex matches and a success state.
-func (String) getVariableLength(regexMatches []string) (int, int, bool) {
+func (StringDataType) getVariableLength(regexMatches []string) (int, int, bool) {
 	// incoherence error
 	if regexMatches == nil || len(regexMatches) < 3 {
 		return 0, 0, false

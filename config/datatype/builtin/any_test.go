@@ -4,26 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"git.xdrm.io/go/aicra/typecheck/builtin"
+	"git.xdrm.io/go/aicra/config/datatype/builtin"
 )
-
-func TestAny_New(t *testing.T) {
-	t.Parallel()
-
-	inst := interface{}(builtin.NewAny())
-
-	switch cast := inst.(type) {
-	case *builtin.Any:
-		return
-	default:
-		t.Errorf("expect %T ; got %T", &builtin.Any{}, cast)
-	}
-}
 
 func TestAny_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	inst := builtin.NewAny()
+	dt := builtin.AnyDataType{}
 
 	tests := []struct {
 		Type    string
@@ -39,9 +26,9 @@ func TestAny_AvailableTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		checker := inst.Checker(test.Type)
+		validator := dt.Build(test.Type)
 
-		if checker == nil {
+		if validator == nil {
 			if test.Handled {
 				t.Errorf("expect %q to be handled", test.Type)
 			}
@@ -60,8 +47,8 @@ func TestAny_AlwaysTrue(t *testing.T) {
 
 	const typeName = "any"
 
-	checker := builtin.NewAny().Checker(typeName)
-	if checker == nil {
+	validator := builtin.AnyDataType{}.Build(typeName)
+	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
 	}
@@ -76,7 +63,7 @@ func TestAny_AlwaysTrue(t *testing.T) {
 
 	for i, value := range values {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			if !checker(value) {
+			if _, isValid := validator(value); !isValid {
 				t.Errorf("expect value to be valid")
 				t.Fail()
 			}
