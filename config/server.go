@@ -123,7 +123,7 @@ func (server *Server) collide() error {
 // Find a service matching an incoming HTTP request
 func (server Server) Find(r *http.Request) *Service {
 	for _, service := range server.services {
-		if service.Match(r) {
+		if matches := service.Match(r); matches {
 			return service
 		}
 	}

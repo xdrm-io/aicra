@@ -43,11 +43,11 @@ func TestLegalServiceName(t *testing.T) {
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}" } ]`,
-			ErrInvalidPatternBracePosition,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}a" } ]`,
-			ErrInvalidPatternBracePosition,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}" } ]`,
@@ -55,11 +55,11 @@ func TestLegalServiceName(t *testing.T) {
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}/abc" } ]`,
-			ErrInvalidPatternBracePosition,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}s/abc" } ]`,
-			ErrInvalidPatternBracePosition,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/abc" } ]`,
@@ -67,11 +67,11 @@ func TestLegalServiceName(t *testing.T) {
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{b{races}s/abc" } ]`,
-			ErrInvalidPatternOpeningBrace,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/}abc" } ]`,
-			ErrInvalidPatternClosingBrace,
+			ErrInvalidPatternBraceCapture,
 		},
 	}
 
@@ -303,7 +303,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			ErrIllegalParamName,
+			ErrMissingParamDesc,
 		},
 		{ // invalid param name suffix
 			`[
@@ -316,7 +316,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			ErrIllegalParamName,
+			ErrMissingParamDesc,
 		},
 
 		{ // missing param description
@@ -500,7 +500,6 @@ func TestParseParameters(t *testing.T) {
 
 }
 
-// todo: rewrite with new api format
 func TestMatchSimple(t *testing.T) {
 	tests := []struct {
 		Config string
@@ -583,7 +582,7 @@ func TestMatchSimple(t *testing.T) {
 					"path": "/a/{valid}",
 					"info": "info",
 					"in": {
-						"{id}": {
+						"{valid}": {
 							"info": "info",
 							"type": "bool"
 						}
@@ -598,7 +597,7 @@ func TestMatchSimple(t *testing.T) {
 					"path": "/a/{valid}",
 					"info": "info",
 					"in": {
-						"{id}": {
+						"{valid}": {
 							"info": "info",
 							"type": "bool"
 						}

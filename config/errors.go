@@ -23,14 +23,11 @@ const ErrPatternCollision = Error("invalid config format")
 // ErrInvalidPattern - a service pattern is malformed
 const ErrInvalidPattern = Error("must begin with a '/' and not end with")
 
-// ErrInvalidPatternBracePosition - a service pattern opening/closing brace is not directly between '/'
-const ErrInvalidPatternBracePosition = Error("capturing braces must be alone between slashes")
+// ErrInvalidPatternBraceCapture - a service pattern brace capture is invalid
+const ErrInvalidPatternBraceCapture = Error("invalid uri capturing braces")
 
-// ErrInvalidPatternOpeningBrace - a service pattern opening brace is invalid
-const ErrInvalidPatternOpeningBrace = Error("opening brace already open")
-
-// ErrInvalidPatternClosingBrace - a service pattern closing brace is invalid
-const ErrInvalidPatternClosingBrace = Error("closing brace already closed")
+// ErrUnspecifiedBraceCapture - a parameter brace capture is not specified in the pattern
+const ErrUnspecifiedBraceCapture = Error("capturing brace missing in the path")
 
 // ErrMissingDescription - a service is missing its description
 const ErrMissingDescription = Error("missing description")
@@ -42,7 +39,7 @@ const ErrMissingParamDesc = Error("missing parameter description")
 const ErrUnknownDataType = Error("unknown data type")
 
 // ErrIllegalParamName - a parameter has an illegal name
-const ErrIllegalParamName = Error("parameter name must not begin/end with '_'")
+const ErrIllegalParamName = Error("illegal parameter name")
 
 // ErrMissingParamType - a parameter has an illegal type
 const ErrMissingParamType = Error("missing parameter type")

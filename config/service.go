@@ -3,10 +3,13 @@ package config
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"git.xdrm.io/go/aicra/config/datatype"
 )
+
+var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
@@ -21,7 +24,7 @@ func (svc *Service) Match(req *http.Request) bool {
 	}
 
 	// check and extract input
-	// todo: check if input match
+	// todo: check if input match and extract models
 
 	return true
 }
@@ -50,34 +53,34 @@ func (svc *Service) checkPattern() error {
 		}
 	}
 
-	// check capturing braces
-	depth := 0
-	for c, l := 1, length; c < l; c++ {
-		char := svc.Pattern[c]
-
-		if char == '{' {
-			// opening brace when already opened
-			if depth != 0 {
-				return ErrInvalidPatternOpeningBrace
-			}
-
-			// not directly preceded by a slash
-			if svc.Pattern[c-1] != '/' {
-				return ErrInvalidPatternBracePosition
-			}
-			depth++
+	// for each slash-separated chunk
+	parts := splitURL(svc.Pattern)
+	for i, part := range parts {
+		if len(part) < 1 {
+			return ErrInvalidPattern
 		}
-		if char == '}' {
-			// closing brace when already closed
-			if depth != 1 {
-				return ErrInvalidPatternClosingBrace
+
+		// if brace capture
+		if matches := braceRegex.FindAllStringSubmatch(part, -1); len(matches) > 0 && len(matches[0]) > 1 {
+			braceName := matches[0][1]
+
+			// append
+			if svc.captures == nil {
+				svc.captures = make([]*braceCapture, 0)
 			}
-			// not directly followed by a slash or end of pattern
-			if c+1 < l && svc.Pattern[c+1] != '/' {
-				return ErrInvalidPatternBracePosition
-			}
-			depth--
+			svc.captures = append(svc.captures, &braceCapture{
+				Index: i,
+				Name:  braceName,
+				Ref:   nil,
+			})
+			continue
 		}
+
+		// fail on invalid format
+		if strings.ContainsAny(part, "{}") {
+			return ErrInvalidPatternBraceCapture
+		}
+
 	}
 
 	return nil
@@ -93,10 +96,25 @@ func (svc *Service) checkAndFormatInput(types []datatype.DataType) error {
 
 	// for each parameter
 	for paramName, param := range svc.Input {
-
-		// fail on invalid name
-		if strings.Trim(paramName, "_") != paramName {
+		if len(paramName) < 1 {
 			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
+		}
+
+		// fail if brace does not exists in pattern
+		if matches := braceRegex.FindAllStringSubmatch(paramName, -1); len(matches) > 0 && len(matches[0]) > 1 {
+			braceName := matches[0][1]
+
+			found := false
+			for _, capture := range svc.captures {
+				if capture.Name == braceName {
+					capture.Ref = param
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("%s: %w", paramName, ErrUnspecifiedBraceCapture)
+			}
 		}
 
 		// use param name if no rename
