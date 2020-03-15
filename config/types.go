@@ -24,7 +24,7 @@ type Service struct {
 	// Download    *bool                 `json:"download"`
 	// Output map[string]*Parameter `json:"out"`
 
-	captures []*braceCapture
+	Captures []*BraceCapture
 }
 
 // Parameter represents a parameter definition (from api.json)
@@ -39,8 +39,8 @@ type Parameter struct {
 	Validator datatype.Validator
 }
 
-// links to the related URI parameter
-type braceCapture struct {
+// BraceCapture links to the related URI parameter
+type BraceCapture struct {
 	Name  string
 	Index int
 	Ref   *Parameter
@@ -48,6 +48,6 @@ type braceCapture struct {
 
 // links to the related URI parameter and hold a value
 type braceCaptureValue struct {
-	braceCapture
+	BraceCapture
 	Value interface{}
 }

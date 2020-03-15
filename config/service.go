@@ -65,10 +65,10 @@ func (svc *Service) checkPattern() error {
 			braceName := matches[0][1]
 
 			// append
-			if svc.captures == nil {
-				svc.captures = make([]*braceCapture, 0)
+			if svc.Captures == nil {
+				svc.Captures = make([]*BraceCapture, 0)
 			}
-			svc.captures = append(svc.captures, &braceCapture{
+			svc.Captures = append(svc.Captures, &BraceCapture{
 				Index: i,
 				Name:  braceName,
 				Ref:   nil,
@@ -105,7 +105,7 @@ func (svc *Service) checkAndFormatInput(types []datatype.DataType) error {
 			braceName := matches[0][1]
 
 			found := false
-			for _, capture := range svc.captures {
+			for _, capture := range svc.Captures {
 				if capture.Name == braceName {
 					capture.Ref = param
 					found = true
