@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"git.xdrm.io/go/aicra/config/datatype/builtin"
+	"git.xdrm.io/go/aicra/datatype/builtin"
 )
 
 func TestAny_AvailableTypes(t *testing.T) {

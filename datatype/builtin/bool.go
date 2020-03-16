@@ -1,6 +1,6 @@
 package builtin
 
-import "git.xdrm.io/go/aicra/config/datatype"
+import "git.xdrm.io/go/aicra/datatype"
 
 // BoolDataType is what its name tells
 type BoolDataType struct{}

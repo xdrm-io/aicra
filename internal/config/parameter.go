@@ -1,6 +1,6 @@
 package config
 
-import "git.xdrm.io/go/aicra/config/datatype"
+import "git.xdrm.io/go/aicra/datatype"
 
 func (param *Parameter) checkAndFormat() error {
 
@@ -24,7 +24,7 @@ func (param *Parameter) checkAndFormat() error {
 }
 
 // assigns the first matching data type from the type definition
-func (param *Parameter) assignDataType(types []datatype.DataType) bool {
+func (param *Parameter) assignDataType(types []datatype.T) bool {
 	for _, dtype := range types {
 		param.Validator = dtype.Build(param.Type)
 		if param.Validator != nil {

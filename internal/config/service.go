@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git.xdrm.io/go/aicra/config/datatype"
+	"git.xdrm.io/go/aicra/datatype"
 )
 
 var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)
@@ -86,7 +86,7 @@ func (svc *Service) checkPattern() error {
 	return nil
 }
 
-func (svc *Service) checkAndFormatInput(types []datatype.DataType) error {
+func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 
 	// ignore no parameter
 	if svc.Input == nil || len(svc.Input) < 1 {

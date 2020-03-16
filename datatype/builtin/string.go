@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"git.xdrm.io/go/aicra/config/datatype"
+	"git.xdrm.io/go/aicra/datatype"
 )
 
 var fixedLengthRegex = regexp.MustCompile(`^string\((\d+)\)$`)

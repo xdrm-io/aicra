@@ -5,30 +5,24 @@ import (
 	"math"
 	"testing"
 
-	"git.xdrm.io/go/aicra/config/datatype/builtin"
+	"git.xdrm.io/go/aicra/datatype/builtin"
 )
 
-func TestFloat64_AvailableTypes(t *testing.T) {
+func TestUint_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	dt := builtin.FloatDataType{}
+	dt := builtin.UintDataType{}
 
 	tests := []struct {
 		Type    string
 		Handled bool
 	}{
-		{"float", true},
-		{"float64", true},
-		{"Float", false},
-		{"Float64", false},
-		{"FLOAT", false},
-		{"FLOAT64", false},
-		{" float", false},
-		{"float ", false},
-		{" float ", false},
-		{" float64", false},
-		{"float64 ", false},
-		{" float64 ", false},
+		{"uint", true},
+		{"Uint", false},
+		{"UINT", false},
+		{" uint", false},
+		{"uint ", false},
+		{" uint ", false},
 	}
 
 	for _, test := range tests {
@@ -51,12 +45,12 @@ func TestFloat64_AvailableTypes(t *testing.T) {
 
 }
 
-func TestFloat64_Values(t *testing.T) {
+func TestUint_Values(t *testing.T) {
 	t.Parallel()
 
-	const typeName = "float"
+	const typeName = "uint"
 
-	validator := builtin.FloatDataType{}.Build(typeName)
+	validator := builtin.UintDataType{}.Build(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
@@ -69,29 +63,35 @@ func TestFloat64_Values(t *testing.T) {
 		{uint(0), true},
 		{uint(math.MaxInt64), true},
 		{uint(math.MaxUint64), true},
-		{-1, true},
-		{-math.MaxInt64, true},
+		{-1, false},
+		{-math.MaxInt64, false},
 
-		{float64(math.MinInt64), true},
+		{float64(math.MinInt64), false},
 		{float64(0), true},
 		{float64(math.MaxInt64), true},
 		// we cannot just compare because of how precision works
 		{float64(math.MaxUint64 - 1024), true},
-		{float64(math.MaxUint64 + 1), true},
+		{float64(math.MaxUint64 + 1), false},
 
 		// json number
-		{fmt.Sprintf("%f", -math.MaxFloat64), true},
-		{"-1", true},
+		{fmt.Sprintf("%d", math.MinInt64), false},
+		{"-1", false},
 		{"0", true},
 		{"1", true},
 		{fmt.Sprintf("%d", math.MaxInt64), true},
 		{fmt.Sprintf("%d", uint(math.MaxUint64)), true},
-		{fmt.Sprintf("%f", float64(math.MaxFloat64)), true},
+		// strane offset because of how precision works
+		{fmt.Sprintf("%f", float64(math.MaxUint64+1024*3)), false},
+
+		{[]byte(fmt.Sprintf("%d", math.MaxInt64)), true},
+		{[]byte(fmt.Sprintf("%d", uint(math.MaxUint64))), true},
+		// strane offset because of how precision works
+		{[]byte(fmt.Sprintf("%f", float64(math.MaxUint64+1024*3))), false},
 
 		{"string", false},
 		{[]byte("bytes"), false},
-		{-0.1, true},
-		{0.1, true},
+		{-0.1, false},
+		{0.1, false},
 		{nil, false},
 	}
 

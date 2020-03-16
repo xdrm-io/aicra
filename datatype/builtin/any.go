@@ -1,6 +1,6 @@
 package builtin
 
-import "git.xdrm.io/go/aicra/config/datatype"
+import "git.xdrm.io/go/aicra/datatype"
 
 // AnyDataType is what its name tells
 type AnyDataType struct{}

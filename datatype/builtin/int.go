@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"math"
 
-	"git.xdrm.io/go/aicra/config/datatype"
+	"git.xdrm.io/go/aicra/datatype"
 )
 
 // IntDataType is what its name tells

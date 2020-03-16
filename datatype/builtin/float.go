@@ -3,7 +3,7 @@ package builtin
 import (
 	"encoding/json"
 
-	"git.xdrm.io/go/aicra/config/datatype"
+	"git.xdrm.io/go/aicra/datatype"
 )
 
 // FloatDataType is what its name tells

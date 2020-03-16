@@ -3,14 +3,14 @@ package config
 import (
 	"net/http"
 
-	"git.xdrm.io/go/aicra/config/datatype"
+	"git.xdrm.io/go/aicra/datatype"
 )
 
 var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 
 // Server represents a full server configuration
 type Server struct {
-	Types    []datatype.DataType
+	Types    []datatype.T
 	Services []*Service
 }
 

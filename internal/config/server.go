@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"strings"
 
-	"git.xdrm.io/go/aicra/config/datatype"
+	"git.xdrm.io/go/aicra/datatype"
 )
 
 // Parse builds a server configuration from a json reader and checks for most format errors.
 // you can provide additional DataTypes as variadic arguments
-func Parse(r io.Reader, dtypes ...datatype.DataType) (*Server, error) {
+func Parse(r io.Reader, dtypes ...datatype.T) (*Server, error) {
 	server := &Server{
-		Types:    make([]datatype.DataType, 0),
+		Types:    make([]datatype.T, 0),
 		Services: make([]*Service, 0),
 	}
 	// add data types
