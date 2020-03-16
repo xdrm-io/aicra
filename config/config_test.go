@@ -233,12 +233,12 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 		t.FailNow()
 	}
 
-	if len(srv.services) < 1 {
+	if len(srv.Services) < 1 {
 		t.Errorf("expected a service")
 		t.FailNow()
 	}
 
-	for _, param := range srv.services[0].Input {
+	for _, param := range srv.Services[0].Input {
 		if param.Rename != "original" {
 			t.Errorf("expected the parameter 'original' not to be renamed to '%s'", param.Rename)
 			t.FailNow()
@@ -266,11 +266,11 @@ func TestOptionalParam(t *testing.T) {
 		t.FailNow()
 	}
 
-	if len(srv.services) < 1 {
+	if len(srv.Services) < 1 {
 		t.Errorf("expected a service")
 		t.FailNow()
 	}
-	for pName, param := range srv.services[0].Input {
+	for pName, param := range srv.Services[0].Input {
 
 		if pName == "optional" || pName == "optional2" {
 			if !param.Optional {
@@ -618,14 +618,14 @@ func TestMatchSimple(t *testing.T) {
 				t.FailNow()
 			}
 
-			if len(srv.services) != 1 {
-				t.Errorf("expected to have 1 service, got %d", len(srv.services))
+			if len(srv.Services) != 1 {
+				t.Errorf("expected to have 1 service, got %d", len(srv.Services))
 				t.FailNow()
 			}
 
 			req := httptest.NewRequest(http.MethodGet, test.URL, nil)
 
-			match := srv.services[0].Match(req)
+			match := srv.Services[0].Match(req)
 			if test.Match && !match {
 				t.Errorf("expected '%s' to match", test.URL)
 				t.FailNow()

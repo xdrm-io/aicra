@@ -10,8 +10,8 @@ var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.Method
 
 // Server represents a full server configuration
 type Server struct {
-	types    []datatype.DataType
-	services []*Service
+	Types    []datatype.DataType
+	Services []*Service
 }
 
 // Service represents a service definition (from api.json)

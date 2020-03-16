@@ -14,16 +14,16 @@ import (
 // you can provide additional DataTypes as variadic arguments
 func Parse(r io.Reader, dtypes ...datatype.DataType) (*Server, error) {
 	server := &Server{
-		types:    make([]datatype.DataType, 0),
-		services: make([]*Service, 0),
+		Types:    make([]datatype.DataType, 0),
+		Services: make([]*Service, 0),
 	}
 	// add data types
 	for _, dtype := range dtypes {
-		server.types = append(server.types, dtype)
+		server.Types = append(server.Types, dtype)
 	}
 
 	// parse JSON
-	if err := json.NewDecoder(r).Decode(&server.services); err != nil {
+	if err := json.NewDecoder(r).Decode(&server.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", ErrRead, err)
 	}
 
@@ -42,13 +42,13 @@ func Parse(r io.Reader, dtypes ...datatype.DataType) (*Server, error) {
 
 // collide returns if there is collision between services
 func (server *Server) collide() error {
-	length := len(server.services)
+	length := len(server.Services)
 
 	// for each service combination
 	for a := 0; a < length; a++ {
 		for b := a + 1; b < length; b++ {
-			aService := server.services[a]
-			bService := server.services[b]
+			aService := server.Services[a]
+			bService := server.Services[b]
 
 			// ignore different method
 			if aService.Method != bService.Method {
@@ -122,7 +122,7 @@ func (server *Server) collide() error {
 
 // Find a service matching an incoming HTTP request
 func (server Server) Find(r *http.Request) *Service {
-	for _, service := range server.services {
+	for _, service := range server.Services {
 		if matches := service.Match(r); matches {
 			return service
 		}
@@ -133,7 +133,7 @@ func (server Server) Find(r *http.Request) *Service {
 
 // checkAndFormat checks for errors and missing fields and sets default values for optional fields.
 func (server Server) checkAndFormat() error {
-	for _, service := range server.services {
+	for _, service := range server.Services {
 
 		// check method
 		err := service.checkMethod()
@@ -154,7 +154,7 @@ func (server Server) checkAndFormat() error {
 		}
 
 		// check input parameters
-		err = service.checkAndFormatInput(server.types)
+		err = service.checkAndFormatInput(server.Types)
 		if err != nil {
 			return fmt.Errorf("%s '%s' [in]: %w", service.Method, service.Pattern, err)
 		}
