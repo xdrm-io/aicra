@@ -24,7 +24,13 @@ type Service struct {
 	// Download    *bool                 `json:"download"`
 	// Output map[string]*Parameter `json:"out"`
 
+	// references to url parameters
+	// format: '/uri/{param}'
 	Captures []*BraceCapture
+
+	// references to Query parameters
+	// format: 'GET@paranName'
+	Query map[string]*Parameter
 }
 
 // Parameter represents a parameter definition (from api.json)

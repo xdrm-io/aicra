@@ -10,6 +10,7 @@ import (
 )
 
 var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)
+var queryRegex = regexp.MustCompile(`^GET@([a-z_-]+)$`)
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
@@ -117,6 +118,17 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 				return fmt.Errorf("%s: %w", paramName, ErrUnspecifiedBraceCapture)
 			}
 			iscapture = true
+
+		} else if matches := queryRegex.FindAllStringSubmatch(paramName, -1); len(matches) > 0 && len(matches[0]) > 1 {
+
+			queryName := matches[0][1]
+
+			// init map
+			if svc.Query == nil {
+				svc.Query = make(map[string]*Parameter)
+			}
+			svc.Query[queryName] = param
+
 		}
 
 		// use param name if no rename
