@@ -29,8 +29,14 @@ const ErrInvalidPatternBraceCapture = Error("invalid uri capturing braces")
 // ErrUnspecifiedBraceCapture - a parameter brace capture is not specified in the pattern
 const ErrUnspecifiedBraceCapture = Error("capturing brace missing in the path")
 
+// ErrUndefinedBraceCapture - a parameter brace capture in the pattern is not defined in parameters
+const ErrUndefinedBraceCapture = Error("capturing brace missing input definition")
+
 // ErrMissingDescription - a service is missing its description
 const ErrMissingDescription = Error("missing description")
+
+// ErrIllegalOptionalURIParam - an URI parameter cannot be optional
+const ErrIllegalOptionalURIParam = Error("URI parameter cannot be optional")
 
 // ErrMissingParamDesc - a parameter is missing its description
 const ErrMissingParamDesc = Error("missing parameter description")

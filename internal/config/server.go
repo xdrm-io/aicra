@@ -40,6 +40,17 @@ func Parse(r io.Reader, dtypes ...datatype.T) (*Server, error) {
 	return server, nil
 }
 
+// Find a service matching an incoming HTTP request
+func (server Server) Find(r *http.Request) *Service {
+	for _, service := range server.Services {
+		if matches := service.Match(r); matches {
+			return service
+		}
+	}
+
+	return nil
+}
+
 // collide returns if there is collision between services
 func (server *Server) collide() error {
 	length := len(server.Services)
@@ -120,17 +131,6 @@ func (server *Server) collide() error {
 	return nil
 }
 
-// Find a service matching an incoming HTTP request
-func (server Server) Find(r *http.Request) *Service {
-	for _, service := range server.Services {
-		if matches := service.Match(r); matches {
-			return service
-		}
-	}
-
-	return nil
-}
-
 // checkAndFormat checks for errors and missing fields and sets default values for optional fields.
 func (server Server) checkAndFormat() error {
 	for _, service := range server.Services {
@@ -157,6 +157,13 @@ func (server Server) checkAndFormat() error {
 		err = service.checkAndFormatInput(server.Types)
 		if err != nil {
 			return fmt.Errorf("%s '%s' [in]: %w", service.Method, service.Pattern, err)
+		}
+
+		// fail if a brace capture remains undefined
+		for _, capture := range service.Captures {
+			if capture.Ref == nil {
+				return fmt.Errorf("%s '%s' [in]: %s: %w", service.Method, service.Pattern, capture.Name, ErrUndefinedBraceCapture)
+			}
 		}
 
 	}

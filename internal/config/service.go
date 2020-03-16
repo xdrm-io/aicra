@@ -100,7 +100,8 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
 		}
 
-		// fail if brace does not exists in pattern
+		// fail if brace capture does not exists in pattern
+		iscapture := false
 		if matches := braceRegex.FindAllStringSubmatch(paramName, -1); len(matches) > 0 && len(matches[0]) > 1 {
 			braceName := matches[0][1]
 
@@ -115,6 +116,7 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 			if !found {
 				return fmt.Errorf("%s: %w", paramName, ErrUnspecifiedBraceCapture)
 			}
+			iscapture = true
 		}
 
 		// use param name if no rename
@@ -125,6 +127,11 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 		err := param.checkAndFormat()
 		if err != nil {
 			return fmt.Errorf("%s: %w", paramName, err)
+		}
+
+		// capture parameter cannot be optional
+		if iscapture && param.Optional {
+			return fmt.Errorf("%s: %w", paramName, ErrIllegalOptionalURIParam)
 		}
 
 		if !param.assignDataType(types) {

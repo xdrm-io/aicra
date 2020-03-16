@@ -12,6 +12,8 @@ import (
 )
 
 func TestLegalServiceName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		Raw   string
 		Error error
@@ -51,7 +53,7 @@ func TestLegalServiceName(t *testing.T) {
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}" } ]`,
-			nil,
+			ErrUndefinedBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}/abc" } ]`,
@@ -63,7 +65,7 @@ func TestLegalServiceName(t *testing.T) {
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/abc" } ]`,
-			nil,
+			ErrUndefinedBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{b{races}s/abc" } ]`,
@@ -99,6 +101,7 @@ func TestLegalServiceName(t *testing.T) {
 	}
 }
 func TestAvailableMethods(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		Raw         string
 		ValidMethod bool
@@ -146,6 +149,7 @@ func TestAvailableMethods(t *testing.T) {
 	}
 }
 func TestParseEmpty(t *testing.T) {
+	t.Parallel()
 	reader := strings.NewReader(`[]`)
 	_, err := Parse(reader)
 	if err != nil {
@@ -167,6 +171,7 @@ func TestParseJsonError(t *testing.T) {
 }
 
 func TestParseMissingMethodDescription(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		Raw              string
 		ValidDescription bool
@@ -217,6 +222,7 @@ func TestParseMissingMethodDescription(t *testing.T) {
 }
 
 func TestParamEmptyRenameNoRename(t *testing.T) {
+	t.Parallel()
 	reader := strings.NewReader(`[
 		{
 			"method": "GET",
@@ -247,6 +253,7 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 
 }
 func TestOptionalParam(t *testing.T) {
+	t.Parallel()
 	reader := strings.NewReader(`[
 		{
 			"method": "GET",
@@ -288,6 +295,7 @@ func TestOptionalParam(t *testing.T) {
 
 }
 func TestParseParameters(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		Raw   string
 		Error error
@@ -473,6 +481,57 @@ func TestParseParameters(t *testing.T) {
 			]`,
 			nil,
 		},
+
+		{ // URI parameter
+			`[
+				{
+					"method": "GET",
+					"path": "/{uri}",
+					"info": "info",
+					"in": {
+						"{uri}": { "info": "valid", "type": "any", "name": "freename" }
+					}
+				}
+			]`,
+			nil,
+		},
+		{ // URI parameter cannot be optional
+			`[
+				{
+					"method": "GET",
+					"path": "/{uri}",
+					"info": "info",
+					"in": {
+						"{uri}": { "info": "valid", "type": "?any", "name": "freename" }
+					}
+				}
+			]`,
+			ErrIllegalOptionalURIParam,
+		},
+		{ // URI parameter not specified
+			`[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"in": {
+						"{uri}": { "info": "valid", "type": "?any", "name": "freename" }
+					}
+				}
+			]`,
+			ErrUnspecifiedBraceCapture,
+		},
+		{ // URI parameter not defined
+			`[
+				{
+					"method": "GET",
+					"path": "/{uri}",
+					"info": "info",
+					"in": { }
+				}
+			]`,
+			ErrUndefinedBraceCapture,
+		},
 	}
 
 	for i, test := range tests {
@@ -501,6 +560,7 @@ func TestParseParameters(t *testing.T) {
 }
 
 func TestMatchSimple(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		Config string
 		URL    string
