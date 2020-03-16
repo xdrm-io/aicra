@@ -4,18 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"git.xdrm.io/go/aicra/internal/cerr"
 )
-
-// ErrUnknownType is returned when encountering an unknown type
-const ErrUnknownType = cerr.Error("unknown type")
-
-// ErrInvalidJSON is returned when json parse failed
-const ErrInvalidJSON = cerr.Error("invalid json")
-
-// ErrInvalidRootType is returned when json is a map
-const ErrInvalidRootType = cerr.Error("invalid json root type")
 
 // Parameter represents an http request parameter
 // that can be of type URL, GET, or FORM (multipart, json, urlencoded)
