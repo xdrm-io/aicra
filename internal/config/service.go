@@ -129,6 +129,11 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 			}
 			svc.Query[queryName] = param
 
+		} else {
+			if svc.Form == nil {
+				svc.Form = make(map[string]*Parameter)
+			}
+			svc.Form[paramName] = param
 		}
 
 		// use param name if no rename

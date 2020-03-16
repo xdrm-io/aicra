@@ -31,6 +31,9 @@ type Service struct {
 	// references to Query parameters
 	// format: 'GET@paranName'
 	Query map[string]*Parameter
+
+	// references for form parameters (all but Captures and Query)
+	Form map[string]*Parameter
 }
 
 // Parameter represents a parameter definition (from api.json)
