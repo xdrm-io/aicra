@@ -54,7 +54,7 @@ func (svc *Service) checkPattern() error {
 	}
 
 	// for each slash-separated chunk
-	parts := splitURL(svc.Pattern)
+	parts := SplitURL(svc.Pattern)
 	for i, part := range parts {
 		if len(part) < 1 {
 			return ErrInvalidPattern
@@ -154,8 +154,8 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 
 // checks if an uri matches the service's pattern
 func (svc *Service) matchPattern(uri string) bool {
-	uriparts := splitURL(uri)
-	parts := splitURL(svc.Pattern)
+	uriparts := SplitURL(uri)
+	parts := SplitURL(svc.Pattern)
 
 	// fail if size differ
 	if len(uriparts) != len(parts) {

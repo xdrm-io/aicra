@@ -45,9 +45,3 @@ type BraceCapture struct {
 	Index int
 	Ref   *Parameter
 }
-
-// links to the related URI parameter and hold a value
-type braceCaptureValue struct {
-	BraceCapture
-	Value interface{}
-}

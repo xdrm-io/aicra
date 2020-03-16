@@ -2,8 +2,8 @@ package config
 
 import "strings"
 
-// splits an URL without empty sets
-func splitURL(url string) []string {
+// SplitURL without empty sets
+func SplitURL(url string) []string {
 	trimmed := strings.Trim(url, " /\t\r\n")
 	split := strings.Split(trimmed, "/")
 

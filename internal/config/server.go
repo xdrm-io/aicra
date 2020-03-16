@@ -55,8 +55,8 @@ func (server *Server) collide() error {
 				continue
 			}
 
-			aParts := splitURL(aService.Pattern)
-			bParts := splitURL(bService.Pattern)
+			aParts := SplitURL(aService.Pattern)
+			bParts := SplitURL(bService.Pattern)
 
 			// not same size
 			if len(aParts) != len(bParts) {
