@@ -141,6 +141,9 @@ func (i *Set) parseJSON(req *http.Request) error {
 
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(&parsed); err != nil {
+		if err == io.EOF {
+			return nil
+		}
 		return err
 	}
 
