@@ -37,8 +37,8 @@ func New(service *config.Service) *Set {
 }
 
 // ExtractURI fills 'Set' with creating pointers inside 'Url'
-func (i *Set) ExtractURI(req http.Request) error {
-	uriparts := config.SplitURL(req.RequestURI)
+func (i *Set) ExtractURI(req *http.Request) error {
+	uriparts := config.SplitURL(req.URL.RequestURI())
 
 	for _, capture := range i.service.Captures {
 		// out of range
