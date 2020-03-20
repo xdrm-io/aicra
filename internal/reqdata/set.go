@@ -228,7 +228,7 @@ func (i *Set) parseMultipart(req *http.Request) error {
 
 	// 2. parse multipart
 	if err = mpr.Parse(); err != nil {
-		return err
+		return fmt.Errorf("%s: %w", err, ErrInvalidMultipart)
 	}
 
 	for name, param := range i.service.Form {
