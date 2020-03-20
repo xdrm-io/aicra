@@ -3,6 +3,7 @@ package reqdata
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/multipart"
@@ -219,6 +220,9 @@ func (i *Set) parseMultipart(req *http.Request) error {
 	boundary := req.Header.Get("Content-Type")[len("multipart/form-data; boundary="):]
 	mpr, err := multipart.NewReader(req.Body, boundary)
 	if err != nil {
+		if err == io.EOF {
+			return nil
+		}
 		return err
 	}
 
