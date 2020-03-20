@@ -144,7 +144,7 @@ func (i *Set) parseJSON(req *http.Request) error {
 		if err == io.EOF {
 			return nil
 		}
-		return err
+		return fmt.Errorf("%s: %w", err, ErrInvalidJSON)
 	}
 
 	for name, param := range i.service.Form {
