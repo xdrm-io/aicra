@@ -232,7 +232,7 @@ func (i *Set) parseMultipart(req *http.Request) error {
 	}
 
 	for name, param := range i.service.Form {
-		value, exist := mpr.Data[name]
+		component, exist := mpr.Data[name]
 
 		// fail on missing required
 		if !exist && !param.Optional {
@@ -245,7 +245,7 @@ func (i *Set) parseMultipart(req *http.Request) error {
 		}
 
 		// fail on invalid type
-		cast, valid := param.Validator(value)
+		cast, valid := param.Validator(string(component.Data))
 		if !valid {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
 		}
