@@ -42,17 +42,9 @@ var (
 	// the http request URI.
 	ErrorUnknownService = func() Error { return Error{200, "unknown service", nil} }
 
-	// ErrorUnknownMethod is set when there is no method matching the
-	// request's http method
-	ErrorUnknownMethod = func() Error { return Error{201, "unknown method", nil} }
-
 	// ErrorUncallableService is set when there the requested service's
 	// implementation (plugin file) is not found/callable
 	ErrorUncallableService = func() Error { return Error{202, "uncallable service", nil} }
-
-	// ErrorUncallableMethod is set when there the requested service's
-	// implementation does not features the requested method
-	ErrorUncallableMethod = func() Error { return Error{203, "uncallable method", nil} }
 
 	// ErrorPermission is set when there is a permission error by default
 	// the api returns a permission error when the current scope (built
