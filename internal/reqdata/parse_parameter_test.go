@@ -6,15 +6,9 @@ import (
 )
 
 func TestSimpleString(t *testing.T) {
-	p := Parameter{Value: "some-string"}
-	p.Parse()
+	p := parseParameter("some-string")
 
-	if !p.Parsed {
-		t.Errorf("expected parameter to be parsed")
-		t.FailNow()
-	}
-
-	cast, canCast := p.Value.(string)
+	cast, canCast := p.(string)
 	if !canCast {
 		t.Errorf("expected parameter to be a string")
 		t.FailNow()
@@ -31,15 +25,9 @@ func TestSimpleFloat(t *testing.T) {
 
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
-			p := Parameter{Parsed: false, File: false, Value: tcase}
-			p.Parse()
+			p := parseParameter(tcase)
 
-			if !p.Parsed {
-				t.Errorf("expected parameter to be parsed")
-				t.FailNow()
-			}
-
-			cast, canCast := p.Value.(float64)
+			cast, canCast := p.(float64)
 			if !canCast {
 				t.Errorf("expected parameter to be a float64")
 				t.FailNow()
@@ -58,16 +46,9 @@ func TestSimpleBool(t *testing.T) {
 
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
-			p := Parameter{Parsed: false, File: false, Value: tcase}
+			p := parseParameter(tcase)
 
-			p.Parse()
-
-			if !p.Parsed {
-				t.Errorf("expected parameter to be parsed")
-				t.FailNow()
-			}
-
-			cast, canCast := p.Value.(bool)
+			cast, canCast := p.(bool)
 			if !canCast {
 				t.Errorf("expected parameter to be a bool")
 				t.FailNow()
@@ -82,15 +63,9 @@ func TestSimpleBool(t *testing.T) {
 }
 
 func TestJsonStringSlice(t *testing.T) {
-	p := Parameter{Parsed: false, File: false, Value: `["str1", "str2"]`}
-	p.Parse()
+	p := parseParameter(`["str1", "str2"]`)
 
-	if !p.Parsed {
-		t.Errorf("expected parameter to be parsed")
-		t.FailNow()
-	}
-
-	slice, canCast := p.Value.([]interface{})
+	slice, canCast := p.([]interface{})
 	if !canCast {
 		t.Errorf("expected parameter to be a []interface{}")
 		t.FailNow()
@@ -120,15 +95,9 @@ func TestJsonStringSlice(t *testing.T) {
 }
 
 func TestStringSlice(t *testing.T) {
-	p := Parameter{Parsed: false, File: false, Value: []string{"str1", "str2"}}
-	p.Parse()
+	p := parseParameter([]string{"str1", "str2"})
 
-	if !p.Parsed {
-		t.Errorf("expected parameter to be parsed")
-		t.FailNow()
-	}
-
-	slice, canCast := p.Value.([]interface{})
+	slice, canCast := p.([]interface{})
 	if !canCast {
 		t.Errorf("expected parameter to be a []interface{}")
 		t.FailNow()
@@ -168,15 +137,9 @@ func TestJsonPrimitiveBool(t *testing.T) {
 
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
-			p := Parameter{Parsed: false, File: false, Value: tcase.Raw}
-			p.Parse()
+			p := parseParameter(tcase.Raw)
 
-			if !p.Parsed {
-				t.Errorf("expected parameter to be parsed")
-				t.FailNow()
-			}
-
-			cast, canCast := p.Value.(bool)
+			cast, canCast := p.(bool)
 			if !canCast {
 				t.Errorf("expected parameter to be a bool")
 				t.FailNow()
@@ -211,15 +174,9 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
-			p := Parameter{Parsed: false, File: false, Value: tcase.Raw}
-			p.Parse()
+			p := parseParameter(tcase.Raw)
 
-			if !p.Parsed {
-				t.Errorf("expected parameter to be parsed")
-				t.FailNow()
-			}
-
-			cast, canCast := p.Value.(float64)
+			cast, canCast := p.(float64)
 			if !canCast {
 				t.Errorf("expected parameter to be a float64")
 				t.FailNow()
@@ -235,15 +192,9 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 }
 
 func TestJsonBoolSlice(t *testing.T) {
-	p := Parameter{Parsed: false, File: false, Value: []string{"true", "false"}}
-	p.Parse()
+	p := parseParameter([]string{"true", "false"})
 
-	if !p.Parsed {
-		t.Errorf("expected parameter to be parsed")
-		t.FailNow()
-	}
-
-	slice, canCast := p.Value.([]interface{})
+	slice, canCast := p.([]interface{})
 	if !canCast {
 		t.Errorf("expected parameter to be a []interface{}")
 		t.FailNow()
@@ -273,15 +224,9 @@ func TestJsonBoolSlice(t *testing.T) {
 }
 
 func TestBoolSlice(t *testing.T) {
-	p := Parameter{Parsed: false, File: false, Value: []bool{true, false}}
-	p.Parse()
+	p := parseParameter([]bool{true, false})
 
-	if !p.Parsed {
-		t.Errorf("expected parameter to be parsed")
-		t.FailNow()
-	}
-
-	slice, canCast := p.Value.([]interface{})
+	slice, canCast := p.([]interface{})
 	if !canCast {
 		t.Errorf("expected parameter to be a []interface{}")
 		t.FailNow()

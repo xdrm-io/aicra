@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/multipart"
@@ -26,14 +27,14 @@ type Set struct {
 	// - FORM: no prefix
 	// - URL:  '{uri_var}'
 	// - GET:  'GET@' followed by the key in GET
-	Data map[string]*Parameter
+	Data map[string]interface{}
 }
 
 // New creates a new empty store.
 func New(service *config.Service) *Set {
 	return &Set{
 		service: service,
-		Data:    make(map[string]*Parameter),
+		Data:    make(map[string]interface{}),
 	}
 }
 
@@ -53,17 +54,17 @@ func (i *Set) ExtractURI(req *http.Request) error {
 			return fmt.Errorf("%s: %w", capture.Name, ErrUnknownType)
 		}
 
+		// parse parameter
+		parsed := parseParameter(value)
+
 		// check type
-		cast, valid := capture.Ref.Validator(value)
+		cast, valid := capture.Ref.Validator(parsed)
 		if !valid {
 			return fmt.Errorf("%s: %w", capture.Name, ErrInvalidType)
 		}
 
 		// store cast value in 'Set'
-		i.Data[capture.Ref.Rename] = &Parameter{
-			Value: cast,
-		}
-
+		i.Data[capture.Ref.Rename] = cast
 	}
 
 	return nil
@@ -86,16 +87,17 @@ func (i *Set) ExtractQuery(req *http.Request) error {
 			continue
 		}
 
+		// parse parameter
+		parsed := parseParameter(value)
+
 		// check type
-		cast, valid := param.Validator(value)
+		cast, valid := param.Validator(parsed)
 		if !valid {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
 		}
 
-		// store value
-		i.Data[param.Rename] = &Parameter{
-			Value: cast,
-		}
+		// store cast value
+		i.Data[param.Rename] = cast
 	}
 
 	return nil
@@ -167,10 +169,8 @@ func (i *Set) parseJSON(req *http.Request) error {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
 		}
 
-		// store value
-		i.Data[param.Rename] = &Parameter{
-			Value: cast,
-		}
+		// store cast value
+		i.Data[param.Rename] = cast
 	}
 
 	return nil
@@ -197,16 +197,17 @@ func (i *Set) parseUrlencoded(req *http.Request) error {
 			continue
 		}
 
+		// parse parameter
+		parsed := parseParameter(value)
+
 		// check type
-		cast, valid := param.Validator(value)
+		cast, valid := param.Validator(parsed)
 		if !valid {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
 		}
 
-		// store value
-		i.Data[param.Rename] = &Parameter{
-			Value: cast,
-		}
+		// store cast value
+		i.Data[param.Rename] = cast
 	}
 
 	return nil
@@ -244,18 +245,79 @@ func (i *Set) parseMultipart(req *http.Request) error {
 			continue
 		}
 
+		// parse parameter
+		parsed := parseParameter(string(component.Data))
+
 		// fail on invalid type
-		cast, valid := param.Validator(string(component.Data))
+		cast, valid := param.Validator(parsed)
 		if !valid {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
 		}
 
-		// store value
-		i.Data[param.Rename] = &Parameter{
-			Value: cast,
-		}
+		// store cast value
+		i.Data[param.Rename] = cast
 	}
 
 	return nil
+
+}
+
+// parseParameter parses http URI/GET/POST data
+// - []string : return array of json elements
+// - string   : return json if valid, else return raw string
+func parseParameter(data interface{}) interface{} {
+	dtype := reflect.TypeOf(data)
+	dvalue := reflect.ValueOf(data)
+
+	switch dtype.Kind() {
+
+	/* (1) []string -> recursive */
+	case reflect.Slice:
+
+		// 1. ignore empty
+		if dvalue.Len() == 0 {
+			return data
+		}
+
+		// 2. parse each element recursively
+		result := make([]interface{}, dvalue.Len())
+
+		for i, l := 0, dvalue.Len(); i < l; i++ {
+			element := dvalue.Index(i)
+			result[i] = parseParameter(element.Interface())
+		}
+		return result
+
+	/* (2) string -> parse */
+	case reflect.String:
+
+		// build json wrapper
+		wrapper := fmt.Sprintf("{\"wrapped\":%s}", dvalue.String())
+
+		// try to parse as json
+		var result interface{}
+		err := json.Unmarshal([]byte(wrapper), &result)
+
+		// return if success
+		if err != nil {
+			return dvalue.String()
+		}
+
+		mapval, ok := result.(map[string]interface{})
+		if !ok {
+			return dvalue.String()
+		}
+
+		wrapped, ok := mapval["wrapped"]
+		if !ok {
+			return dvalue.String()
+		}
+
+		return wrapped
+
+	}
+
+	/* (3) NIL if unknown type */
+	return dvalue.Interface()
 
 }

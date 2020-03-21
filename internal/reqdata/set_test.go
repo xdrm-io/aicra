@@ -280,7 +280,7 @@ func TestExtractQuery(t *testing.T) {
 						t.FailNow()
 					}
 
-					cast, canCast := param.Value.([]string)
+					cast, canCast := param.([]interface{})
 					if !canCast {
 						t.Errorf("should return a []string (got '%v')", cast)
 						t.FailNow()
@@ -458,9 +458,9 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 						t.FailNow()
 					}
 
-					cast, canCast := param.Value.([]string)
+					cast, canCast := param.([]interface{})
 					if !canCast {
-						t.Errorf("should return a []string (got '%v')", cast)
+						t.Errorf("should return a []interface{} (got '%v')", cast)
 						t.FailNow()
 					}
 
@@ -606,8 +606,8 @@ func TestJsonParameters(t *testing.T) {
 
 					valueType := reflect.TypeOf(value)
 
-					paramValue := param.Value
-					paramValueType := reflect.TypeOf(param.Value)
+					paramValue := param
+					paramValueType := reflect.TypeOf(param)
 
 					if valueType != paramValueType {
 						t.Errorf("should be of type %v (got '%v')", valueType, paramValueType)
@@ -762,8 +762,8 @@ x
 
 					valueType := reflect.TypeOf(value)
 
-					paramValue := param.Value
-					paramValueType := reflect.TypeOf(param.Value)
+					paramValue := param
+					paramValueType := reflect.TypeOf(param)
 
 					if valueType != paramValueType {
 						t.Errorf("should be of type %v (got '%v')", valueType, paramValueType)
