@@ -6,20 +6,18 @@ import (
 	"os"
 
 	"git.xdrm.io/go/aicra/api"
-
+	"git.xdrm.io/go/aicra/datatype"
 	"git.xdrm.io/go/aicra/internal/config"
-	checker "git.xdrm.io/go/aicra/typecheck"
 )
 
 // Server represents an AICRA instance featuring: type checkers, services
 type Server struct {
-	config   *config.Service
-	Checkers *checker.Set
+	config   *config.Server
 	handlers []*api.Handler
 }
 
 // New creates a framework instance from a configuration file
-func New(configPath string) (*Server, error) {
+func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 	var (
 		err        error
 		configFile io.ReadCloser
@@ -28,7 +26,6 @@ func New(configPath string) (*Server, error) {
 	// 1. init instance
 	var i = &Server{
 		config:   nil,
-		Checkers: checker.New(),
 		handlers: make([]*api.Handler, 0),
 	}
 
@@ -40,14 +37,16 @@ func New(configPath string) (*Server, error) {
 	defer configFile.Close()
 
 	// 3. load configuration
-	i.config, err = config.Parse(configFile)
+	i.config, err = config.Parse(configFile, dtypes...)
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. log configuration services
 	log.Printf("🔧   Reading configuration '%s'\n", configPath)
-	logService(*i.config, "")
+	for _, service := range i.config.Services {
+		log.Printf("    ->\t%s\t'%s'\n", service.Method, service.Pattern)
+	}
 
 	return i, nil
 
