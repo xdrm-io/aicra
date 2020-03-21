@@ -93,8 +93,8 @@ func (server *Server) collide() error {
 				if !aIsCapture && !bIsCapture {
 					if aPart == bPart {
 						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (same path '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, aPart))
+						continue
 					}
-					continue
 				}
 
 				// A captures B -> check type (B is A ?)
@@ -114,7 +114,7 @@ func (server *Server) collide() error {
 					}
 
 					// B captures A -> check type (A is B ?)
-				} else {
+				} else if bIsCapture {
 					input, exists := bService.Input[bPart]
 
 					// fail if no type or no validator
