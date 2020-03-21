@@ -739,6 +739,36 @@ func TestServiceCollision(t *testing.T) {
 			]`,
 			ErrPatternCollision,
 		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/{b}",
+					"info": "info", "in": {
+						"{b}": { "info":"info", "type": "uint" }
+					}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/{b}",
+					"info": "info", "in": {
+						"{b}": { "info":"info", "type": "uint" }
+					}
+				},
+				{ "method": "PUT", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			nil, // different methods
+		},
 	}
 
 	for i, test := range tests {
