@@ -18,7 +18,7 @@ const ErrUnknownMethod = cerr("unknown HTTP method")
 const ErrFormat = cerr("invalid config format")
 
 // ErrPatternCollision - there is a collision between 2 services' patterns (same method)
-const ErrPatternCollision = cerr("invalid config format")
+const ErrPatternCollision = cerr("pattern collision")
 
 // ErrInvalidPattern - a service pattern is malformed
 const ErrInvalidPattern = cerr("must begin with a '/' and not end with")
