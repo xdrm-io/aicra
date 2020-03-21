@@ -4,19 +4,19 @@ import (
 	"fmt"
 )
 
-// Error allows you to create constant "const" error with type boxing.
-type Error string
+// cerr allows you to create constant "const" error with type boxing.
+type cerr string
 
 // Error implements the error builtin interface.
-func (err Error) Error() string {
+func (err cerr) Error() string {
 	return string(err)
 }
 
 // ErrReqParamNotFound is thrown when a request parameter is not found
-const ErrReqParamNotFound = Error("request parameter not found")
+const ErrReqParamNotFound = cerr("request parameter not found")
 
 // ErrReqParamNotType is thrown when a request parameter is not asked with the right type
-const ErrReqParamNotType = Error("request parameter does not fulfills type")
+const ErrReqParamNotType = cerr("request parameter does not fulfills type")
 
 // RequestParam defines input parameters of an api request
 type RequestParam map[string]interface{}

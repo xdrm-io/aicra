@@ -1,54 +1,54 @@
 package config
 
-// Error allows you to create constant "const" error with type boxing.
-type Error string
+// cerr allows you to create constant "const" error with type boxing.
+type cerr string
 
 // Error implements the error builtin interface.
-func (err Error) Error() string {
+func (err cerr) Error() string {
 	return string(err)
 }
 
 // ErrRead - a problem ocurred when trying to read the configuration file
-const ErrRead = Error("cannot read config")
+const ErrRead = cerr("cannot read config")
 
 // ErrUnknownMethod - invalid http method
-const ErrUnknownMethod = Error("unknown HTTP method")
+const ErrUnknownMethod = cerr("unknown HTTP method")
 
 // ErrFormat - a invalid format has been detected
-const ErrFormat = Error("invalid config format")
+const ErrFormat = cerr("invalid config format")
 
 // ErrPatternCollision - there is a collision between 2 services' patterns (same method)
-const ErrPatternCollision = Error("invalid config format")
+const ErrPatternCollision = cerr("invalid config format")
 
 // ErrInvalidPattern - a service pattern is malformed
-const ErrInvalidPattern = Error("must begin with a '/' and not end with")
+const ErrInvalidPattern = cerr("must begin with a '/' and not end with")
 
 // ErrInvalidPatternBraceCapture - a service pattern brace capture is invalid
-const ErrInvalidPatternBraceCapture = Error("invalid uri capturing braces")
+const ErrInvalidPatternBraceCapture = cerr("invalid uri capturing braces")
 
 // ErrUnspecifiedBraceCapture - a parameter brace capture is not specified in the pattern
-const ErrUnspecifiedBraceCapture = Error("capturing brace missing in the path")
+const ErrUnspecifiedBraceCapture = cerr("capturing brace missing in the path")
 
 // ErrUndefinedBraceCapture - a parameter brace capture in the pattern is not defined in parameters
-const ErrUndefinedBraceCapture = Error("capturing brace missing input definition")
+const ErrUndefinedBraceCapture = cerr("capturing brace missing input definition")
 
 // ErrMissingDescription - a service is missing its description
-const ErrMissingDescription = Error("missing description")
+const ErrMissingDescription = cerr("missing description")
 
 // ErrIllegalOptionalURIParam - an URI parameter cannot be optional
-const ErrIllegalOptionalURIParam = Error("URI parameter cannot be optional")
+const ErrIllegalOptionalURIParam = cerr("URI parameter cannot be optional")
 
 // ErrMissingParamDesc - a parameter is missing its description
-const ErrMissingParamDesc = Error("missing parameter description")
+const ErrMissingParamDesc = cerr("missing parameter description")
 
 // ErrUnknownDataType - a parameter has an unknown datatype name
-const ErrUnknownDataType = Error("unknown data type")
+const ErrUnknownDataType = cerr("unknown data type")
 
 // ErrIllegalParamName - a parameter has an illegal name
-const ErrIllegalParamName = Error("illegal parameter name")
+const ErrIllegalParamName = cerr("illegal parameter name")
 
 // ErrMissingParamType - a parameter has an illegal type
-const ErrMissingParamType = Error("missing parameter type")
+const ErrMissingParamType = cerr("missing parameter type")
 
 // ErrParamNameConflict - a parameter has a conflict with its name/rename field
-const ErrParamNameConflict = Error("name conflict for parameter")
+const ErrParamNameConflict = cerr("name conflict for parameter")
