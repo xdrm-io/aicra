@@ -1,8 +1,8 @@
 package aicra
 
 import (
+	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"git.xdrm.io/go/aicra/api"
@@ -42,12 +42,6 @@ func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 		return nil, err
 	}
 
-	// 4. log configuration services
-	log.Printf("🔧   Reading configuration '%s'\n", configPath)
-	for _, service := range i.config.Services {
-		log.Printf("    ->\t%s\t'%s'\n", service.Method, service.Pattern)
-	}
-
 	return i, nil
 
 }
@@ -63,15 +57,24 @@ func (s *Server) Handle(handler *api.Handler) {
 	s.handlers = append(s.handlers, handler)
 }
 
-// HTTP converts the server to a http server
-func (s Server) HTTP() httpServer {
+// ToHTTPServer converts the server to a http server
+func (s Server) ToHTTPServer() (*httpServer, error) {
 
-	// 1. log available handlers
-	log.Printf("🔗	 Mapping handlers\n")
-	for i := 0; i < len(s.handlers); i++ {
-		log.Printf("    ->\t%s\t'%s'\n", s.handlers[i].GetMethod(), s.handlers[i].GetPath())
+	// check if handlers are missing
+	for _, service := range s.config.Services {
+		found := false
+		for _, handler := range s.handlers {
+			if handler.GetPath() == service.Pattern {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("missing handler for %s '%s'", service.Method, service.Pattern)
+		}
 	}
 
 	// 2. cast to http server
-	return httpServer(s)
+	httpServer := httpServer(s)
+	return &httpServer, nil
 }
