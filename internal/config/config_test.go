@@ -559,6 +559,212 @@ func TestParseParameters(t *testing.T) {
 
 }
 
+func TestServiceCollision(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		Config string
+		Error  error
+	}{
+		{
+			`[
+				{ "method": "GET", "path": "/a",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/b",
+					"info": "info", "in": {}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a",
+					"info": "info", "in": {}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/b",
+					"info": "info", "in": {}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/b",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a",
+					"info": "info", "in": {}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/b",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "string" }
+					}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/b",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/b/d",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}/d",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "string" }
+					}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "string" }
+					}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123/d",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "string" }
+					}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}/d",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "string" }
+					}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123/d",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}/d",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			nil,
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/123/d",
+					"info": "info", "in": {}
+				},
+				{ "method": "GET", "path": "/a/{c}/d",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "uint" }
+					}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+	}
+
+	for i, test := range tests {
+
+		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+			_, err := Parse(strings.NewReader(test.Config), builtin.StringDataType{}, builtin.UintDataType{})
+
+			if err == nil && test.Error != nil {
+				t.Errorf("expected an error: '%s'", test.Error.Error())
+				t.FailNow()
+			}
+			if err != nil && test.Error == nil {
+				t.Errorf("unexpected error: '%s'", err.Error())
+				t.FailNow()
+			}
+
+			if err != nil && test.Error != nil {
+				if !errors.Is(err, test.Error) {
+					t.Errorf("expected the error <%s> got <%s>", test.Error, err)
+					t.FailNow()
+				}
+			}
+		})
+	}
+}
+
 func TestMatchSimple(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
