@@ -74,6 +74,8 @@ func (server *Server) collide() error {
 				continue
 			}
 
+			partErrors := make([]error, 0)
+
 			// for each part
 			for pi, aPart := range aParts {
 				bPart := bParts[pi]
@@ -83,13 +85,14 @@ func (server *Server) collide() error {
 
 				// both captures -> as we cannot check, consider a collision
 				if aIsCapture && bIsCapture {
-					return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					partErrors = append(partErrors, fmt.Errorf("%s '%s': %w (path %s and %s)", aService.Method, aService.Pattern, ErrPatternCollision, aPart, bPart))
+					continue
 				}
 
 				// no capture -> check equal
 				if !aIsCapture && !bIsCapture {
 					if aPart == bPart {
-						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+						partErrors = append(partErrors, fmt.Errorf("%s '%s': %w (same path '%s')", aService.Method, aService.Pattern, ErrPatternCollision, aPart))
 					}
 					continue
 				}
@@ -100,12 +103,14 @@ func (server *Server) collide() error {
 
 					// fail if no type or no validator
 					if !exists || input.Validator == nil {
-						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+						partErrors = append(partErrors, fmt.Errorf("%s '%s': %w (invalid type for %s)", aService.Method, aService.Pattern, ErrPatternCollision, aPart))
+						continue
 					}
 
 					// fail if not valid
-					if _, valid := input.Validator(aPart); !valid {
-						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					if _, valid := input.Validator(bPart); valid {
+						partErrors = append(partErrors, fmt.Errorf("%s '%s': %w (%s captures '%s')", aService.Method, aService.Pattern, ErrPatternCollision, aPart, bPart))
+						continue
 					}
 
 					// B captures A -> check type (A is B ?)
@@ -114,15 +119,37 @@ func (server *Server) collide() error {
 
 					// fail if no type or no validator
 					if !exists || input.Validator == nil {
-						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+						partErrors = append(partErrors, fmt.Errorf("%s '%s': %w (invalid type for %s)", bService.Method, bService.Pattern, ErrPatternCollision, bPart))
+						continue
 					}
 
 					// fail if not valid
-					if _, valid := input.Validator(bPart); !valid {
-						return fmt.Errorf("%s: %s '%s'", ErrPatternCollision, aService.Method, aService.Pattern)
+					if _, valid := input.Validator(aPart); valid {
+						partErrors = append(partErrors, fmt.Errorf("%s '%s': %w (%s captures '%s')", bService.Method, bService.Pattern, ErrPatternCollision, bPart, aPart))
+						continue
 					}
 				}
 
+				partErrors = append(partErrors, nil)
+
+			}
+
+			// if at least 1 url part does not match -> ok
+			var firstError error
+			oneMismatch := false
+			for _, err := range partErrors {
+				if err != nil && firstError == nil {
+					firstError = err
+				}
+
+				if err == nil {
+					oneMismatch = true
+					continue
+				}
+			}
+
+			if !oneMismatch {
+				return firstError
 			}
 
 		}
