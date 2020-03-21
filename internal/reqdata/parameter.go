@@ -22,31 +22,22 @@ type Parameter struct {
 }
 
 // Parse parameter (json-like) if not already done
-func (i *Parameter) Parse() error {
+func (i *Parameter) Parse() {
 
-	/* (1) Stop if already parsed or nil*/
+	/* ignore already parsed or nil*/
 	if i.Parsed || i.Value == nil {
-		return nil
+		return
 	}
 
-	/* (2) Try to parse value */
-	parsed, err := parseParameter(i.Value)
-	if err != nil {
-		return err
-	}
-
+	/* parse value */
 	i.Parsed = true
-	i.Value = parsed
-
-	return nil
+	i.Value = parseParameter(i.Value)
 }
 
-// parseParameter parses http GET/POST data
-// - []string
-//		- size = 1 : return json of first element
-//		- size > 1 : return array of json elements
-// - string : return json if valid, else return raw string
-func parseParameter(data interface{}) (interface{}, error) {
+// parseParameter parses http URI/GET/POST data
+// - []string : return array of json elements
+// - string   : return json if valid, else return raw string
+func parseParameter(data interface{}) interface{} {
 	dtype := reflect.TypeOf(data)
 	dvalue := reflect.ValueOf(data)
 
@@ -57,7 +48,7 @@ func parseParameter(data interface{}) (interface{}, error) {
 
 		// 1. ignore empty
 		if dvalue.Len() == 0 {
-			return data, nil
+			return data
 		}
 
 		// 2. parse each element recursively
@@ -65,20 +56,9 @@ func parseParameter(data interface{}) (interface{}, error) {
 
 		for i, l := 0, dvalue.Len(); i < l; i++ {
 			element := dvalue.Index(i)
-
-			// ignore non-string
-			if element.Kind() != reflect.String {
-				result[i] = element.Interface()
-				continue
-			}
-
-			parsed, err := parseParameter(element.String())
-			if err != nil {
-				return data, err
-			}
-			result[i] = parsed
+			result[i] = parseParameter(element.Interface())
 		}
-		return result, nil
+		return result
 
 	/* (2) string -> parse */
 	case reflect.String:
@@ -91,27 +71,25 @@ func parseParameter(data interface{}) (interface{}, error) {
 		err := json.Unmarshal([]byte(wrapper), &result)
 
 		// return if success
-		if err == nil {
-
-			mapval, ok := result.(map[string]interface{})
-			if !ok {
-				return dvalue.String(), ErrInvalidRootType
-			}
-
-			wrapped, ok := mapval["wrapped"]
-			if !ok {
-				return dvalue.String(), ErrInvalidJSON
-			}
-
-			return wrapped, nil
+		if err != nil {
+			return dvalue.String()
 		}
 
-		// else return as string
-		return dvalue.String(), nil
+		mapval, ok := result.(map[string]interface{})
+		if !ok {
+			return dvalue.String()
+		}
+
+		wrapped, ok := mapval["wrapped"]
+		if !ok {
+			return dvalue.String()
+		}
+
+		return wrapped
 
 	}
 
 	/* (3) NIL if unknown type */
-	return dvalue.Interface(), nil
+	return dvalue.Interface()
 
 }

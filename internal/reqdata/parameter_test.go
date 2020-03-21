@@ -6,14 +6,8 @@ import (
 )
 
 func TestSimpleString(t *testing.T) {
-	p := Parameter{Parsed: false, File: false, Value: "some-string"}
-
-	err := p.Parse()
-
-	if err != nil {
-		t.Errorf("unexpected error: <%s>", err)
-		t.FailNow()
-	}
+	p := Parameter{Value: "some-string"}
+	p.Parse()
 
 	if !p.Parsed {
 		t.Errorf("expected parameter to be parsed")
@@ -38,11 +32,7 @@ func TestSimpleFloat(t *testing.T) {
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
 			p := Parameter{Parsed: false, File: false, Value: tcase}
-
-			if err := p.Parse(); err != nil {
-				t.Errorf("unexpected error: <%s>", err)
-				t.FailNow()
-			}
+			p.Parse()
 
 			if !p.Parsed {
 				t.Errorf("expected parameter to be parsed")
@@ -70,10 +60,7 @@ func TestSimpleBool(t *testing.T) {
 		t.Run("case "+string(i), func(t *testing.T) {
 			p := Parameter{Parsed: false, File: false, Value: tcase}
 
-			if err := p.Parse(); err != nil {
-				t.Errorf("unexpected error: <%s>", err)
-				t.FailNow()
-			}
+			p.Parse()
 
 			if !p.Parsed {
 				t.Errorf("expected parameter to be parsed")
@@ -96,13 +83,7 @@ func TestSimpleBool(t *testing.T) {
 
 func TestJsonStringSlice(t *testing.T) {
 	p := Parameter{Parsed: false, File: false, Value: `["str1", "str2"]`}
-
-	err := p.Parse()
-
-	if err != nil {
-		t.Errorf("unexpected error: <%s>", err)
-		t.FailNow()
-	}
+	p.Parse()
 
 	if !p.Parsed {
 		t.Errorf("expected parameter to be parsed")
@@ -140,13 +121,7 @@ func TestJsonStringSlice(t *testing.T) {
 
 func TestStringSlice(t *testing.T) {
 	p := Parameter{Parsed: false, File: false, Value: []string{"str1", "str2"}}
-
-	err := p.Parse()
-
-	if err != nil {
-		t.Errorf("unexpected error: <%s>", err)
-		t.FailNow()
-	}
+	p.Parse()
 
 	if !p.Parsed {
 		t.Errorf("expected parameter to be parsed")
@@ -194,12 +169,7 @@ func TestJsonPrimitiveBool(t *testing.T) {
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
 			p := Parameter{Parsed: false, File: false, Value: tcase.Raw}
-
-			err := p.Parse()
-			if err != nil {
-				t.Errorf("unexpected error: <%s>", err)
-				t.FailNow()
-			}
+			p.Parse()
 
 			if !p.Parsed {
 				t.Errorf("expected parameter to be parsed")
@@ -242,12 +212,7 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 	for i, tcase := range tcases {
 		t.Run("case "+string(i), func(t *testing.T) {
 			p := Parameter{Parsed: false, File: false, Value: tcase.Raw}
-
-			err := p.Parse()
-			if err != nil {
-				t.Errorf("unexpected error: <%s>", err)
-				t.FailNow()
-			}
+			p.Parse()
 
 			if !p.Parsed {
 				t.Errorf("expected parameter to be parsed")
@@ -271,13 +236,7 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 
 func TestJsonBoolSlice(t *testing.T) {
 	p := Parameter{Parsed: false, File: false, Value: []string{"true", "false"}}
-
-	err := p.Parse()
-
-	if err != nil {
-		t.Errorf("unexpected error: <%s>", err)
-		t.FailNow()
-	}
+	p.Parse()
 
 	if !p.Parsed {
 		t.Errorf("expected parameter to be parsed")
@@ -315,13 +274,7 @@ func TestJsonBoolSlice(t *testing.T) {
 
 func TestBoolSlice(t *testing.T) {
 	p := Parameter{Parsed: false, File: false, Value: []bool{true, false}}
-
-	err := p.Parse()
-
-	if err != nil {
-		t.Errorf("unexpected error: <%s>", err)
-		t.FailNow()
-	}
+	p.Parse()
 
 	if !p.Parsed {
 		t.Errorf("expected parameter to be parsed")
