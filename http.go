@@ -97,6 +97,7 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	foundHandler.Handle(*apireq, response)
 
 	// 11. apply headers
+	res.Header().Set("Content-Type", "application/json; charset=utf-8")
 	for key, values := range response.Headers {
 		for _, value := range values {
 			res.Header().Add(key, value)
