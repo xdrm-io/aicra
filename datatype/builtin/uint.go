@@ -11,7 +11,7 @@ import (
 type UintDataType struct{}
 
 // Build returns the validator
-func (UintDataType) Build(typeName string) datatype.Validator {
+func (UintDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
 	// nothing if type not handled
 	if typeName != "uint" {
 		return nil

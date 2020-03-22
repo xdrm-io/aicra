@@ -26,7 +26,7 @@ func (param *Parameter) checkAndFormat() error {
 // assigns the first matching data type from the type definition
 func (param *Parameter) assignDataType(types []datatype.T) bool {
 	for _, dtype := range types {
-		param.Validator = dtype.Build(param.Type)
+		param.Validator = dtype.Build(param.Type, types...)
 		if param.Validator != nil {
 			return true
 		}

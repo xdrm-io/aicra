@@ -10,7 +10,7 @@ import (
 type FloatDataType struct{}
 
 // Build returns the validator
-func (FloatDataType) Build(typeName string) datatype.Validator {
+func (FloatDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
 	// nothing if type not handled
 	if typeName != "float64" && typeName != "float" {
 		return nil
