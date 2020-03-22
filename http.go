@@ -60,6 +60,7 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	for _, handler := range server.handlers {
 		if handler.GetMethod() == service.Method && handler.GetPath() == service.Pattern {
+			foundHandler = handler
 			found = true
 		}
 	}
