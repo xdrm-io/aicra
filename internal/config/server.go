@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"git.xdrm.io/go/aicra/datatype"
 )
@@ -17,27 +16,38 @@ func Parse(r io.Reader, dtypes ...datatype.T) (*Server, error) {
 		Types:    make([]datatype.T, 0),
 		Services: make([]*Service, 0),
 	}
+
 	// add data types
 	for _, dtype := range dtypes {
 		server.Types = append(server.Types, dtype)
 	}
 
-	// parse JSON
 	if err := json.NewDecoder(r).Decode(&server.Services); err != nil {
 		return nil, fmt.Errorf("%s: %w", ErrRead, err)
 	}
 
-	// check services
-	if err := server.checkAndFormat(); err != nil {
-		return nil, fmt.Errorf("%s: %w", ErrFormat, err)
-	}
-
-	// check collisions
-	if err := server.collide(); err != nil {
+	if err := server.Validate(); err != nil {
 		return nil, fmt.Errorf("%s: %w", ErrFormat, err)
 	}
 
 	return server, nil
+}
+
+// Validate implements the validator interface
+func (server Server) Validate(datatypes ...datatype.T) error {
+	for _, service := range server.Services {
+		err := service.Validate(server.Types...)
+		if err != nil {
+			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
+		}
+	}
+
+	// check for collisions
+	if err := server.collide(); err != nil {
+		return fmt.Errorf("%s: %w", ErrFormat, err)
+	}
+
+	return nil
 }
 
 // Find a service matching an incoming HTTP request
@@ -155,44 +165,5 @@ func (server *Server) collide() error {
 		}
 	}
 
-	return nil
-}
-
-// checkAndFormat checks for errors and missing fields and sets default values for optional fields.
-func (server Server) checkAndFormat() error {
-	for _, service := range server.Services {
-
-		// check method
-		err := service.checkMethod()
-		if err != nil {
-			return fmt.Errorf("%s '%s' [method]: %w", service.Method, service.Pattern, err)
-		}
-
-		// check pattern
-		service.Pattern = strings.Trim(service.Pattern, " \t\r\n")
-		err = service.checkPattern()
-		if err != nil {
-			return fmt.Errorf("%s '%s' [path]: %w", service.Method, service.Pattern, err)
-		}
-
-		// check description
-		if len(strings.Trim(service.Description, " \t\r\n")) < 1 {
-			return fmt.Errorf("%s '%s' [description]: %w", service.Method, service.Pattern, ErrMissingDescription)
-		}
-
-		// check input parameters
-		err = service.checkAndFormatInput(server.Types)
-		if err != nil {
-			return fmt.Errorf("%s '%s' [in]: %w", service.Method, service.Pattern, err)
-		}
-
-		// fail if a brace capture remains undefined
-		for _, capture := range service.Captures {
-			if capture.Ref == nil {
-				return fmt.Errorf("%s '%s' [in]: %s: %w", service.Method, service.Pattern, capture.Name, ErrUndefinedBraceCapture)
-			}
-		}
-
-	}
 	return nil
 }
