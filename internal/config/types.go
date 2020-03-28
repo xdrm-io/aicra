@@ -22,12 +22,12 @@ type Server struct {
 
 // Service represents a service definition (from api.json)
 type Service struct {
-	Method      string                `json:"method"`
-	Pattern     string                `json:"path"`
-	Scope       [][]string            `json:"scope"`
-	Description string                `json:"info"`
-	Input       map[string]*Parameter `json:"in"`
-	// Output      map[string]*Parameter `json:"out"`
+	Method      string                 `json:"method"`
+	Pattern     string                 `json:"path"`
+	Scope       [][]string             `json:"scope"`
+	Description string                 `json:"info"`
+	Input       map[string]*Parameter  `json:"in"`
+	Output      map[string]interface{} `json:"out"`
 
 	// references to url parameters
 	// format: '/uri/{param}'
@@ -46,8 +46,8 @@ type Parameter struct {
 	Description string `json:"info"`
 	Type        string `json:"type"`
 	Rename      string `json:"name,omitempty"`
-	// Kind of data the datatype returns
-	Kind reflect.Kind
+	// ExtractType is the type of data the datatype returns
+	ExtractType reflect.Type
 	// Optional is set to true when the type is prefixed with '?'
 	Optional bool
 

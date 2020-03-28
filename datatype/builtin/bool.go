@@ -9,9 +9,9 @@ import (
 // BoolDataType is what its name tells
 type BoolDataType struct{}
 
-// Kind returns the kind of data
-func (BoolDataType) Kind() reflect.Kind {
-	return reflect.Bool
+// Type returns the type of data
+func (BoolDataType) Type() reflect.Type {
+	return reflect.TypeOf(true)
 }
 
 // Build returns the validator

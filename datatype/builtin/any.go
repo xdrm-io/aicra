@@ -9,9 +9,9 @@ import (
 // AnyDataType is what its name tells
 type AnyDataType struct{}
 
-// Kind returns the kind of data
-func (AnyDataType) Kind() reflect.Kind {
-	return reflect.Interface
+// Type returns the type of data
+func (AnyDataType) Type() reflect.Type {
+	return reflect.TypeOf(interface{}(nil))
 }
 
 // Build returns the validator

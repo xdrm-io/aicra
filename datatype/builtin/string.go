@@ -14,9 +14,9 @@ var variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
 // StringDataType is what its name tells
 type StringDataType struct{}
 
-// Kind returns the kind of data
-func (StringDataType) Kind() reflect.Kind {
-	return reflect.String
+// Type returns the type of data
+func (StringDataType) Type() reflect.Type {
+	return reflect.TypeOf(string(""))
 }
 
 // Build returns the validator.

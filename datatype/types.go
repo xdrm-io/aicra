@@ -10,6 +10,6 @@ type Validator func(value interface{}) (cast interface{}, valid bool)
 // definition does not match this T ; the registry is passed for recursive datatypes (e.g. slices, structs, etc)
 // to be able to access other datatypes
 type T interface {
-	Kind() reflect.Kind
+	Type() reflect.Type
 	Build(typeDefinition string, registry ...T) Validator
 }

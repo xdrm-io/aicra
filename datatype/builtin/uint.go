@@ -11,9 +11,9 @@ import (
 // UintDataType is what its name tells
 type UintDataType struct{}
 
-// Kind returns the kind of data
-func (UintDataType) Kind() reflect.Kind {
-	return reflect.Uint
+// Type returns the type of data
+func (UintDataType) Type() reflect.Type {
+	return reflect.TypeOf(uint(0))
 }
 
 // Build returns the validator

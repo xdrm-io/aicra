@@ -10,9 +10,9 @@ import (
 // FloatDataType is what its name tells
 type FloatDataType struct{}
 
-// Kind returns the kind of data
-func (FloatDataType) Kind() reflect.Kind {
-	return reflect.Float64
+// Type returns the type of data
+func (FloatDataType) Type() reflect.Type {
+	return reflect.TypeOf(float64(0))
 }
 
 // Build returns the validator

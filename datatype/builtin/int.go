@@ -11,9 +11,9 @@ import (
 // IntDataType is what its name tells
 type IntDataType struct{}
 
-// Kind returns the kind of data
-func (IntDataType) Kind() reflect.Kind {
-	return reflect.Int
+// Type returns the type of data
+func (IntDataType) Type() reflect.Type {
+	return reflect.TypeOf(int(0))
 }
 
 // Build returns the validator
