@@ -18,7 +18,7 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 1. find a matching service in the config
 	service := server.config.Find(req)
 	if service == nil {
-		response := api.NewResponse(api.ErrorUnknownService())
+		response := api.EmptyResponse().WithError(api.ErrorUnknownService)
 		response.ServeHTTP(res, req)
 		logError(response)
 		return
@@ -30,7 +30,7 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 3. extract URI data
 	err := dataset.ExtractURI(req)
 	if err != nil {
-		response := api.NewResponse(api.ErrorMissingParam())
+		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
 		response.ServeHTTP(res, req)
 		logError(response)
 		return
@@ -39,7 +39,7 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 4. extract query data
 	err = dataset.ExtractQuery(req)
 	if err != nil {
-		response := api.NewResponse(api.ErrorMissingParam())
+		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
 		response.ServeHTTP(res, req)
 		logError(response)
 		return
@@ -48,7 +48,7 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 5. extract form/json data
 	err = dataset.ExtractForm(req)
 	if err != nil {
-		response := api.NewResponse(api.ErrorMissingParam())
+		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
 		response.ServeHTTP(res, req)
 		logError(response)
 		return
@@ -68,15 +68,13 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 7. fail if found no handler
 	if foundHandler == nil {
 		if found {
-			r := api.NewResponse()
-			r.SetError(api.ErrorUncallableService(), service.Method, service.Pattern)
+			r := api.EmptyResponse().WithError(api.ErrorUncallableService)
 			r.ServeHTTP(res, req)
 			logError(r)
 			return
 		}
 
-		r := api.NewResponse()
-		r.SetError(api.ErrorUnknownService(), service.Method, service.Pattern)
+		r := api.EmptyResponse().WithError(api.ErrorUnknownService)
 		r.ServeHTTP(res, req)
 		logError(r)
 		return
@@ -93,8 +91,9 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	apireq.Param = dataset.Data
 
 	// 10. execute
-	response := api.NewResponse()
-	foundHandler.Handle(*apireq, response)
+	response := api.EmptyResponse()
+	apiErr := foundHandler.Fn(*apireq, response)
+	response.WithError(apiErr)
 
 	// 11. apply headers
 	res.Header().Set("Content-Type", "application/json; charset=utf-8")

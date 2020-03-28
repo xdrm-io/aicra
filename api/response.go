@@ -16,29 +16,20 @@ type Response struct {
 	err     Error
 }
 
-// NewResponse creates an empty response. An optional error can be passed as its first argument.
-func NewResponse(errors ...Error) *Response {
-	res := &Response{
+// EmptyResponse creates an empty response.
+func EmptyResponse() *Response {
+	return &Response{
 		Status:  http.StatusOK,
 		Data:    make(ResponseData),
-		err:     ErrorFailure(),
+		err:     ErrorFailure,
 		Headers: make(http.Header),
 	}
-
-	// optional error
-	if len(errors) == 1 {
-		res.err = errors[0]
-	}
-
-	return res
 }
 
-// SetError sets the error from a base error with error arguments.
-func (res *Response) SetError(baseError Error, arguments ...interface{}) {
-	if len(arguments) > 0 {
-		baseError.SetArguments(arguments[0], arguments[1:]...)
-	}
-	res.err = baseError
+// WithError sets the error from a base error with error arguments.
+func (res *Response) WithError(err Error) *Response {
+	res.err = err
+	return res
 }
 
 // Error implements the error interface and dispatches to internal error.
