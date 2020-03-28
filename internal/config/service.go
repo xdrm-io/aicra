@@ -30,7 +30,88 @@ func (svc *Service) Match(req *http.Request) bool {
 	return true
 }
 
-func (svc *Service) checkMethod() error {
+// checks if an uri matches the service's pattern
+func (svc *Service) matchPattern(uri string) bool {
+	uriparts := SplitURL(uri)
+	parts := SplitURL(svc.Pattern)
+
+	// fail if size differ
+	if len(uriparts) != len(parts) {
+		return false
+	}
+
+	// root url '/'
+	if len(parts) == 0 {
+		return true
+	}
+
+	// check part by part
+	for i, part := range parts {
+		uripart := uriparts[i]
+
+		isCapture := len(part) > 0 && part[0] == '{'
+
+		// if no capture -> check equality
+		if !isCapture {
+			if part != uripart {
+				return false
+			}
+			continue
+		}
+
+		param, exists := svc.Input[part]
+
+		// fail if no validator
+		if !exists || param.Validator == nil {
+			return false
+		}
+
+		// fail if not type-valid
+		if _, valid := param.Validator(uripart); !valid {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Validate implements the validator interface
+func (svc *Service) Validate(datatypes ...datatype.T) error {
+	// check method
+	err := svc.isMethodAvailable()
+	if err != nil {
+		return fmt.Errorf("field 'method': %w", err)
+	}
+
+	// check pattern
+	svc.Pattern = strings.Trim(svc.Pattern, " \t\r\n")
+	err = svc.isPatternValid()
+	if err != nil {
+		return fmt.Errorf("field 'path': %w", err)
+	}
+
+	// check description
+	if len(strings.Trim(svc.Description, " \t\r\n")) < 1 {
+		return fmt.Errorf("field 'description': %w", ErrMissingDescription)
+	}
+
+	// check input parameters
+	err = svc.validateInput(datatypes)
+	if err != nil {
+		return fmt.Errorf("field 'in': %w", err)
+	}
+
+	// fail if a brace capture remains undefined
+	for _, capture := range svc.Captures {
+		if capture.Ref == nil {
+			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrUndefinedBraceCapture)
+		}
+	}
+
+	return nil
+}
+
+func (svc *Service) isMethodAvailable() error {
 	for _, available := range availableHTTPMethods {
 		if svc.Method == available {
 			return nil
@@ -39,7 +120,7 @@ func (svc *Service) checkMethod() error {
 	return ErrUnknownMethod
 }
 
-func (svc *Service) checkPattern() error {
+func (svc *Service) isPatternValid() error {
 	length := len(svc.Pattern)
 
 	// empty pattern
@@ -87,7 +168,7 @@ func (svc *Service) checkPattern() error {
 	return nil
 }
 
-func (svc *Service) checkAndFormatInput(types []datatype.T) error {
+func (svc *Service) validateInput(types []datatype.T) error {
 
 	// ignore no parameter
 	if svc.Input == nil || len(svc.Input) < 1 {
@@ -141,7 +222,7 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 			param.Rename = paramName
 		}
 
-		err := param.checkAndFormat()
+		err := param.Validate()
 		if err != nil {
 			return fmt.Errorf("%s: %w", paramName, err)
 		}
@@ -151,7 +232,16 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 			return fmt.Errorf("%s: %w", paramName, ErrIllegalOptionalURIParam)
 		}
 
-		if !param.assignDataType(types) {
+		// assign the datatype
+		datatypeFound := false
+		for _, dtype := range types {
+			param.Validator = dtype.Build(param.Type, types...)
+			if param.Validator != nil {
+				datatypeFound = true
+				break
+			}
+		}
+		if !datatypeFound {
 			return fmt.Errorf("%s: %w", paramName, ErrUnknownDataType)
 		}
 
@@ -174,49 +264,4 @@ func (svc *Service) checkAndFormatInput(types []datatype.T) error {
 	}
 
 	return nil
-}
-
-// checks if an uri matches the service's pattern
-func (svc *Service) matchPattern(uri string) bool {
-	uriparts := SplitURL(uri)
-	parts := SplitURL(svc.Pattern)
-
-	// fail if size differ
-	if len(uriparts) != len(parts) {
-		return false
-	}
-
-	// root url '/'
-	if len(parts) == 0 {
-		return true
-	}
-
-	// check part by part
-	for i, part := range parts {
-		uripart := uriparts[i]
-
-		isCapture := len(part) > 0 && part[0] == '{'
-
-		// if no capture -> check equality
-		if !isCapture {
-			if part != uripart {
-				return false
-			}
-			continue
-		}
-
-		param, exists := svc.Input[part]
-
-		// fail if no validator
-		if !exists || param.Validator == nil {
-			return false
-		}
-
-		// fail if not type-valid
-		if _, valid := param.Validator(uripart); !valid {
-			return false
-		}
-	}
-
-	return true
 }
