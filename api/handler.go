@@ -4,28 +4,23 @@ import (
 	"strings"
 )
 
-// HandlerFunc manages an API request
-type HandlerFunc func(Request, *Response)
+// HandlerFn defines the handler signature
+type HandlerFn func(req Request, res *Response) Error
 
 // Handler is an API handler ready to be bound
 type Handler struct {
 	path   string
 	method string
-	handle HandlerFunc
+	Fn     HandlerFn
 }
 
 // NewHandler builds a handler from its http method and path
-func NewHandler(method, path string, handlerFunc HandlerFunc) *Handler {
+func NewHandler(method, path string, fn HandlerFn) (*Handler, error) {
 	return &Handler{
 		path:   path,
 		method: strings.ToUpper(method),
-		handle: handlerFunc,
-	}
-}
-
-// Handle fires a handler
-func (h *Handler) Handle(req Request, res *Response) {
-	h.handle(req, res)
+		Fn:     fn,
+	}, nil
 }
 
 // GetMethod returns the handler's HTTP method

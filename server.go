@@ -47,13 +47,11 @@ func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 }
 
 // HandleFunc sets a new handler for an HTTP method to a path
-func (s *Server) HandleFunc(httpMethod, path string, handlerFunc api.HandlerFunc) {
-	handler := api.NewHandler(httpMethod, path, handlerFunc)
-	s.handlers = append(s.handlers, handler)
-}
-
-// Handle sets a new handler
-func (s *Server) Handle(handler *api.Handler) {
+func (s *Server) Handle(httpMethod, path string, fn api.HandlerFn) {
+	handler, err := api.NewHandler(httpMethod, path, fn)
+	if err != nil {
+		panic(err)
+	}
 	s.handlers = append(s.handlers, handler)
 }
 
