@@ -6,7 +6,7 @@ import "git.xdrm.io/go/aicra/datatype"
 type AnyDataType struct{}
 
 // Build returns the validator
-func (AnyDataType) Build(typeName string) datatype.Validator {
+func (AnyDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
 	// nothing if type not handled
 	if typeName != "any" {
 		return nil

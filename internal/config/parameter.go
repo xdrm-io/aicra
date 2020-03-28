@@ -2,8 +2,8 @@ package config
 
 import "git.xdrm.io/go/aicra/datatype"
 
-func (param *Parameter) checkAndFormat() error {
-
+// Validate implements the validator interface
+func (param *Parameter) Validate(datatypes ...datatype.T) error {
 	// missing description
 	if len(param.Description) < 1 {
 		return ErrMissingParamDesc
@@ -14,22 +14,11 @@ func (param *Parameter) checkAndFormat() error {
 		return ErrMissingParamType
 	}
 
-	// set optional + type
+	// optional type transform
 	if param.Type[0] == '?' {
 		param.Optional = true
 		param.Type = param.Type[1:]
 	}
 
 	return nil
-}
-
-// assigns the first matching data type from the type definition
-func (param *Parameter) assignDataType(types []datatype.T) bool {
-	for _, dtype := range types {
-		param.Validator = dtype.Build(param.Type)
-		if param.Validator != nil {
-			return true
-		}
-	}
-	return false
 }

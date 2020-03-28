@@ -15,7 +15,7 @@ type StringDataType struct{}
 
 // Build returns the validator.
 // availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
-func (s StringDataType) Build(typeName string) datatype.Validator {
+func (s StringDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
 	simple := typeName == "string"
 	fixedLengthMatches := fixedLengthRegex.FindStringSubmatch(typeName)
 	variableLengthMatches := variableLengthRegex.FindStringSubmatch(typeName)

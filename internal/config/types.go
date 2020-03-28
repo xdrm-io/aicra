@@ -8,6 +8,11 @@ import (
 
 var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 
+// validator unifies the check and format routine
+type validator interface {
+	Validate(...datatype.T) error
+}
+
 // Server represents a full server configuration
 type Server struct {
 	Types    []datatype.T

@@ -64,7 +64,7 @@ func (s Server) ToHTTPServer() (*httpServer, error) {
 	for _, service := range s.config.Services {
 		found := false
 		for _, handler := range s.handlers {
-			if handler.GetPath() == service.Pattern {
+			if handler.GetMethod() == service.Method && handler.GetPath() == service.Pattern {
 				found = true
 				break
 			}

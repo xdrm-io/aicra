@@ -6,7 +6,7 @@ import "git.xdrm.io/go/aicra/datatype"
 type BoolDataType struct{}
 
 // Build returns the validator
-func (BoolDataType) Build(typeName string) datatype.Validator {
+func (BoolDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
 	// nothing if type not handled
 	if typeName != "bool" {
 		return nil
