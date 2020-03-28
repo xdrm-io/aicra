@@ -1,9 +1,18 @@
 package builtin
 
-import "git.xdrm.io/go/aicra/datatype"
+import (
+	"reflect"
+
+	"git.xdrm.io/go/aicra/datatype"
+)
 
 // BoolDataType is what its name tells
 type BoolDataType struct{}
+
+// Kind returns the kind of data
+func (BoolDataType) Kind() reflect.Kind {
+	return reflect.Bool
+}
 
 // Build returns the validator
 func (BoolDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {

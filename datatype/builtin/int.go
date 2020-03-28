@@ -3,12 +3,18 @@ package builtin
 import (
 	"encoding/json"
 	"math"
+	"reflect"
 
 	"git.xdrm.io/go/aicra/datatype"
 )
 
 // IntDataType is what its name tells
 type IntDataType struct{}
+
+// Kind returns the kind of data
+func (IntDataType) Kind() reflect.Kind {
+	return reflect.Int
+}
 
 // Build returns the validator
 func (IntDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {

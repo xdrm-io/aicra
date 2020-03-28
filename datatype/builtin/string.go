@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"reflect"
 	"regexp"
 	"strconv"
 
@@ -12,6 +13,11 @@ var variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
 
 // StringDataType is what its name tells
 type StringDataType struct{}
+
+// Kind returns the kind of data
+func (StringDataType) Kind() reflect.Kind {
+	return reflect.String
+}
 
 // Build returns the validator.
 // availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.

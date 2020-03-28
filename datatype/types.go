@@ -1,5 +1,7 @@
 package datatype
 
+import "reflect"
+
 // Validator returns whether a given value fulfills a datatype
 // and casts the value into a compatible type
 type Validator func(value interface{}) (cast interface{}, valid bool)
@@ -8,5 +10,6 @@ type Validator func(value interface{}) (cast interface{}, valid bool)
 // definition does not match this T ; the registry is passed for recursive datatypes (e.g. slices, structs, etc)
 // to be able to access other datatypes
 type T interface {
+	Kind() reflect.Kind
 	Build(typeDefinition string, registry ...T) Validator
 }

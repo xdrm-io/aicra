@@ -238,6 +238,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 			param.Validator = dtype.Build(param.Type, types...)
 			if param.Validator != nil {
 				datatypeFound = true
+				param.Kind = dtype.Kind()
 				break
 			}
 		}
