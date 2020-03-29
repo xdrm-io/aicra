@@ -125,6 +125,7 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 			continue
 		}
 
+		if !field.Type.ConvertibleTo(ptype) {
 			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
