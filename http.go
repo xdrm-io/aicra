@@ -95,7 +95,12 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	response := api.EmptyResponse().WithError(apiErr)
 	for key, value := range returned {
 
-		response.SetData(name, value)
+		// find original name from rename
+		for name, param := range service.Output {
+			if param.Rename == key {
+				response.SetData(name, value)
+			}
+		}
 	}
 
 	// 11. apply headers
