@@ -20,5 +20,19 @@ func (param *Parameter) Validate(datatypes ...datatype.T) error {
 		param.Type = param.Type[1:]
 	}
 
+	// assign the datatype
+	datatypeFound := false
+	for _, dtype := range datatypes {
+		param.Validator = dtype.Build(param.Type, datatypes...)
+		if param.Validator != nil {
+			datatypeFound = true
+			param.ExtractType = dtype.Type()
+			break
+		}
+	}
+	if !datatypeFound {
+		return ErrUnknownDataType
+	}
+
 	return nil
 }

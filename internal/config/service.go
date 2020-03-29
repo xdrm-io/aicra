@@ -222,7 +222,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 			param.Rename = paramName
 		}
 
-		err := param.Validate()
+		err := param.Validate(types...)
 		if err != nil {
 			return fmt.Errorf("%s: %w", paramName, err)
 		}
@@ -232,21 +232,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 			return fmt.Errorf("%s: %w", paramName, ErrIllegalOptionalURIParam)
 		}
 
-		// assign the datatype
-		datatypeFound := false
-		for _, dtype := range types {
-			param.Validator = dtype.Build(param.Type, types...)
-			if param.Validator != nil {
-				datatypeFound = true
-				param.ExtractType = dtype.Type()
-				break
-			}
-		}
-		if !datatypeFound {
-			return fmt.Errorf("%s: %w", paramName, ErrUnknownDataType)
-		}
-
-		// check for name/rename conflict
+		// fail on name/rename conflict
 		for paramName2, param2 := range svc.Input {
 			// ignore self
 			if paramName == paramName2 {
