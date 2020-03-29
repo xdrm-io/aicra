@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
@@ -38,7 +39,52 @@ func Build(fn HandlerFn, service config.Service) (*Handler, error) {
 	return h, nil
 }
 
-// Handle
-func (h *Handler) Handle() {
+// Handle binds input @data into HandleFn and returns map output
+func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, api.Error) {
+	fnv := reflect.ValueOf(h.fn)
 
+	callArgs := []reflect.Value{}
+
+	// bind input data
+	if fnv.Type().NumIn() > 0 {
+		// create zero value struct
+		callStructPtr := reflect.New(fnv.Type().In(0))
+		callStruct := callStructPtr.Elem()
+
+		// set each field
+		for name := range h.spec.Input {
+			field := callStruct.FieldByName(name)
+			if !field.CanSet() {
+				continue
+			}
+
+			// get value from @data
+			value, inData := data[name]
+			if !inData {
+				continue
+			}
+			field.Set(reflect.ValueOf(value).Convert(field.Type()))
+		}
+		callArgs = append(callArgs, callStruct)
+	}
+
+	// call the HandlerFn
+	output := fnv.Call(callArgs)
+
+	// no output OR pointer to output struct is nil
+	outdata := make(map[string]interface{})
+	if len(h.spec.Output) < 1 || output[0].IsNil() {
+		return outdata, api.Error(output[len(output)-1].Int())
+	}
+
+	// extract struct from pointer
+	returnStruct := output[0].Elem()
+
+	for name := range h.spec.Output {
+		field := returnStruct.FieldByName(name)
+		outdata[name] = field.Interface()
+	}
+
+	// extract api.Error
+	return outdata, api.Error(output[len(output)-1].Int())
 }
