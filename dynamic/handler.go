@@ -22,16 +22,16 @@ func Build(fn HandlerFn, service config.Service) (*Handler, error) {
 		fn:   fn,
 	}
 
-	fnt := reflect.TypeOf(fn)
+	fnv := reflect.ValueOf(fn)
 
-	if fnt.Kind() != reflect.Func {
+	if fnv.Type().Kind() != reflect.Func {
 		return nil, ErrHandlerNotFunc
 	}
 
-	if err := h.spec.checkInput(fnt); err != nil {
+	if err := h.spec.checkInput(fnv); err != nil {
 		return nil, fmt.Errorf("input: %w", err)
 	}
-	if err := h.spec.checkOutput(fnt); err != nil {
+	if err := h.spec.checkOutput(fnv); err != nil {
 		return nil, fmt.Errorf("output: %w", err)
 	}
 

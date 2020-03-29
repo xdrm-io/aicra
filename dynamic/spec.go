@@ -25,11 +25,6 @@ func makeSpec(service config.Service) spec {
 	}
 
 	for _, param := range service.Output {
-		// make a pointer if optional
-		if param.Optional {
-			spec.Output[param.Rename] = reflect.PtrTo(param.ExtractType)
-			continue
-		}
 		spec.Output[param.Rename] = param.ExtractType
 	}
 
@@ -37,28 +32,20 @@ func makeSpec(service config.Service) spec {
 }
 
 // checks for HandlerFn input arguments
-func (s spec) checkInput(fnt reflect.Type) error {
-	if fnt.NumIn() != 1 {
-		return ErrMissingHandlerArgument
-	}
-
-	// arg[0] must be api.Request
-	requestArg := fnt.In(0)
-	if !requestArg.AssignableTo(reflect.TypeOf(api.Request{})) {
-		return ErrMissingRequestArgument
-	}
+func (s spec) checkInput(fnv reflect.Value) error {
+	fnt := fnv.Type()
 
 	// no input -> ok
 	if len(s.Input) == 0 {
 		return nil
 	}
 
-	if fnt.NumIn() < 2 {
+	if fnt.NumIn() != 1 {
 		return ErrMissingHandlerArgumentParam
 	}
 
-	// arg[1] must be a struct
-	structArg := fnt.In(1)
+	// arg must be a struct
+	structArg := fnt.In(0)
 	if structArg.Kind() != reflect.Struct {
 		return ErrMissingParamArgument
 	}
@@ -71,7 +58,7 @@ func (s spec) checkInput(fnt reflect.Type) error {
 		}
 
 		if !ptype.AssignableTo(field.Type) {
-			return fmt.Errorf("%s: %w (%s)", name, ErrWrongParamTypeFromConfig, ptype)
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
 
@@ -79,7 +66,8 @@ func (s spec) checkInput(fnt reflect.Type) error {
 }
 
 // checks for HandlerFn output arguments
-func (s spec) checkOutput(fnt reflect.Type) error {
+func (s spec) checkOutput(fnv reflect.Value) error {
+	fnt := fnv.Type()
 	if fnt.NumOut() < 1 {
 		return ErrMissingHandlerOutput
 	}
@@ -99,10 +87,15 @@ func (s spec) checkOutput(fnt reflect.Type) error {
 		return ErrMissingParamOutput
 	}
 
-	// fail if first output is not a struct
-	structOutput := fnt.Out(0)
+	// fail if first output is not a pointer to struct
+	structOutputPtr := fnt.Out(0)
+	if structOutputPtr.Kind() != reflect.Ptr {
+		return ErrMissingParamOutput
+	}
+
+	structOutput := structOutputPtr.Elem()
 	if structOutput.Kind() != reflect.Struct {
-		return ErrMissingParamArgument
+		return ErrMissingParamOutput
 	}
 
 	// fail on invalid output
@@ -112,8 +105,13 @@ func (s spec) checkOutput(fnt reflect.Type) error {
 			return fmt.Errorf("%s: %w", name, ErrMissingOutputFromConfig)
 		}
 
-		if !ptype.AssignableTo(field.Type) {
-			return fmt.Errorf("%s: %w (%s)", name, ErrWrongOutputTypeFromConfig, ptype)
+		// ignore types evalutating to nil
+		if ptype == nil {
+			continue
+		}
+
+		if !ptype.ConvertibleTo(field.Type) {
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongOutputTypeFromConfig, field.Type, ptype)
 		}
 	}
 
