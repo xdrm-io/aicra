@@ -183,7 +183,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 		}
 
 		// fail if brace capture does not exists in pattern
-		iscapture := false
+		var iscapture, isquery bool
 		if matches := braceRegex.FindAllStringSubmatch(paramName, -1); len(matches) > 0 && len(matches[0]) > 1 {
 			braceName := matches[0][1]
 
@@ -209,12 +209,17 @@ func (svc *Service) validateInput(types []datatype.T) error {
 				svc.Query = make(map[string]*Parameter)
 			}
 			svc.Query[queryName] = param
-
+			isquery = true
 		} else {
 			if svc.Form == nil {
 				svc.Form = make(map[string]*Parameter)
 			}
 			svc.Form[paramName] = param
+		}
+
+		// fail if capture or query without rename
+		if len(param.Rename) < 1 && (iscapture || isquery) {
+			return fmt.Errorf("%s: %w", paramName, ErrMandatoryRename)
 		}
 
 		// use param name if no rename

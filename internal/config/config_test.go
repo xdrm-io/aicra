@@ -481,6 +481,46 @@ func TestParseParameters(t *testing.T) {
 			]`,
 			nil,
 		},
+		// missing rename
+		{
+			`[
+				{
+					"method": "GET",
+					"path": "/{uri}",
+					"info": "info",
+					"in": {
+						"{uri}": { "info": "valid", "type": "any" }
+					}
+				}
+			]`,
+			ErrMandatoryRename,
+		},
+		{
+			`[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"in": {
+						"GET@abc": { "info": "valid", "type": "any" }
+					}
+				}
+			]`,
+			ErrMandatoryRename,
+		},
+		{
+			`[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"in": {
+						"GET@abc": { "info": "valid", "type": "any", "name": "abc" }
+					}
+				}
+			]`,
+			nil,
+		},
 
 		{ // URI parameter
 			`[
@@ -616,7 +656,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string" }
+						"{c}": { "info":"info", "type": "string", "name": "c" }
 					}
 				}
 			]`,
@@ -629,7 +669,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -642,7 +682,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}/d",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string" }
+						"{c}": { "info":"info", "type": "string", "name": "c" }
 					}
 				}
 			]`,
@@ -655,7 +695,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string" }
+						"{c}": { "info":"info", "type": "string", "name": "c" }
 					}
 				}
 			]`,
@@ -668,7 +708,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string" }
+						"{c}": { "info":"info", "type": "string", "name": "c" }
 					}
 				}
 			]`,
@@ -681,7 +721,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}/d",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string" }
+						"{c}": { "info":"info", "type": "string", "name": "c" }
 					}
 				}
 			]`,
@@ -694,7 +734,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -707,7 +747,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -720,7 +760,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}/d",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -733,7 +773,7 @@ func TestServiceCollision(t *testing.T) {
 				},
 				{ "method": "GET", "path": "/a/{c}/d",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -743,12 +783,12 @@ func TestServiceCollision(t *testing.T) {
 			`[
 				{ "method": "GET", "path": "/a/{b}",
 					"info": "info", "in": {
-						"{b}": { "info":"info", "type": "uint" }
+						"{b}": { "info":"info", "type": "uint", "name": "b" }
 					}
 				},
 				{ "method": "GET", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -758,12 +798,12 @@ func TestServiceCollision(t *testing.T) {
 			`[
 				{ "method": "GET", "path": "/a/{b}",
 					"info": "info", "in": {
-						"{b}": { "info":"info", "type": "uint" }
+						"{b}": { "info":"info", "type": "uint", "name": "b" }
 					}
 				},
 				{ "method": "PUT", "path": "/a/{c}",
 					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint" }
+						"{c}": { "info":"info", "type": "uint", "name": "c" }
 					}
 				}
 			]`,
@@ -850,7 +890,8 @@ func TestMatchSimple(t *testing.T) {
 					"in": {
 						"{id}": {
 							"info": "info",
-							"type": "bool"
+							"type": "bool",
+							"name": "id"
 						}
 					}
 			} ]`,
@@ -865,7 +906,8 @@ func TestMatchSimple(t *testing.T) {
 					"in": {
 						"{id}": {
 							"info": "info",
-							"type": "int"
+							"type": "int",
+							"name": "id"
 						}
 					}
 			} ]`,
@@ -880,7 +922,8 @@ func TestMatchSimple(t *testing.T) {
 					"in": {
 						"{valid}": {
 							"info": "info",
-							"type": "bool"
+							"type": "bool",
+							"name": "valid"
 						}
 					}
 			} ]`,
@@ -895,7 +938,8 @@ func TestMatchSimple(t *testing.T) {
 					"in": {
 						"{valid}": {
 							"info": "info",
-							"type": "bool"
+							"type": "bool",
+							"name": "valid"
 						}
 					}
 			} ]`,
