@@ -29,6 +29,9 @@ const ErrMissingRequestArgument = cerr("handler first argument must be of type a
 // ErrMissingParamArgument - missing parameters argument for handler
 const ErrMissingParamArgument = cerr("handler second argument must be a struct")
 
+// ErrUnexportedParamName - argument is unexported in struct
+const ErrUnexportedName = cerr("unexported name")
+
 // ErrMissingParamOutput - missing output argument for handler
 const ErrMissingParamOutput = cerr("handler first output must be a *struct")
 

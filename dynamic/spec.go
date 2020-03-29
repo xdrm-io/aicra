@@ -3,6 +3,7 @@ package dynamic
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
@@ -50,8 +51,15 @@ func (s spec) checkInput(fnv reflect.Value) error {
 		return ErrMissingParamArgument
 	}
 
-	// check for invlaid param
+	// check for invalid param
 	for name, ptype := range s.Input {
+		if len(name) < 1 {
+			continue
+		}
+		if name[0] == strings.ToLower(name)[0] {
+			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+		}
+
 		field, exists := structArg.FieldByName(name)
 		if !exists {
 			return fmt.Errorf("%s: %w", name, ErrMissingParamFromConfig)
@@ -100,6 +108,13 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 
 	// fail on invalid output
 	for name, ptype := range s.Output {
+		if len(name) < 1 {
+			continue
+		}
+		if name[0] == strings.ToLower(name)[0] {
+			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+		}
+
 		field, exists := structOutput.FieldByName(name)
 		if !exists {
 			return fmt.Errorf("%s: %w", name, ErrMissingOutputFromConfig)
