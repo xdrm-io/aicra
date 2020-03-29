@@ -55,11 +55,11 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// 6. find a matching handler
-	var foundHandler *api.Handler
+	var foundHandler *handler
 	var found bool
 
 	for _, handler := range server.handlers {
-		if handler.GetMethod() == service.Method && handler.GetPath() == service.Pattern {
+		if handler.Method == service.Method && handler.Path == service.Pattern {
 			foundHandler = handler
 			found = true
 		}
@@ -91,9 +91,17 @@ func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	apireq.Param = dataset.Data
 
 	// 10. execute
-	response := api.EmptyResponse()
-	apiErr := foundHandler.Fn(*apireq, response)
-	response.WithError(apiErr)
+	returned, apiErr := foundHandler.dynHandler.Handle(dataset.Data)
+	response := api.EmptyResponse().WithError(apiErr)
+	for key, value := range returned {
+
+		// find original name from rename
+		for name, param := range service.Output {
+			if param.Rename == key {
+				response.SetData(name, value)
+			}
+		}
+	}
 
 	// 11. apply headers
 	res.Header().Set("Content-Type", "application/json; charset=utf-8")

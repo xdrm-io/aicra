@@ -5,15 +5,15 @@ import (
 	"io"
 	"os"
 
-	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/datatype"
+	"git.xdrm.io/go/aicra/dynamic"
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
 // Server represents an AICRA instance featuring: type checkers, services
 type Server struct {
 	config   *config.Server
-	handlers []*api.Handler
+	handlers []*handler
 }
 
 // New creates a framework instance from a configuration file
@@ -26,7 +26,7 @@ func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 	// 1. init instance
 	var i = &Server{
 		config:   nil,
-		handlers: make([]*api.Handler, 0),
+		handlers: make([]*handler, 0),
 	}
 
 	// 2. open config file
@@ -46,13 +46,26 @@ func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 
 }
 
-// HandleFunc sets a new handler for an HTTP method to a path
-func (s *Server) Handle(httpMethod, path string, fn api.HandlerFn) {
-	handler, err := api.NewHandler(httpMethod, path, fn)
+// Handle sets a new handler for an HTTP method to a path
+func (s *Server) Handle(method, path string, fn dynamic.HandlerFn) error {
+	// find associated service
+	var found *config.Service = nil
+	for _, service := range s.config.Services {
+		if method == service.Method && path == service.Pattern {
+			found = service
+			break
+		}
+	}
+	if found == nil {
+		return fmt.Errorf("%s '%s': %w", method, path, ErrNoServiceForHandler)
+	}
+
+	handler, err := createHandler(method, path, *found, fn)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.handlers = append(s.handlers, handler)
+	return nil
 }
 
 // ToHTTPServer converts the server to a http server
@@ -62,13 +75,13 @@ func (s Server) ToHTTPServer() (*httpServer, error) {
 	for _, service := range s.config.Services {
 		found := false
 		for _, handler := range s.handlers {
-			if handler.GetMethod() == service.Method && handler.GetPath() == service.Pattern {
+			if handler.Method == service.Method && handler.Path == service.Pattern {
 				found = true
 				break
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("missing handler for %s '%s'", service.Method, service.Pattern)
+			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, ErrNoHandlerForService)
 		}
 	}
 

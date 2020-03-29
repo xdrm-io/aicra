@@ -2,12 +2,18 @@ package builtin
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"git.xdrm.io/go/aicra/datatype"
 )
 
 // FloatDataType is what its name tells
 type FloatDataType struct{}
+
+// Type returns the type of data
+func (FloatDataType) Type() reflect.Type {
+	return reflect.TypeOf(float64(0))
+}
 
 // Build returns the validator
 func (FloatDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {

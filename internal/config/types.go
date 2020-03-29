@@ -2,6 +2,7 @@ package config
 
 import (
 	"net/http"
+	"reflect"
 
 	"git.xdrm.io/go/aicra/datatype"
 )
@@ -26,8 +27,7 @@ type Service struct {
 	Scope       [][]string            `json:"scope"`
 	Description string                `json:"info"`
 	Input       map[string]*Parameter `json:"in"`
-	// Download    *bool                 `json:"download"`
-	// Output map[string]*Parameter `json:"out"`
+	Output      map[string]*Parameter `json:"out"`
 
 	// references to url parameters
 	// format: '/uri/{param}'
@@ -46,6 +46,8 @@ type Parameter struct {
 	Description string `json:"info"`
 	Type        string `json:"type"`
 	Rename      string `json:"name,omitempty"`
+	// ExtractType is the type of data the datatype returns
+	ExtractType reflect.Type
 	// Optional is set to true when the type is prefixed with '?'
 	Optional bool
 

@@ -29,6 +29,9 @@ const ErrInvalidPatternBraceCapture = cerr("invalid uri capturing braces")
 // ErrUnspecifiedBraceCapture - a parameter brace capture is not specified in the pattern
 const ErrUnspecifiedBraceCapture = cerr("capturing brace missing in the path")
 
+// ErrMandatoryRename - capture/query parameters must have a rename
+const ErrMandatoryRename = cerr("capture and query parameters must have a 'name'")
+
 // ErrUndefinedBraceCapture - a parameter brace capture in the pattern is not defined in parameters
 const ErrUndefinedBraceCapture = cerr("capturing brace missing input definition")
 
@@ -37,6 +40,9 @@ const ErrMissingDescription = cerr("missing description")
 
 // ErrIllegalOptionalURIParam - an URI parameter cannot be optional
 const ErrIllegalOptionalURIParam = cerr("URI parameter cannot be optional")
+
+// ErrOptionalOption - an output is optional
+const ErrOptionalOption = cerr("output cannot be optional")
 
 // ErrMissingParamDesc - a parameter is missing its description
 const ErrMissingParamDesc = cerr("missing parameter description")
