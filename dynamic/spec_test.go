@@ -117,6 +117,12 @@ func TestOutputCheck(t *testing.T) {
 			Fn:     func() {},
 			Err:    ErrMissingHandlerOutput,
 		},
+		// no input -> with last type not api.Error
+		{
+			Output: map[string]reflect.Type{},
+			Fn:     func() bool { return true },
+			Err:    ErrMissingHandlerErrorOutput,
+		},
 		// no input -> with api.Error
 		{
 			Output: map[string]reflect.Type{},
@@ -181,6 +187,14 @@ func TestOutputCheck(t *testing.T) {
 		{
 			Output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
+			},
+			Fn:  func() (*struct{ Test1 int }, api.Error) { return nil, api.ErrorSuccess },
+			Err: nil,
+		},
+		// ignore type check on nil type
+		{
+			Output: map[string]reflect.Type{
+				"Test1": nil,
 			},
 			Fn:  func() (*struct{ Test1 int }, api.Error) { return nil, api.ErrorSuccess },
 			Err: nil,
