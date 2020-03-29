@@ -41,6 +41,9 @@ const ErrMissingDescription = cerr("missing description")
 // ErrIllegalOptionalURIParam - an URI parameter cannot be optional
 const ErrIllegalOptionalURIParam = cerr("URI parameter cannot be optional")
 
+// ErrOptionalOption - an output is optional
+const ErrOptionalOption = cerr("output cannot be optional")
+
 // ErrMissingParamDesc - a parameter is missing its description
 const ErrMissingParamDesc = cerr("missing parameter description")
 

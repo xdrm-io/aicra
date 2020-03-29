@@ -1,6 +1,8 @@
 package config
 
-import "git.xdrm.io/go/aicra/datatype"
+import (
+	"git.xdrm.io/go/aicra/datatype"
+)
 
 // Validate implements the validator interface
 func (param *Parameter) Validate(datatypes ...datatype.T) error {
@@ -21,16 +23,14 @@ func (param *Parameter) Validate(datatypes ...datatype.T) error {
 	}
 
 	// assign the datatype
-	datatypeFound := false
 	for _, dtype := range datatypes {
 		param.Validator = dtype.Build(param.Type, datatypes...)
+		param.ExtractType = dtype.Type()
 		if param.Validator != nil {
-			datatypeFound = true
-			param.ExtractType = dtype.Type()
 			break
 		}
 	}
-	if !datatypeFound {
+	if param.Validator == nil {
 		return ErrUnknownDataType
 	}
 

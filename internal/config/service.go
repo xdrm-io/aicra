@@ -108,6 +108,12 @@ func (svc *Service) Validate(datatypes ...datatype.T) error {
 		}
 	}
 
+	// check output
+	err = svc.validateOutput(datatypes)
+	if err != nil {
+		return fmt.Errorf("field 'out': %w", err)
+	}
+
 	return nil
 }
 
@@ -239,6 +245,55 @@ func (svc *Service) validateInput(types []datatype.T) error {
 
 		// fail on name/rename conflict
 		for paramName2, param2 := range svc.Input {
+			// ignore self
+			if paramName == paramName2 {
+				continue
+			}
+
+			// 3.2.1. Same rename field
+			// 3.2.2. Not-renamed field matches a renamed field
+			// 3.2.3. Renamed field matches name
+			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
+				return fmt.Errorf("%s: %w", paramName, ErrParamNameConflict)
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
+func (svc *Service) validateOutput(types []datatype.T) error {
+
+	// ignore no parameter
+	if svc.Output == nil || len(svc.Output) < 1 {
+		svc.Output = make(map[string]*Parameter, 0)
+		return nil
+	}
+
+	// for each parameter
+	for paramName, param := range svc.Output {
+		if len(paramName) < 1 {
+			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
+		}
+
+		// use param name if no rename
+		if len(param.Rename) < 1 {
+			param.Rename = paramName
+		}
+
+		err := param.Validate(types...)
+		if err != nil {
+			return fmt.Errorf("%s: %w", paramName, err)
+		}
+
+		if param.Optional {
+			return fmt.Errorf("%s: %w", paramName, ErrOptionalOption)
+		}
+
+		// fail on name/rename conflict
+		for paramName2, param2 := range svc.Output {
 			// ignore self
 			if paramName == paramName2 {
 				continue
