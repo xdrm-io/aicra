@@ -17,6 +17,9 @@ func makeSpec(service config.Service) spec {
 	}
 
 	for _, param := range service.Input {
+		if len(param.Rename) < 1 {
+			continue
+		}
 		// make a pointer if optional
 		if param.Optional {
 			spec.Input[param.Rename] = reflect.PtrTo(param.ExtractType)
@@ -26,6 +29,9 @@ func makeSpec(service config.Service) spec {
 	}
 
 	for _, param := range service.Output {
+		if len(param.Rename) < 1 {
+			continue
+		}
 		spec.Output[param.Rename] = param.ExtractType
 	}
 
@@ -53,9 +59,6 @@ func (s spec) checkInput(fnv reflect.Value) error {
 
 	// check for invalid param
 	for name, ptype := range s.Input {
-		if len(name) < 1 {
-			continue
-		}
 		if name[0] == strings.ToLower(name)[0] {
 			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
 		}
@@ -108,9 +111,6 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 
 	// fail on invalid output
 	for name, ptype := range s.Output {
-		if len(name) < 1 {
-			continue
-		}
 		if name[0] == strings.ToLower(name)[0] {
 			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
 		}
