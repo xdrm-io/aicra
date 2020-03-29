@@ -76,7 +76,7 @@ var errorReasons = map[Error]string{
 	ErrorUnknown:             "unknown error",
 	ErrorSuccess:             "all right",
 	ErrorFailure:             "it failed",
-	ErrorNoMatchFound:        "resource found",
+	ErrorNoMatchFound:        "resource not found",
 	ErrorAlreadyExists:       "already exists",
 	ErrorConfig:              "configuration error",
 	ErrorUpload:              "upload failed",
