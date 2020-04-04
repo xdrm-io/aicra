@@ -1,99 +1,106 @@
 package aicra
 
 import (
-	"fmt"
-	"io"
+	"log"
 	"net/http"
 
-	"git.xdrm.io/go/aicra/datatype"
-	"git.xdrm.io/go/aicra/dynfunc"
-	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/api"
+	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
-// Builder for an aicra server
-type Builder struct {
-	conf     *config.Server
-	handlers []*apiHandler
-}
+// Server hides the builder and allows handling http requests
+type Server Builder
 
-// represents an server handler
-type apiHandler struct {
-	Method string
-	Path   string
-	dyn    *dynfunc.Handler
-}
+// ServeHTTP implements http.Handler and is called on each request
+func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
 
-// AddType adds an available datatype to the api definition
-func (b *Builder) AddType(t datatype.T) {
-	if b.conf == nil {
-		b.conf = &config.Server{}
-	}
-	if b.conf.Services != nil {
-		panic(ErrLateType)
-	}
-	b.conf.Types = append(b.conf.Types, t)
-}
-
-// Setup the builder with its api definition
-// panics if already setup
-func (b *Builder) Setup(r io.Reader) error {
-	if b.conf == nil {
-		b.conf = &config.Server{}
-	}
-	if b.conf.Services != nil {
-		panic(ErrAlreadySetup)
-	}
-	return b.conf.Parse(r)
-}
-
-// Bind a dynamic handler to a REST service
-func (b *Builder) Bind(method, path string, fn interface{}) error {
-	if b.conf.Services == nil {
-		return ErrNotSetup
+	// 1. find a matching service in the config
+	service := server.conf.Find(req)
+	if service == nil {
+		response := api.EmptyResponse().WithError(api.ErrorUnknownService)
+		response.ServeHTTP(res, req)
+		logError(response)
+		return
 	}
 
-	// find associated service
-	var service *config.Service
-	for _, s := range b.conf.Services {
-		if method == s.Method && path == s.Pattern {
-			service = s
-			break
+	// 2. build input parameter receiver
+	dataset := reqdata.New(service)
+
+	// 3. extract URI data
+	err := dataset.ExtractURI(req)
+	if err != nil {
+		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
+		response.ServeHTTP(res, req)
+		logError(response)
+		return
+	}
+
+	// 4. extract query data
+	err = dataset.ExtractQuery(req)
+	if err != nil {
+		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
+		response.ServeHTTP(res, req)
+		logError(response)
+		return
+	}
+
+	// 5. extract form/json data
+	err = dataset.ExtractForm(req)
+	if err != nil {
+		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
+		response.ServeHTTP(res, req)
+		logError(response)
+		return
+	}
+
+	// 6. find a matching handler
+	var handler *apiHandler
+	for _, h := range server.handlers {
+		if h.Method == service.Method && h.Path == service.Pattern {
+			handler = h
 		}
 	}
 
-	if service == nil {
-		return fmt.Errorf("%s '%s': %w", method, path, ErrUnknownService)
+	// 7. fail if found no handler
+	if handler == nil {
+		r := api.EmptyResponse().WithError(api.ErrorUnknownService)
+		r.ServeHTTP(res, req)
+		logError(r)
+		return
 	}
 
-	dyn, err := dynfunc.Build(fn, *service)
+	// 8. build api.Request from http.Request
+	apireq, err := api.NewRequest(req)
 	if err != nil {
-		return fmt.Errorf("%s '%s' handler: %w", method, path, err)
+		log.Fatal(err)
 	}
 
-	b.handlers = append(b.handlers, &apiHandler{
-		Path:   path,
-		Method: method,
-		dyn:    dyn,
-	})
+	// 9. feed request with scope & parameters
+	apireq.Scope = service.Scope
+	apireq.Param = dataset.Data
 
-	return nil
-}
+	// 10. execute
+	returned, apiErr := handler.dyn.Handle(dataset.Data)
+	response := api.EmptyResponse().WithError(apiErr)
+	for key, value := range returned {
 
-// Build a fully-featured HTTP server
-func (b Builder) Build() (http.Handler, error) {
-
-	for _, service := range b.conf.Services {
-		var hasAssociatedHandler bool
-		for _, handler := range b.handlers {
-			if handler.Method == service.Method && handler.Path == service.Pattern {
-				hasAssociatedHandler = true
-				break
+		// find original name from rename
+		for name, param := range service.Output {
+			if param.Rename == key {
+				response.SetData(name, value)
 			}
 		}
-		if !hasAssociatedHandler {
-			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, ErrMissingHandler)
+	}
+
+	// 11. apply headers
+	res.Header().Set("Content-Type", "application/json; charset=utf-8")
+	for key, values := range response.Headers {
+		for _, value := range values {
+			res.Header().Add(key, value)
 		}
 	}
 
-	return httpHandler(b), nil
+	// 12. write to response
+	response.ServeHTTP(res, req)
 }
