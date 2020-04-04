@@ -76,23 +76,23 @@ func errorHandler(err api.Error) http.HandlerFunc {
 	}
 }
 
-func extractRequestData(service *config.Service, req http.Request) (*reqdata.Set, error) {
+func extractRequestData(service *config.Service, req http.Request) (*reqdata.T, error) {
 	dataset := reqdata.New(service)
 
 	// 3. extract URI data
-	err := dataset.ExtractURI(req)
+	err := dataset.GetURI(req)
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. extract query data
-	err = dataset.ExtractQuery(req)
+	err = dataset.GetQuery(req)
 	if err != nil {
 		return nil, err
 	}
 
 	// 5. extract form/json data
-	err = dataset.ExtractForm(req)
+	err = dataset.GetForm(req)
 	if err != nil {
 		return nil, err
 	}
