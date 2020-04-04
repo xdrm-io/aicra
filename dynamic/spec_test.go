@@ -21,11 +21,11 @@ func TestInputCheck(t *testing.T) {
 			Fn:    func() {},
 			Err:   nil,
 		},
-		// func can have any arguments if not specified
+		// func must have noarguments if none specified
 		{
 			Input: map[string]reflect.Type{},
 			Fn:    func(int, string) {},
-			Err:   nil,
+			Err:   ErrUnexpectedInput,
 		},
 		// missing input struct in func
 		{

@@ -44,6 +44,9 @@ func (s spec) checkInput(fnv reflect.Value) error {
 
 	// no input -> ok
 	if len(s.Input) == 0 {
+		if fnt.NumIn() > 0 {
+			return ErrUnexpectedInput
+		}
 		return nil
 	}
 

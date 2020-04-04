@@ -17,6 +17,9 @@ const ErrNoServiceForHandler = cerr("no service found for this handler")
 // ErrMissingHandlerArgumentParam - missing params arguments for handler
 const ErrMissingHandlerArgumentParam = cerr("missing handler argument : parameter struct")
 
+// ErrUnexpectedInput - input argument is not expected
+const ErrUnexpectedInput = cerr("unexpected input struct")
+
 // ErrMissingHandlerOutput - missing output for handler
 const ErrMissingHandlerOutput = cerr("handler must have at least 1 output")
 
