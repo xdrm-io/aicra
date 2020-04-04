@@ -39,7 +39,7 @@ func New(service *config.Service) *Set {
 }
 
 // ExtractURI fills 'Set' with creating pointers inside 'Url'
-func (i *Set) ExtractURI(req *http.Request) error {
+func (i *Set) ExtractURI(req http.Request) error {
 	uriparts := config.SplitURL(req.URL.RequestURI())
 
 	for _, capture := range i.service.Captures {
@@ -71,7 +71,7 @@ func (i *Set) ExtractURI(req *http.Request) error {
 }
 
 // ExtractQuery data from the url query parameters
-func (i *Set) ExtractQuery(req *http.Request) error {
+func (i *Set) ExtractQuery(req http.Request) error {
 	query := req.URL.Query()
 
 	for name, param := range i.service.Query {
@@ -108,7 +108,7 @@ func (i *Set) ExtractQuery(req *http.Request) error {
 // - parse 'form-data' if not supported for non-POST requests
 // - parse 'x-www-form-urlencoded'
 // - parse 'application/json'
-func (i *Set) ExtractForm(req *http.Request) error {
+func (i *Set) ExtractForm(req http.Request) error {
 
 	// ignore GET method
 	if req.Method == http.MethodGet {
@@ -138,7 +138,7 @@ func (i *Set) ExtractForm(req *http.Request) error {
 
 // parseJSON parses JSON from the request body inside 'Form'
 // and 'Set'
-func (i *Set) parseJSON(req *http.Request) error {
+func (i *Set) parseJSON(req http.Request) error {
 
 	parsed := make(map[string]interface{}, 0)
 
@@ -178,7 +178,7 @@ func (i *Set) parseJSON(req *http.Request) error {
 
 // parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
-func (i *Set) parseUrlencoded(req *http.Request) error {
+func (i *Set) parseUrlencoded(req http.Request) error {
 	// use http.Request interface
 	if err := req.ParseForm(); err != nil {
 		return err
@@ -215,7 +215,7 @@ func (i *Set) parseUrlencoded(req *http.Request) error {
 
 // parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func (i *Set) parseMultipart(req *http.Request) error {
+func (i *Set) parseMultipart(req http.Request) error {
 
 	// 1. create reader
 	boundary := req.Header.Get("Content-Type")[len("multipart/form-data; boundary="):]
