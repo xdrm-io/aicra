@@ -8,6 +8,12 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
+// Handler represents a dynamic api handler
+type Handler struct {
+	spec spec
+	fn   interface{}
+}
+
 // Build a handler from a service configuration and a dynamic function
 //
 // @fn must have as a signature : `func(inputStruct) (*outputStruct, api.Error)`

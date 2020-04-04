@@ -9,6 +9,11 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
+type spec struct {
+	Input  map[string]reflect.Type
+	Output map[string]reflect.Type
+}
+
 // builds a spec from the configuration service
 func makeSpec(service config.Service) spec {
 	spec := spec{
