@@ -18,14 +18,14 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 1. find a matching service in the config
 	service := server.conf.Find(req)
 	if service == nil {
-		errorHandler(api.ErrorUnknownService)
+		errorHandler(api.ErrorUnknownService).ServeHTTP(res, req)
 		return
 	}
 
 	// 2. extract request data
 	dataset, err := extractRequestData(service, *req)
 	if err != nil {
-		errorHandler(api.ErrorMissingParam)
+		errorHandler(api.ErrorMissingParam).ServeHTTP(res, req)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	// 4. fail if found no handler
 	if handler == nil {
-		errorHandler(api.ErrorUncallableService)
+		errorHandler(api.ErrorUncallableService).ServeHTTP(res, req)
 		return
 	}
 
