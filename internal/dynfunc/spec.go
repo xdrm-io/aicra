@@ -1,8 +1,9 @@
-package dynamic
+package dynfunc
 
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
@@ -16,6 +17,9 @@ func makeSpec(service config.Service) spec {
 	}
 
 	for _, param := range service.Input {
+		if len(param.Rename) < 1 {
+			continue
+		}
 		// make a pointer if optional
 		if param.Optional {
 			spec.Input[param.Rename] = reflect.PtrTo(param.ExtractType)
@@ -25,6 +29,9 @@ func makeSpec(service config.Service) spec {
 	}
 
 	for _, param := range service.Output {
+		if len(param.Rename) < 1 {
+			continue
+		}
 		spec.Output[param.Rename] = param.ExtractType
 	}
 
@@ -37,6 +44,9 @@ func (s spec) checkInput(fnv reflect.Value) error {
 
 	// no input -> ok
 	if len(s.Input) == 0 {
+		if fnt.NumIn() > 0 {
+			return ErrUnexpectedInput
+		}
 		return nil
 	}
 
@@ -50,8 +60,12 @@ func (s spec) checkInput(fnv reflect.Value) error {
 		return ErrMissingParamArgument
 	}
 
-	// check for invlaid param
+	// check for invalid param
 	for name, ptype := range s.Input {
+		if name[0] == strings.ToLower(name)[0] {
+			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+		}
+
 		field, exists := structArg.FieldByName(name)
 		if !exists {
 			return fmt.Errorf("%s: %w", name, ErrMissingParamFromConfig)
@@ -100,6 +114,10 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 
 	// fail on invalid output
 	for name, ptype := range s.Output {
+		if name[0] == strings.ToLower(name)[0] {
+			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+		}
+
 		field, exists := structOutput.FieldByName(name)
 		if !exists {
 			return fmt.Errorf("%s: %w", name, ErrMissingOutputFromConfig)
@@ -110,8 +128,8 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 			continue
 		}
 
-		if !ptype.ConvertibleTo(field.Type) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongOutputTypeFromConfig, field.Type, ptype)
+		if !field.Type.ConvertibleTo(ptype) {
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
 

@@ -1,91 +1,101 @@
 package aicra
 
 import (
-	"fmt"
-	"io"
-	"os"
+	"net/http"
 
-	"git.xdrm.io/go/aicra/datatype"
-	"git.xdrm.io/go/aicra/dynamic"
+	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
-// Server represents an AICRA instance featuring: type checkers, services
-type Server struct {
-	config   *config.Server
-	handlers []*handler
-}
+// Server hides the builder and allows handling http requests
+type Server Builder
 
-// New creates a framework instance from a configuration file
-func New(configPath string, dtypes ...datatype.T) (*Server, error) {
-	var (
-		err        error
-		configFile io.ReadCloser
-	)
+// ServeHTTP implements http.Handler and is called on each request
+func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	defer req.Body.Close()
 
-	// 1. init instance
-	var i = &Server{
-		config:   nil,
-		handlers: make([]*handler, 0),
+	// 1. find a matching service in the config
+	service := server.conf.Find(req)
+	if service == nil {
+		errorHandler(api.ErrorUnknownService)
+		return
 	}
 
-	// 2. open config file
-	configFile, err = os.Open(configPath)
+	// 2. extract request data
+	dataset, err := extractRequestData(service, *req)
 	if err != nil {
-		return nil, err
-	}
-	defer configFile.Close()
-
-	// 3. load configuration
-	i.config, err = config.Parse(configFile, dtypes...)
-	if err != nil {
-		return nil, err
+		errorHandler(api.ErrorMissingParam)
+		return
 	}
 
-	return i, nil
-
-}
-
-// Handle sets a new handler for an HTTP method to a path
-func (s *Server) Handle(method, path string, fn dynamic.HandlerFn) error {
-	// find associated service
-	var found *config.Service = nil
-	for _, service := range s.config.Services {
-		if method == service.Method && path == service.Pattern {
-			found = service
-			break
+	// 3. find a matching handler
+	var handler *apiHandler
+	for _, h := range server.handlers {
+		if h.Method == service.Method && h.Path == service.Pattern {
+			handler = h
 		}
 	}
-	if found == nil {
-		return fmt.Errorf("%s '%s': %w", method, path, ErrNoServiceForHandler)
+
+	// 4. fail if found no handler
+	if handler == nil {
+		errorHandler(api.ErrorUncallableService)
+		return
 	}
 
-	handler, err := createHandler(method, path, *found, fn)
-	if err != nil {
-		return err
-	}
-	s.handlers = append(s.handlers, handler)
-	return nil
-}
+	// 5. execute
+	returned, apiErr := handler.dyn.Handle(dataset.Data)
 
-// ToHTTPServer converts the server to a http server
-func (s Server) ToHTTPServer() (*httpServer, error) {
+	// 6. build response from returned data
+	response := api.EmptyResponse().WithError(apiErr)
+	for key, value := range returned {
 
-	// check if handlers are missing
-	for _, service := range s.config.Services {
-		found := false
-		for _, handler := range s.handlers {
-			if handler.Method == service.Method && handler.Path == service.Pattern {
-				found = true
-				break
+		// find original name from rename
+		for name, param := range service.Output {
+			if param.Rename == key {
+				response.SetData(name, value)
 			}
 		}
-		if !found {
-			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, ErrNoHandlerForService)
+	}
+
+	// 7. apply headers
+	res.Header().Set("Content-Type", "application/json; charset=utf-8")
+	for key, values := range response.Headers {
+		for _, value := range values {
+			res.Header().Add(key, value)
 		}
 	}
 
-	// 2. cast to http server
-	httpServer := httpServer(s)
-	return &httpServer, nil
+	response.ServeHTTP(res, req)
+}
+
+func errorHandler(err api.Error) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		r := api.EmptyResponse().WithError(err)
+		r.ServeHTTP(res, req)
+	}
+}
+
+func extractRequestData(service *config.Service, req http.Request) (*reqdata.Set, error) {
+	dataset := reqdata.New(service)
+
+	// 3. extract URI data
+	err := dataset.ExtractURI(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. extract query data
+	err = dataset.ExtractQuery(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. extract form/json data
+	err = dataset.ExtractForm(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return dataset, nil
 }

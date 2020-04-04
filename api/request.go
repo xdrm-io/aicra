@@ -22,21 +22,16 @@ type Request struct {
 }
 
 // NewRequest builds an interface request from a http.Request
-func NewRequest(req *http.Request) (*Request, error) {
-
-	// 1. get useful data
+func NewRequest(req *http.Request) *Request {
 	uri := normaliseURI(req.URL.Path)
 	uriparts := strings.Split(uri, "/")
 
-	// 3. Init request
-	inst := &Request{
+	return &Request{
 		URI:     uriparts,
 		Scope:   nil,
 		Request: req,
 		Param:   make(RequestParam),
 	}
-
-	return inst, nil
 }
 
 // normaliseURI removes the trailing '/' to always

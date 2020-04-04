@@ -11,6 +11,35 @@ import (
 
 var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)
 var queryRegex = regexp.MustCompile(`^GET@([a-z_-]+)$`)
+var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+
+// Service definition
+type Service struct {
+	Method      string                `json:"method"`
+	Pattern     string                `json:"path"`
+	Scope       [][]string            `json:"scope"`
+	Description string                `json:"info"`
+	Input       map[string]*Parameter `json:"in"`
+	Output      map[string]*Parameter `json:"out"`
+
+	// references to url parameters
+	// format: '/uri/{param}'
+	Captures []*BraceCapture
+
+	// references to Query parameters
+	// format: 'GET@paranName'
+	Query map[string]*Parameter
+
+	// references for form parameters (all but Captures and Query)
+	Form map[string]*Parameter
+}
+
+// BraceCapture links to the related URI parameter
+type BraceCapture struct {
+	Name  string
+	Index int
+	Ref   *Parameter
+}
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
@@ -23,9 +52,6 @@ func (svc *Service) Match(req *http.Request) bool {
 	if !svc.matchPattern(req.RequestURI) {
 		return false
 	}
-
-	// check and extract input
-	// todo: check if input match and extract models
 
 	return true
 }
@@ -76,7 +102,7 @@ func (svc *Service) matchPattern(uri string) bool {
 }
 
 // Validate implements the validator interface
-func (svc *Service) Validate(datatypes ...datatype.T) error {
+func (svc *Service) validate(datatypes ...datatype.T) error {
 	// check method
 	err := svc.isMethodAvailable()
 	if err != nil {
@@ -233,7 +259,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 			param.Rename = paramName
 		}
 
-		err := param.Validate(types...)
+		err := param.validate(types...)
 		if err != nil {
 			return fmt.Errorf("%s: %w", paramName, err)
 		}
@@ -283,7 +309,7 @@ func (svc *Service) validateOutput(types []datatype.T) error {
 			param.Rename = paramName
 		}
 
-		err := param.Validate(types...)
+		err := param.validate(types...)
 		if err != nil {
 			return fmt.Errorf("%s: %w", paramName, err)
 		}

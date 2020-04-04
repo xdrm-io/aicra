@@ -131,7 +131,7 @@ func TestStoreWithUri(t *testing.T) {
 			store := New(service)
 
 			req := httptest.NewRequest(http.MethodGet, "http://host.com"+test.URI, nil)
-			err := store.ExtractURI(req)
+			err := store.ExtractURI(*req)
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
@@ -242,7 +242,7 @@ func TestExtractQuery(t *testing.T) {
 			store := New(getServiceWithQuery(test.ServiceParam...))
 
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", test.Query), nil)
-			err := store.ExtractQuery(req)
+			err := store.ExtractQuery(*req)
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
@@ -324,7 +324,7 @@ func TestStoreWithUrlEncodedFormParseError(t *testing.T) {
 
 	// defer req.Body.Close()
 	store := New(nil)
-	err := store.ExtractForm(req)
+	err := store.ExtractForm(*req)
 	if err == nil {
 		t.Errorf("expected malformed urlencoded to have FailNow being parsed (got %d elements)", len(store.Data))
 		t.FailNow()
@@ -420,7 +420,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			defer req.Body.Close()
 
 			store := New(getServiceWithForm(test.ServiceParams...))
-			err := store.ExtractForm(req)
+			err := store.ExtractForm(*req)
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
@@ -563,7 +563,7 @@ func TestJsonParameters(t *testing.T) {
 			defer req.Body.Close()
 			store := New(getServiceWithForm(test.ServiceParams...))
 
-			err := store.ExtractForm(req)
+			err := store.ExtractForm(*req)
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
@@ -720,7 +720,7 @@ x
 			defer req.Body.Close()
 			store := New(getServiceWithForm(test.ServiceParams...))
 
-			err := store.ExtractForm(req)
+			err := store.ExtractForm(*req)
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {

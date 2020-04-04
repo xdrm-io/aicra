@@ -9,34 +9,30 @@ import (
 	"git.xdrm.io/go/aicra/datatype"
 )
 
-// Parse builds a server configuration from a json reader and checks for most format errors.
-// you can provide additional DataTypes as variadic arguments
-func Parse(r io.Reader, dtypes ...datatype.T) (*Server, error) {
-	server := &Server{
-		Types:    make([]datatype.T, 0),
-		Services: make([]*Service, 0),
-	}
-
-	// add data types
-	for _, dtype := range dtypes {
-		server.Types = append(server.Types, dtype)
-	}
-
-	if err := json.NewDecoder(r).Decode(&server.Services); err != nil {
-		return nil, fmt.Errorf("%s: %w", ErrRead, err)
-	}
-
-	if err := server.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", ErrFormat, err)
-	}
-
-	return server, nil
+// Server definition
+type Server struct {
+	Types    []datatype.T
+	Services []*Service
 }
 
-// Validate implements the validator interface
-func (server Server) Validate(datatypes ...datatype.T) error {
+// Parse a reader into a server. Server.Types must be set beforehand to
+// make datatypes available when checking and formatting the read configuration.
+func (srv *Server) Parse(r io.Reader) error {
+	if err := json.NewDecoder(r).Decode(&srv.Services); err != nil {
+		return fmt.Errorf("%s: %w", ErrRead, err)
+	}
+
+	if err := srv.validate(); err != nil {
+		return fmt.Errorf("%s: %w", ErrFormat, err)
+	}
+
+	return nil
+}
+
+// validate implements the validator interface
+func (server Server) validate(datatypes ...datatype.T) error {
 	for _, service := range server.Services {
-		err := service.Validate(server.Types...)
+		err := service.validate(server.Types...)
 		if err != nil {
 			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
 		}

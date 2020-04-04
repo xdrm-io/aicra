@@ -22,6 +22,18 @@ var (
 	// ErrorConfig has to be set when there is a configuration error
 	ErrorConfig Error = 4
 
+	// ErrorCreation has to be set when there is a creation/insert error
+	ErrorCreation Error = 5
+
+	// ErrorModification has to be set when there is an update/modification error
+	ErrorModification Error = 6
+
+	// ErrorDeletion has to be set when there is a deletion/removal error
+	ErrorDeletion Error = 7
+
+	// ErrorTransaction has to be set when there is a transactional error
+	ErrorTransaction Error = 8
+
 	// ErrorUpload has to be set when a file upload failed
 	ErrorUpload Error = 100
 
@@ -79,6 +91,10 @@ var errorReasons = map[Error]string{
 	ErrorNoMatchFound:        "resource not found",
 	ErrorAlreadyExists:       "already exists",
 	ErrorConfig:              "configuration error",
+	ErrorCreation:            "create error",
+	ErrorModification:        "update error",
+	ErrorDeletion:            "delete error",
+	ErrorTransaction:         "transactional error",
 	ErrorUpload:              "upload failed",
 	ErrorDownload:            "download failed",
 	MissingDownloadHeaders:   "download headers are missing",

@@ -1,4 +1,4 @@
-package dynamic
+package dynfunc
 
 import (
 	"fmt"
@@ -8,16 +8,16 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
-// Build a handler from a service configuration and a HandlerFn
+// Build a handler from a service configuration and a dynamic function
 //
-// a HandlerFn must have as a signature : `func(api.Request, inputStruct) (outputStruct, api.Error)`
+// @fn must have as a signature : `func(inputStruct) (*outputStruct, api.Error)`
 //  - `inputStruct` is a struct{} containing a field for each service input (with valid reflect.Type)
 //  - `outputStruct` is a struct{} containing a field for each service output (with valid reflect.Type)
 //
 // Special cases:
-//  - it there is no input, `inputStruct` can be omitted
-//  - it there is no output, `outputStruct` can be omitted
-func Build(fn HandlerFn, service config.Service) (*Handler, error) {
+//  - it there is no input, `inputStruct` must be omitted
+//  - it there is no output, `outputStruct` must be omitted
+func Build(fn interface{}, service config.Service) (*Handler, error) {
 	h := &Handler{
 		spec: makeSpec(service),
 		fn:   fn,
@@ -39,7 +39,7 @@ func Build(fn HandlerFn, service config.Service) (*Handler, error) {
 	return h, nil
 }
 
-// Handle binds input @data into HandleFn and returns map output
+// Handle binds input @data into the dynamic function and returns map output
 func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, api.Error) {
 	fnv := reflect.ValueOf(h.fn)
 

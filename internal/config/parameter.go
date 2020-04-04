@@ -1,11 +1,26 @@
 package config
 
 import (
+	"reflect"
+
 	"git.xdrm.io/go/aicra/datatype"
 )
 
-// Validate implements the validator interface
-func (param *Parameter) Validate(datatypes ...datatype.T) error {
+// Parameter represents a parameter definition (from api.json)
+type Parameter struct {
+	Description string `json:"info"`
+	Type        string `json:"type"`
+	Rename      string `json:"name,omitempty"`
+	// ExtractType is the type of data the datatype returns
+	ExtractType reflect.Type
+	// Optional is set to true when the type is prefixed with '?'
+	Optional bool
+
+	// Validator is inferred from @Type
+	Validator datatype.Validator
+}
+
+func (param *Parameter) validate(datatypes ...datatype.T) error {
 	// missing description
 	if len(param.Description) < 1 {
 		return ErrMissingParamDesc

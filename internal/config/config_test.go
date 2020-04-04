@@ -80,7 +80,8 @@ func TestLegalServiceName(t *testing.T) {
 	for i, test := range tests {
 
 		t.Run(fmt.Sprintf("service.%d", i), func(t *testing.T) {
-			_, err := Parse(strings.NewReader(test.Raw))
+			srv := &Server{}
+			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if err == nil && test.Error != nil {
 				t.Errorf("expected an error: '%s'", test.Error.Error())
@@ -134,7 +135,8 @@ func TestAvailableMethods(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("service.%d", i), func(t *testing.T) {
-			_, err := Parse(strings.NewReader(test.Raw))
+			srv := &Server{}
+			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if test.ValidMethod && err != nil {
 				t.Errorf("unexpected error: '%s'", err.Error())
@@ -150,20 +152,22 @@ func TestAvailableMethods(t *testing.T) {
 }
 func TestParseEmpty(t *testing.T) {
 	t.Parallel()
-	reader := strings.NewReader(`[]`)
-	_, err := Parse(reader)
+	r := strings.NewReader(`[]`)
+	srv := &Server{}
+	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error (got '%s')", err)
 		t.FailNow()
 	}
 }
 func TestParseJsonError(t *testing.T) {
-	reader := strings.NewReader(`{
+	r := strings.NewReader(`{
 		"GET": {
 			"info": "info
 		},
 	}`) // trailing ',' is invalid JSON
-	_, err := Parse(reader)
+	srv := &Server{}
+	err := srv.Parse(r)
 	if err == nil {
 		t.Errorf("expected error")
 		t.FailNow()
@@ -205,7 +209,8 @@ func TestParseMissingMethodDescription(t *testing.T) {
 	for i, test := range tests {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
-			_, err := Parse(strings.NewReader(test.Raw))
+			srv := &Server{}
+			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if test.ValidDescription && err != nil {
 				t.Errorf("unexpected error: '%s'", err)
@@ -223,7 +228,7 @@ func TestParseMissingMethodDescription(t *testing.T) {
 
 func TestParamEmptyRenameNoRename(t *testing.T) {
 	t.Parallel()
-	reader := strings.NewReader(`[
+	r := strings.NewReader(`[
 		{
 			"method": "GET",
 			"path": "/",
@@ -233,7 +238,9 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 			}
 		}
 	]`)
-	srv, err := Parse(reader, builtin.AnyDataType{})
+	srv := &Server{}
+	srv.Types = append(srv.Types, builtin.AnyDataType{})
+	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
 		t.FailNow()
@@ -254,7 +261,7 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 }
 func TestOptionalParam(t *testing.T) {
 	t.Parallel()
-	reader := strings.NewReader(`[
+	r := strings.NewReader(`[
 		{
 			"method": "GET",
 			"path": "/",
@@ -267,7 +274,10 @@ func TestOptionalParam(t *testing.T) {
 			}
 		}
 	]`)
-	srv, err := Parse(reader, builtin.AnyDataType{}, builtin.BoolDataType{})
+	srv := &Server{}
+	srv.Types = append(srv.Types, builtin.AnyDataType{})
+	srv.Types = append(srv.Types, builtin.BoolDataType{})
+	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
 		t.FailNow()
@@ -577,7 +587,9 @@ func TestParseParameters(t *testing.T) {
 	for i, test := range tests {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
-			_, err := Parse(strings.NewReader(test.Raw), builtin.AnyDataType{})
+			srv := &Server{}
+			srv.Types = append(srv.Types, builtin.AnyDataType{})
+			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if err == nil && test.Error != nil {
 				t.Errorf("expected an error: '%s'", test.Error.Error())
@@ -814,7 +826,10 @@ func TestServiceCollision(t *testing.T) {
 	for i, test := range tests {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
-			_, err := Parse(strings.NewReader(test.Config), builtin.StringDataType{}, builtin.UintDataType{})
+			srv := &Server{}
+			srv.Types = append(srv.Types, builtin.StringDataType{})
+			srv.Types = append(srv.Types, builtin.UintDataType{})
+			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err == nil && test.Error != nil {
 				t.Errorf("expected an error: '%s'", test.Error.Error())
@@ -951,7 +966,11 @@ func TestMatchSimple(t *testing.T) {
 	for i, test := range tests {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
-			srv, err := Parse(strings.NewReader(test.Config), builtin.AnyDataType{}, builtin.IntDataType{}, builtin.BoolDataType{})
+			srv := &Server{}
+			srv.Types = append(srv.Types, builtin.AnyDataType{})
+			srv.Types = append(srv.Types, builtin.IntDataType{})
+			srv.Types = append(srv.Types, builtin.BoolDataType{})
+			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {
 				t.Errorf("unexpected error: '%s'", err)
