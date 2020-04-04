@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"git.xdrm.io/go/aicra/datatype"
-	"git.xdrm.io/go/aicra/dynamic"
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
@@ -47,7 +46,7 @@ func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 }
 
 // Handle sets a new handler for an HTTP method to a path
-func (s *Server) Handle(method, path string, fn dynamic.HandlerFn) error {
+func (s *Server) Handle(method, path string, fn interface{}) error {
 	// find associated service
 	var found *config.Service = nil
 	for _, service := range s.config.Services {

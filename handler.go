@@ -16,7 +16,7 @@ type handler struct {
 
 // createHandler builds a handler from its http method and path
 // also it checks whether the function signature is valid
-func createHandler(method, path string, service config.Service, fn dynamic.HandlerFn) (*handler, error) {
+func createHandler(method, path string, service config.Service, fn interface{}) (*handler, error) {
 	method = strings.ToUpper(method)
 
 	dynHandler, err := dynamic.Build(fn, service)

@@ -2,13 +2,10 @@ package dynamic
 
 import "reflect"
 
-// HandlerFn defines a dynamic handler function
-type HandlerFn interface{}
-
 // Handler represents a dynamic api handler
 type Handler struct {
 	spec spec
-	fn   HandlerFn
+	fn   interface{}
 }
 
 type spec struct {
