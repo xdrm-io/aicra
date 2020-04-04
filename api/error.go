@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 // Error represents an http response error following the api format.
@@ -10,15 +11,21 @@ import (
 // directly into the response as JSON alongside response output fields.
 type Error int
 
-// Error implements the error interface
 func (e Error) Error() string {
-	// use unknown error if no reason
 	reason, ok := errorReasons[e]
 	if !ok {
 		return ErrorUnknown.Error()
 	}
-
 	return fmt.Sprintf("[%d] %s", e, reason)
+}
+
+// Status returns the associated HTTP status code
+func (e Error) Status() int {
+	status, ok := errorStatus[e]
+	if !ok {
+		return http.StatusOK
+	}
+	return status
 }
 
 // MarshalJSON implements encoding/json.Marshaler interface
