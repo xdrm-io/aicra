@@ -3,7 +3,6 @@ package config
 // cerr allows you to create constant "const" error with type boxing.
 type cerr string
 
-// Error implements the error builtin interface.
 func (err cerr) Error() string {
 	return string(err)
 }
