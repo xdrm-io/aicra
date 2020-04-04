@@ -1,4 +1,4 @@
-package dynamic
+package dynfunc
 
 // cerr allows you to create constant "const" error with type boxing.
 type cerr string

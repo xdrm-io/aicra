@@ -6,13 +6,20 @@ import (
 	"os"
 
 	"git.xdrm.io/go/aicra/datatype"
+	"git.xdrm.io/go/aicra/dynfunc"
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
 // Server represents an AICRA instance featuring: type checkers, services
 type Server struct {
 	config   *config.Server
-	handlers []*handler
+	handlers []*apiHandler
+}
+
+type apiHandler struct {
+	Method     string
+	Path       string
+	dynHandler *dynfunc.Handler
 }
 
 // New creates a framework instance from a configuration file
@@ -48,22 +55,29 @@ func New(configPath string, dtypes ...datatype.T) (*Server, error) {
 // Handle sets a new handler for an HTTP method to a path
 func (s *Server) Handle(method, path string, fn interface{}) error {
 	// find associated service
-	var found *config.Service = nil
-	for _, service := range s.config.Services {
-		if method == service.Method && path == service.Pattern {
-			found = service
+	var service *config.Service
+	for _, s := range s.config.Services {
+		if method == s.Method && path == s.Pattern {
+			service = s
 			break
 		}
 	}
-	if found == nil {
-		return fmt.Errorf("%s '%s': %w", method, path, ErrNoServiceForHandler)
+
+	if service == nil {
+		return fmt.Errorf("%s '%s': %w", method, path, ErrUnknownService)
 	}
 
-	handler, err := createHandler(method, path, *found, fn)
+	dynHandler, err := dynfunc.Build(fn, *service)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s '%s' handler: %w", method, path, err)
 	}
-	s.handlers = append(s.handlers, handler)
+
+	s.handlers = append(s.handlers, &apiHandler{
+		Path:       path,
+		Method:     method,
+		dynHandler: dynHandler,
+	})
+
 	return nil
 }
 
