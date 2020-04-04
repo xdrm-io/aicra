@@ -29,7 +29,7 @@ func (b *Builder) AddType(t datatype.T) {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
-		panic(ErrLateType)
+		panic(errLateType)
 	}
 	b.conf.Types = append(b.conf.Types, t)
 }
@@ -41,7 +41,7 @@ func (b *Builder) Setup(r io.Reader) error {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
-		panic(ErrAlreadySetup)
+		panic(errAlreadySetup)
 	}
 	return b.conf.Parse(r)
 }
@@ -49,7 +49,7 @@ func (b *Builder) Setup(r io.Reader) error {
 // Bind a dynamic handler to a REST service
 func (b *Builder) Bind(method, path string, fn interface{}) error {
 	if b.conf.Services == nil {
-		return ErrNotSetup
+		return errNotSetup
 	}
 
 	// find associated service
@@ -62,7 +62,7 @@ func (b *Builder) Bind(method, path string, fn interface{}) error {
 	}
 
 	if service == nil {
-		return fmt.Errorf("%s '%s': %w", method, path, ErrUnknownService)
+		return fmt.Errorf("%s '%s': %w", method, path, errUnknownService)
 	}
 
 	dyn, err := dynfunc.Build(fn, *service)
@@ -91,7 +91,7 @@ func (b Builder) Build() (http.Handler, error) {
 			}
 		}
 		if !hasAssociatedHandler {
-			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, ErrMissingHandler)
+			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, errMissingHandler)
 		}
 	}
 

@@ -1,5 +1,7 @@
 package api
 
+import "net/http"
+
 var (
 	// ErrorUnknown represents any error which cause is unknown.
 	// It might also be used for debug purposes as this error
@@ -19,20 +21,17 @@ var (
 	// unique fields already exists
 	ErrorAlreadyExists Error = 3
 
-	// ErrorConfig has to be set when there is a configuration error
-	ErrorConfig Error = 4
-
 	// ErrorCreation has to be set when there is a creation/insert error
-	ErrorCreation Error = 5
+	ErrorCreation Error = 4
 
 	// ErrorModification has to be set when there is an update/modification error
-	ErrorModification Error = 6
+	ErrorModification Error = 5
 
 	// ErrorDeletion has to be set when there is a deletion/removal error
-	ErrorDeletion Error = 7
+	ErrorDeletion Error = 6
 
 	// ErrorTransaction has to be set when there is a transactional error
-	ErrorTransaction Error = 8
+	ErrorTransaction Error = 7
 
 	// ErrorUpload has to be set when a file upload failed
 	ErrorUpload Error = 100
@@ -90,7 +89,6 @@ var errorReasons = map[Error]string{
 	ErrorFailure:             "it failed",
 	ErrorNoMatchFound:        "resource not found",
 	ErrorAlreadyExists:       "already exists",
-	ErrorConfig:              "configuration error",
 	ErrorCreation:            "create error",
 	ErrorModification:        "update error",
 	ErrorDeletion:            "delete error",
@@ -107,4 +105,27 @@ var errorReasons = map[Error]string{
 	ErrorMissingParam:        "missing parameter",
 	ErrorInvalidParam:        "invalid parameter",
 	ErrorInvalidDefaultParam: "invalid default param",
+}
+var errorStatus = map[Error]int{
+	ErrorUnknown:             http.StatusOK,
+	ErrorSuccess:             http.StatusOK,
+	ErrorFailure:             http.StatusInternalServerError,
+	ErrorNoMatchFound:        http.StatusOK,
+	ErrorAlreadyExists:       http.StatusOK,
+	ErrorCreation:            http.StatusOK,
+	ErrorModification:        http.StatusOK,
+	ErrorDeletion:            http.StatusOK,
+	ErrorTransaction:         http.StatusOK,
+	ErrorUpload:              http.StatusInternalServerError,
+	ErrorDownload:            http.StatusInternalServerError,
+	MissingDownloadHeaders:   http.StatusBadRequest,
+	ErrorMissingDownloadBody: http.StatusBadRequest,
+	ErrorUnknownService:      http.StatusServiceUnavailable,
+	ErrorUncallableService:   http.StatusServiceUnavailable,
+	ErrorNotImplemented:      http.StatusNotImplemented,
+	ErrorPermission:          http.StatusUnauthorized,
+	ErrorToken:               http.StatusForbidden,
+	ErrorMissingParam:        http.StatusBadRequest,
+	ErrorInvalidParam:        http.StatusBadRequest,
+	ErrorInvalidDefaultParam: http.StatusBadRequest,
 }

@@ -196,8 +196,8 @@ func TestNoName(t *testing.T) {
 				return
 			}
 
-			if err = mpr.Parse(); err != ErrMissingDataName {
-				t.Errorf("expected the error <%s>, got <%s>", ErrMissingDataName, err)
+			if err = mpr.Parse(); err != errMissingDataName {
+				t.Errorf("expected the error <%s>, got <%s>", errMissingDataName, err)
 				return
 			}
 		})
@@ -238,8 +238,8 @@ func TestNoHeader(t *testing.T) {
 				return
 			}
 
-			if err = mpr.Parse(); err != ErrNoHeader {
-				t.Errorf("expected the error <%s>, got <%s>", ErrNoHeader, err)
+			if err = mpr.Parse(); err != errNoHeader {
+				t.Errorf("expected the error <%s>, got <%s>", errNoHeader, err)
 				return
 			}
 		})
@@ -274,8 +274,8 @@ facebook.com
 		t.Fatalf("unexpected error <%s>", err)
 	}
 
-	if err = mpr.Parse(); err != ErrDataNameConflict {
-		t.Fatalf("expected the error <%s>, got <%s>", ErrDataNameConflict, err)
+	if err = mpr.Parse(); err != errDataNameConflict {
+		t.Fatalf("expected the error <%s>, got <%s>", errDataNameConflict, err)
 	}
 
 }

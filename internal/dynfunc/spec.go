@@ -9,6 +9,11 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
+type spec struct {
+	Input  map[string]reflect.Type
+	Output map[string]reflect.Type
+}
+
 // builds a spec from the configuration service
 func makeSpec(service config.Service) spec {
 	spec := spec{
@@ -45,34 +50,34 @@ func (s spec) checkInput(fnv reflect.Value) error {
 	// no input -> ok
 	if len(s.Input) == 0 {
 		if fnt.NumIn() > 0 {
-			return ErrUnexpectedInput
+			return errUnexpectedInput
 		}
 		return nil
 	}
 
 	if fnt.NumIn() != 1 {
-		return ErrMissingHandlerArgumentParam
+		return errMissingHandlerArgumentParam
 	}
 
 	// arg must be a struct
 	structArg := fnt.In(0)
 	if structArg.Kind() != reflect.Struct {
-		return ErrMissingParamArgument
+		return errMissingParamArgument
 	}
 
 	// check for invalid param
 	for name, ptype := range s.Input {
 		if name[0] == strings.ToLower(name)[0] {
-			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+			return fmt.Errorf("%s: %w", name, errUnexportedName)
 		}
 
 		field, exists := structArg.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, ErrMissingParamFromConfig)
+			return fmt.Errorf("%s: %w", name, errMissingParamFromConfig)
 		}
 
 		if !ptype.AssignableTo(field.Type) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, errWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
 
@@ -83,13 +88,13 @@ func (s spec) checkInput(fnv reflect.Value) error {
 func (s spec) checkOutput(fnv reflect.Value) error {
 	fnt := fnv.Type()
 	if fnt.NumOut() < 1 {
-		return ErrMissingHandlerOutput
+		return errMissingHandlerOutput
 	}
 
 	// last output must be api.Error
 	errOutput := fnt.Out(fnt.NumOut() - 1)
 	if !errOutput.AssignableTo(reflect.TypeOf(api.ErrorUnknown)) {
-		return ErrMissingHandlerErrorOutput
+		return errMissingHandlerErrorOutput
 	}
 
 	// no output -> ok
@@ -98,29 +103,29 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 	}
 
 	if fnt.NumOut() != 2 {
-		return ErrMissingParamOutput
+		return errMissingParamOutput
 	}
 
 	// fail if first output is not a pointer to struct
 	structOutputPtr := fnt.Out(0)
 	if structOutputPtr.Kind() != reflect.Ptr {
-		return ErrMissingParamOutput
+		return errMissingParamOutput
 	}
 
 	structOutput := structOutputPtr.Elem()
 	if structOutput.Kind() != reflect.Struct {
-		return ErrMissingParamOutput
+		return errMissingParamOutput
 	}
 
 	// fail on invalid output
 	for name, ptype := range s.Output {
 		if name[0] == strings.ToLower(name)[0] {
-			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+			return fmt.Errorf("%s: %w", name, errUnexportedName)
 		}
 
 		field, exists := structOutput.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, ErrMissingOutputFromConfig)
+			return fmt.Errorf("%s: %w", name, errMissingOutputFromConfig)
 		}
 
 		// ignore types evalutating to nil
@@ -129,7 +134,7 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 		}
 
 		if !field.Type.ConvertibleTo(ptype) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, errWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
 

@@ -22,15 +22,15 @@ type Service struct {
 	Input       map[string]*Parameter `json:"in"`
 	Output      map[string]*Parameter `json:"out"`
 
-	// references to url parameters
-	// format: '/uri/{param}'
+	// Captures contains references to URI parameters from the `Input` map. The format
+	// of these parameter names is "{paramName}"
 	Captures []*BraceCapture
 
-	// references to Query parameters
-	// format: 'GET@paranName'
+	// Query contains references to HTTP Query parameters from the `Input` map.
+	// Query parameters names are "GET@paramName", this map contains escaped names (e.g. "paramName")
 	Query map[string]*Parameter
 
-	// references for form parameters (all but Captures and Query)
+	// Form references form parameters from the `Input` map (all but Captures and Query).
 	Form map[string]*Parameter
 }
 
@@ -43,16 +43,12 @@ type BraceCapture struct {
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
-	// method
 	if req.Method != svc.Method {
 		return false
 	}
-
-	// check path
 	if !svc.matchPattern(req.RequestURI) {
 		return false
 	}
-
 	return true
 }
 
@@ -61,13 +57,12 @@ func (svc *Service) matchPattern(uri string) bool {
 	uriparts := SplitURL(uri)
 	parts := SplitURL(svc.Pattern)
 
-	// fail if size differ
 	if len(uriparts) != len(parts) {
 		return false
 	}
 
 	// root url '/'
-	if len(parts) == 0 {
+	if len(parts) == 0 && len(uriparts) == 0 {
 		return true
 	}
 
@@ -118,7 +113,7 @@ func (svc *Service) validate(datatypes ...datatype.T) error {
 
 	// check description
 	if len(strings.Trim(svc.Description, " \t\r\n")) < 1 {
-		return fmt.Errorf("field 'description': %w", ErrMissingDescription)
+		return fmt.Errorf("field 'description': %w", errMissingDescription)
 	}
 
 	// check input parameters
@@ -130,7 +125,7 @@ func (svc *Service) validate(datatypes ...datatype.T) error {
 	// fail if a brace capture remains undefined
 	for _, capture := range svc.Captures {
 		if capture.Ref == nil {
-			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrUndefinedBraceCapture)
+			return fmt.Errorf("field 'in': %s: %w", capture.Name, errUndefinedBraceCapture)
 		}
 	}
 
@@ -149,7 +144,7 @@ func (svc *Service) isMethodAvailable() error {
 			return nil
 		}
 	}
-	return ErrUnknownMethod
+	return errUnknownMethod
 }
 
 func (svc *Service) isPatternValid() error {
@@ -157,13 +152,13 @@ func (svc *Service) isPatternValid() error {
 
 	// empty pattern
 	if length < 1 {
-		return ErrInvalidPattern
+		return errInvalidPattern
 	}
 
 	if length > 1 {
 		// pattern not starting with '/' or ending with '/'
 		if svc.Pattern[0] != '/' || svc.Pattern[length-1] == '/' {
-			return ErrInvalidPattern
+			return errInvalidPattern
 		}
 	}
 
@@ -171,7 +166,7 @@ func (svc *Service) isPatternValid() error {
 	parts := SplitURL(svc.Pattern)
 	for i, part := range parts {
 		if len(part) < 1 {
-			return ErrInvalidPattern
+			return errInvalidPattern
 		}
 
 		// if brace capture
@@ -192,7 +187,7 @@ func (svc *Service) isPatternValid() error {
 
 		// fail on invalid format
 		if strings.ContainsAny(part, "{}") {
-			return ErrInvalidPatternBraceCapture
+			return errInvalidPatternBraceCapture
 		}
 
 	}
@@ -211,7 +206,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 	// for each parameter
 	for paramName, param := range svc.Input {
 		if len(paramName) < 1 {
-			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
+			return fmt.Errorf("%s: %w", paramName, errIllegalParamName)
 		}
 
 		// fail if brace capture does not exists in pattern
@@ -228,7 +223,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 				}
 			}
 			if !found {
-				return fmt.Errorf("%s: %w", paramName, ErrUnspecifiedBraceCapture)
+				return fmt.Errorf("%s: %w", paramName, errUnspecifiedBraceCapture)
 			}
 			iscapture = true
 
@@ -251,7 +246,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 
 		// fail if capture or query without rename
 		if len(param.Rename) < 1 && (iscapture || isquery) {
-			return fmt.Errorf("%s: %w", paramName, ErrMandatoryRename)
+			return fmt.Errorf("%s: %w", paramName, errMandatoryRename)
 		}
 
 		// use param name if no rename
@@ -266,7 +261,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 
 		// capture parameter cannot be optional
 		if iscapture && param.Optional {
-			return fmt.Errorf("%s: %w", paramName, ErrIllegalOptionalURIParam)
+			return fmt.Errorf("%s: %w", paramName, errIllegalOptionalURIParam)
 		}
 
 		// fail on name/rename conflict
@@ -280,7 +275,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 			// 3.2.2. Not-renamed field matches a renamed field
 			// 3.2.3. Renamed field matches name
 			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
-				return fmt.Errorf("%s: %w", paramName, ErrParamNameConflict)
+				return fmt.Errorf("%s: %w", paramName, errParamNameConflict)
 			}
 
 		}
@@ -301,7 +296,7 @@ func (svc *Service) validateOutput(types []datatype.T) error {
 	// for each parameter
 	for paramName, param := range svc.Output {
 		if len(paramName) < 1 {
-			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
+			return fmt.Errorf("%s: %w", paramName, errIllegalParamName)
 		}
 
 		// use param name if no rename
@@ -315,7 +310,7 @@ func (svc *Service) validateOutput(types []datatype.T) error {
 		}
 
 		if param.Optional {
-			return fmt.Errorf("%s: %w", paramName, ErrOptionalOption)
+			return fmt.Errorf("%s: %w", paramName, errOptionalOption)
 		}
 
 		// fail on name/rename conflict
@@ -329,7 +324,7 @@ func (svc *Service) validateOutput(types []datatype.T) error {
 			// 3.2.2. Not-renamed field matches a renamed field
 			// 3.2.3. Renamed field matches name
 			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
-				return fmt.Errorf("%s: %w", paramName, ErrParamNameConflict)
+				return fmt.Errorf("%s: %w", paramName, errParamNameConflict)
 			}
 
 		}

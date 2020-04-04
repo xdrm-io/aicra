@@ -11,33 +11,29 @@ type Parameter struct {
 	Description string `json:"info"`
 	Type        string `json:"type"`
 	Rename      string `json:"name,omitempty"`
-	// ExtractType is the type of data the datatype returns
+	Optional    bool
+	// ExtractType is the type the Validator will cast into
 	ExtractType reflect.Type
-	// Optional is set to true when the type is prefixed with '?'
-	Optional bool
-
-	// Validator is inferred from @Type
+	// Validator is inferred from the "type" property
 	Validator datatype.Validator
 }
 
 func (param *Parameter) validate(datatypes ...datatype.T) error {
-	// missing description
 	if len(param.Description) < 1 {
-		return ErrMissingParamDesc
+		return errMissingParamDesc
 	}
 
-	// invalid type
 	if len(param.Type) < 1 || param.Type == "?" {
-		return ErrMissingParamType
+		return errMissingParamType
 	}
 
-	// optional type transform
+	// optional type
 	if param.Type[0] == '?' {
 		param.Optional = true
 		param.Type = param.Type[1:]
 	}
 
-	// assign the datatype
+	// find validator
 	for _, dtype := range datatypes {
 		param.Validator = dtype.Build(param.Type, datatypes...)
 		param.ExtractType = dtype.Type()
@@ -46,8 +42,7 @@ func (param *Parameter) validate(datatypes ...datatype.T) error {
 		}
 	}
 	if param.Validator == nil {
-		return ErrUnknownDataType
+		return errUnknownDataType
 	}
-
 	return nil
 }

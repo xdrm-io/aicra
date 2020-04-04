@@ -13,19 +13,19 @@ func (comp *Component) parseHeaders(_raw []byte) error {
 	// 1. Extract lines
 	_lines := strings.Split(string(_raw), "\n")
 	if len(_lines) < 2 {
-		return ErrNoHeader
+		return errNoHeader
 	}
 
 	// 2. trim each line + remove 'Content-Disposition' prefix
 	header := strings.Trim(_lines[0], " \t\r")
 
 	if !strings.HasPrefix(header, "Content-Disposition: form-data;") {
-		return ErrNoHeader
+		return errNoHeader
 	}
 	header = strings.Trim(header[len("Content-Disposition: form-data;"):], " \t\r")
 
 	if len(header) < 1 {
-		return ErrNoHeader
+		return errNoHeader
 	}
 
 	// 3. Extract each key-value pair
