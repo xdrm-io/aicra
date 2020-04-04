@@ -20,11 +20,11 @@ type Server struct {
 // make datatypes available when checking and formatting the read configuration.
 func (srv *Server) Parse(r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(&srv.Services); err != nil {
-		return fmt.Errorf("%s: %w", ErrRead, err)
+		return fmt.Errorf("%s: %w", errRead, err)
 	}
 
 	if err := srv.validate(); err != nil {
-		return fmt.Errorf("%s: %w", ErrFormat, err)
+		return fmt.Errorf("%s: %w", errFormat, err)
 	}
 
 	return nil
@@ -41,7 +41,7 @@ func (server Server) validate(datatypes ...datatype.T) error {
 
 	// check for collisions
 	if err := server.collide(); err != nil {
-		return fmt.Errorf("%s: %w", ErrFormat, err)
+		return fmt.Errorf("%s: %w", errFormat, err)
 	}
 
 	return nil
@@ -92,14 +92,14 @@ func (server *Server) collide() error {
 
 				// both captures -> as we cannot check, consider a collision
 				if aIsCapture && bIsCapture {
-					partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (path %s and %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, aPart, bPart))
+					partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (path %s and %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart, bPart))
 					continue
 				}
 
 				// no capture -> check equal
 				if !aIsCapture && !bIsCapture {
 					if aPart == bPart {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (same path '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, aPart))
+						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (same path '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart))
 						continue
 					}
 				}
@@ -110,13 +110,13 @@ func (server *Server) collide() error {
 
 					// fail if no type or no validator
 					if !exists || input.Validator == nil {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (invalid type for %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, aPart))
+						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (invalid type for %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart))
 						continue
 					}
 
 					// fail if not valid
 					if _, valid := input.Validator(bPart); valid {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (%s captures '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, aPart, bPart))
+						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (%s captures '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart, bPart))
 						continue
 					}
 
@@ -126,13 +126,13 @@ func (server *Server) collide() error {
 
 					// fail if no type or no validator
 					if !exists || input.Validator == nil {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (invalid type for %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, bPart))
+						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (invalid type for %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, bPart))
 						continue
 					}
 
 					// fail if not valid
 					if _, valid := input.Validator(aPart); valid {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (%s captures '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, ErrPatternCollision, bPart, aPart))
+						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (%s captures '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, bPart, aPart))
 						continue
 					}
 				}

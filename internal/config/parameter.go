@@ -23,12 +23,12 @@ type Parameter struct {
 func (param *Parameter) validate(datatypes ...datatype.T) error {
 	// missing description
 	if len(param.Description) < 1 {
-		return ErrMissingParamDesc
+		return errMissingParamDesc
 	}
 
 	// invalid type
 	if len(param.Type) < 1 || param.Type == "?" {
-		return ErrMissingParamType
+		return errMissingParamType
 	}
 
 	// optional type transform
@@ -46,7 +46,7 @@ func (param *Parameter) validate(datatypes ...datatype.T) error {
 		}
 	}
 	if param.Validator == nil {
-		return ErrUnknownDataType
+		return errUnknownDataType
 	}
 
 	return nil
