@@ -25,7 +25,7 @@ func TestInputCheck(t *testing.T) {
 		{
 			Input: map[string]reflect.Type{},
 			Fn:    func(int, string) {},
-			Err:   ErrUnexpectedInput,
+			Err:   errUnexpectedInput,
 		},
 		// missing input struct in func
 		{
@@ -33,7 +33,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() {},
-			Err: ErrMissingHandlerArgumentParam,
+			Err: errMissingHandlerArgumentParam,
 		},
 		// input not a struct
 		{
@@ -41,7 +41,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(int) {},
-			Err: ErrMissingParamArgument,
+			Err: errMissingParamArgument,
 		},
 		// unexported param name
 		{
@@ -49,7 +49,7 @@ func TestInputCheck(t *testing.T) {
 				"test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{}) {},
-			Err: ErrUnexportedName,
+			Err: errUnexportedName,
 		},
 		// input field missing
 		{
@@ -57,7 +57,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{}) {},
-			Err: ErrMissingParamFromConfig,
+			Err: errMissingParamFromConfig,
 		},
 		// input field invalid type
 		{
@@ -65,7 +65,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{ Test1 string }) {},
-			Err: ErrWrongParamTypeFromConfig,
+			Err: errWrongParamTypeFromConfig,
 		},
 		// input field valid type
 		{
@@ -115,13 +115,13 @@ func TestOutputCheck(t *testing.T) {
 		{
 			Output: map[string]reflect.Type{},
 			Fn:     func() {},
-			Err:    ErrMissingHandlerOutput,
+			Err:    errMissingHandlerOutput,
 		},
 		// no input -> with last type not api.Error
 		{
 			Output: map[string]reflect.Type{},
 			Fn:     func() bool { return true },
-			Err:    ErrMissingHandlerErrorOutput,
+			Err:    errMissingHandlerErrorOutput,
 		},
 		// no input -> with api.Error
 		{
@@ -141,7 +141,7 @@ func TestOutputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() api.Error { return api.ErrorSuccess },
-			Err: ErrMissingParamOutput,
+			Err: errMissingParamOutput,
 		},
 		// output not a pointer
 		{
@@ -149,7 +149,7 @@ func TestOutputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() (int, api.Error) { return 0, api.ErrorSuccess },
-			Err: ErrMissingParamOutput,
+			Err: errMissingParamOutput,
 		},
 		// output not a pointer to struct
 		{
@@ -157,7 +157,7 @@ func TestOutputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() (*int, api.Error) { return nil, api.ErrorSuccess },
-			Err: ErrMissingParamOutput,
+			Err: errMissingParamOutput,
 		},
 		// unexported param name
 		{
@@ -165,7 +165,7 @@ func TestOutputCheck(t *testing.T) {
 				"test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() (*struct{}, api.Error) { return nil, api.ErrorSuccess },
-			Err: ErrUnexportedName,
+			Err: errUnexportedName,
 		},
 		// output field missing
 		{
@@ -173,7 +173,7 @@ func TestOutputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() (*struct{}, api.Error) { return nil, api.ErrorSuccess },
-			Err: ErrMissingParamFromConfig,
+			Err: errMissingParamFromConfig,
 		},
 		// output field invalid type
 		{
@@ -181,7 +181,7 @@ func TestOutputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() (*struct{ Test1 string }, api.Error) { return nil, api.ErrorSuccess },
-			Err: ErrWrongParamTypeFromConfig,
+			Err: errWrongParamTypeFromConfig,
 		},
 		// output field valid type
 		{

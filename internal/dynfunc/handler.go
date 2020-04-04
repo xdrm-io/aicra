@@ -32,7 +32,7 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 	fnv := reflect.ValueOf(fn)
 
 	if fnv.Type().Kind() != reflect.Func {
-		return nil, ErrHandlerNotFunc
+		return nil, errHandlerNotFunc
 	}
 
 	if err := h.spec.checkInput(fnv); err != nil {
