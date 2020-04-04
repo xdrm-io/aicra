@@ -73,7 +73,6 @@ func errorHandler(err api.Error) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		r := api.EmptyResponse().WithError(err)
 		r.ServeHTTP(res, req)
-		logError(r)
 	}
 }
 
