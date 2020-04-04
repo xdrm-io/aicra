@@ -71,11 +71,11 @@ func (reader *Reader) Parse() error {
 
 		name := comp.GetHeader("name")
 		if len(name) < 1 {
-			return ErrMissingDataName
+			return errMissingDataName
 		}
 
 		if _, nameUsed := reader.Data[name]; nameUsed {
-			return ErrDataNameConflict
+			return errDataNameConflict
 		}
 
 		reader.Data[name] = comp
