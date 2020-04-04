@@ -16,17 +16,18 @@ type Server struct {
 	Services []*Service
 }
 
-// Parse a reader into a server. Server.Types must be set beforehand to
+// Parse a configuration into a server. Server.Types must be set beforehand to
 // make datatypes available when checking and formatting the read configuration.
 func (srv *Server) Parse(r io.Reader) error {
-	if err := json.NewDecoder(r).Decode(&srv.Services); err != nil {
+	err := json.NewDecoder(r).Decode(&srv.Services)
+	if err != nil {
 		return fmt.Errorf("%s: %w", errRead, err)
 	}
 
-	if err := srv.validate(); err != nil {
+	err = srv.validate()
+	if err != nil {
 		return fmt.Errorf("%s: %w", errFormat, err)
 	}
-
 	return nil
 }
 
@@ -39,11 +40,9 @@ func (server Server) validate(datatypes ...datatype.T) error {
 		}
 	}
 
-	// check for collisions
 	if err := server.collide(); err != nil {
 		return fmt.Errorf("%s: %w", errFormat, err)
 	}
-
 	return nil
 }
 
@@ -58,7 +57,11 @@ func (server Server) Find(r *http.Request) *Service {
 	return nil
 }
 
-// collide returns if there is collision between services
+// collide returns if there is collision between any service for the same method and colliding paths.
+// Note that service path collision detection relies on datatypes:
+//  - example 1: `/user/{id}` and `/user/articles` will not collide as {id} is an int and "articles" is not
+//  - example 2: `/user/{name}` and `/user/articles` will collide as {name} is a string so as "articles"
+//  - example 3: `/user/{name}` and `/user/{id}` will collide as {name} and {id} cannot be checked against their potential values
 func (server *Server) collide() error {
 	length := len(server.Services)
 
@@ -68,101 +71,102 @@ func (server *Server) collide() error {
 			aService := server.Services[a]
 			bService := server.Services[b]
 
-			// ignore different method
 			if aService.Method != bService.Method {
 				continue
 			}
 
-			aParts := SplitURL(aService.Pattern)
-			bParts := SplitURL(bService.Pattern)
-
-			// not same size
-			if len(aParts) != len(bParts) {
+			aURIParts := SplitURL(aService.Pattern)
+			bURIParts := SplitURL(bService.Pattern)
+			if len(aURIParts) != len(bURIParts) {
 				continue
 			}
 
-			partErrors := make([]error, 0)
-
-			// for each part
-			for pi, aPart := range aParts {
-				bPart := bParts[pi]
-
-				aIsCapture := len(aPart) > 1 && aPart[0] == '{'
-				bIsCapture := len(bPart) > 1 && bPart[0] == '{'
-
-				// both captures -> as we cannot check, consider a collision
-				if aIsCapture && bIsCapture {
-					partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (path %s and %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart, bPart))
-					continue
-				}
-
-				// no capture -> check equal
-				if !aIsCapture && !bIsCapture {
-					if aPart == bPart {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (same path '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart))
-						continue
-					}
-				}
-
-				// A captures B -> check type (B is A ?)
-				if aIsCapture {
-					input, exists := aService.Input[aPart]
-
-					// fail if no type or no validator
-					if !exists || input.Validator == nil {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (invalid type for %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart))
-						continue
-					}
-
-					// fail if not valid
-					if _, valid := input.Validator(bPart); valid {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (%s captures '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, aPart, bPart))
-						continue
-					}
-
-					// B captures A -> check type (A is B ?)
-				} else if bIsCapture {
-					input, exists := bService.Input[bPart]
-
-					// fail if no type or no validator
-					if !exists || input.Validator == nil {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (invalid type for %s)", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, bPart))
-						continue
-					}
-
-					// fail if not valid
-					if _, valid := input.Validator(aPart); valid {
-						partErrors = append(partErrors, fmt.Errorf("(%s '%s') vs (%s '%s'): %w (%s captures '%s')", aService.Method, aService.Pattern, bService.Method, bService.Pattern, errPatternCollision, bPart, aPart))
-						continue
-					}
-				}
-
-				partErrors = append(partErrors, nil)
-
+			err := checkURICollision(aURIParts, bURIParts, aService.Input, bService.Input)
+			if err != nil {
+				return fmt.Errorf("(%s '%s') vs (%s '%s'): %w", aService.Method, aService.Pattern, bService.Method, bService.Pattern, err)
 			}
-
-			// if at least 1 url part does not match -> ok
-			var firstError error
-			oneMismatch := false
-			for _, err := range partErrors {
-				if err != nil && firstError == nil {
-					firstError = err
-				}
-
-				if err == nil {
-					oneMismatch = true
-					continue
-				}
-			}
-
-			if !oneMismatch {
-				return firstError
-			}
-
 		}
 	}
 
 	return nil
+}
+
+// check if uri of services A and B collide
+func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter) error {
+	var errors = []error{}
+
+	// for each part
+	for pi, aPart := range uriA {
+		bPart := uriB[pi]
+
+		// no need for further check as it has been done earlier in the validation process
+		aIsCapture := len(aPart) > 1 && aPart[0] == '{'
+		bIsCapture := len(bPart) > 1 && bPart[0] == '{'
+
+		// both captures -> as we cannot check, consider a collision
+		if aIsCapture && bIsCapture {
+			errors = append(errors, fmt.Errorf("%w (path %s and %s)", errPatternCollision, aPart, bPart))
+			continue
+		}
+
+		// no capture -> check strict equality
+		if !aIsCapture && !bIsCapture {
+			if aPart == bPart {
+				errors = append(errors, fmt.Errorf("%w (same path '%s')", errPatternCollision, aPart))
+				continue
+			}
+		}
+
+		// A captures B -> check type (B is A ?)
+		if aIsCapture {
+			input, exists := inputA[aPart]
+
+			// fail if no type or no validator
+			if !exists || input.Validator == nil {
+				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", errPatternCollision, aPart))
+				continue
+			}
+
+			// fail if not valid
+			if _, valid := input.Validator(bPart); valid {
+				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", errPatternCollision, aPart, bPart))
+				continue
+			}
+
+			// B captures A -> check type (A is B ?)
+		} else if bIsCapture {
+			input, exists := inputB[bPart]
+
+			// fail if no type or no validator
+			if !exists || input.Validator == nil {
+				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", errPatternCollision, bPart))
+				continue
+			}
+
+			// fail if not valid
+			if _, valid := input.Validator(aPart); valid {
+				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", errPatternCollision, bPart, aPart))
+				continue
+			}
+		}
+
+		errors = append(errors, nil)
+
+	}
+
+	// at least 1 URI part not matching -> no collision
+	var firstError error
+	for _, err := range errors {
+		if err != nil && firstError == nil {
+			firstError = err
+		}
+
+		if err == nil {
+			return nil
+		}
+	}
+
+	return firstError
 }
 
 // SplitURL without empty sets

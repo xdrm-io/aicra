@@ -22,15 +22,15 @@ type Service struct {
 	Input       map[string]*Parameter `json:"in"`
 	Output      map[string]*Parameter `json:"out"`
 
-	// references to url parameters
-	// format: '/uri/{param}'
+	// Captures contains references to URI parameters from the `Input` map. The format
+	// of these parameter names is "{paramName}"
 	Captures []*BraceCapture
 
-	// references to Query parameters
-	// format: 'GET@paranName'
+	// Query contains references to HTTP Query parameters from the `Input` map.
+	// Query parameters names are "GET@paramName", this map contains escaped names (e.g. "paramName")
 	Query map[string]*Parameter
 
-	// references for form parameters (all but Captures and Query)
+	// Form references form parameters from the `Input` map (all but Captures and Query).
 	Form map[string]*Parameter
 }
 
@@ -43,16 +43,12 @@ type BraceCapture struct {
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
-	// method
 	if req.Method != svc.Method {
 		return false
 	}
-
-	// check path
 	if !svc.matchPattern(req.RequestURI) {
 		return false
 	}
-
 	return true
 }
 
@@ -61,13 +57,12 @@ func (svc *Service) matchPattern(uri string) bool {
 	uriparts := SplitURL(uri)
 	parts := SplitURL(svc.Pattern)
 
-	// fail if size differ
 	if len(uriparts) != len(parts) {
 		return false
 	}
 
 	// root url '/'
-	if len(parts) == 0 {
+	if len(parts) == 0 && len(uriparts) == 0 {
 		return true
 	}
 

@@ -877,6 +877,36 @@ func TestMatchSimple(t *testing.T) {
 			"/a",
 			false,
 		},
+		{ // root url
+			`[ {
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/",
+			false,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/",
+			false,
+		},
+		{
+			`[ {
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/",
+			true,
+		},
 		{
 			`[ {
 					"method": "GET",
@@ -996,4 +1026,81 @@ func TestMatchSimple(t *testing.T) {
 		})
 	}
 
+}
+
+func TestFindPriority(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		Config       string
+		URL          string
+		MatchingDesc string
+	}{
+		{
+			`[
+				{ "method": "GET", "path": "/a", "info": "s1" },
+				{ "method": "GET", "path": "/",  "info": "s2" }
+			]`,
+			"/",
+			"s2",
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/",  "info": "s2" },
+				{ "method": "GET", "path": "/a", "info": "s1" }
+			]`,
+			"/",
+			"s2",
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a", "info": "s1" },
+				{ "method": "GET", "path": "/",  "info": "s2" }
+			]`,
+			"/a",
+			"s1",
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/b/c",  "info": "s1" },
+				{ "method": "GET", "path": "/a/b",    "info": "s2" }
+			]`,
+			"/a/b/c",
+			"s1",
+		},
+		{
+			`[
+				{ "method": "GET", "path": "/a/b/c",  "info": "s1" },
+				{ "method": "GET", "path": "/a/b",    "info": "s2" }
+			]`,
+			"/a/b/",
+			"s2",
+		},
+	}
+
+	for i, test := range tests {
+
+		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+			srv := &Server{}
+			srv.Types = append(srv.Types, builtin.AnyDataType{})
+			srv.Types = append(srv.Types, builtin.IntDataType{})
+			srv.Types = append(srv.Types, builtin.BoolDataType{})
+			err := srv.Parse(strings.NewReader(test.Config))
+
+			if err != nil {
+				t.Errorf("unexpected error: '%s'", err)
+				t.FailNow()
+			}
+
+			req := httptest.NewRequest(http.MethodGet, test.URL, nil)
+			service := srv.Find(req)
+			if service == nil {
+				t.Errorf("expected to find a service")
+				t.FailNow()
+			}
+			if service.Description != test.MatchingDesc {
+				t.Errorf("expected description '%s', got '%s'", test.MatchingDesc, service.Description)
+				t.FailNow()
+			}
+		})
+	}
 }

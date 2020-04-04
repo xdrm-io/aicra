@@ -7,53 +7,53 @@ func (err cerr) Error() string {
 	return string(err)
 }
 
-// errRead - a problem ocurred when trying to read the configuration file
+// errRead - read error
 const errRead = cerr("cannot read config")
 
-// errUnknownMethod - invalid http method
+// errUnknownMethod - unknown http method
 const errUnknownMethod = cerr("unknown HTTP method")
 
-// errFormat - a invalid format has been detected
+// errFormat - invalid format
 const errFormat = cerr("invalid config format")
 
-// errPatternCollision - there is a collision between 2 services' patterns (same method)
+// errPatternCollision - collision between 2 services' patterns
 const errPatternCollision = cerr("pattern collision")
 
-// errInvalidPattern - a service pattern is malformed
-const errInvalidPattern = cerr("must begin with a '/' and not end with")
+// errInvalidPattern - malformed service pattern
+const errInvalidPattern = cerr("malformed service path: must begin with a '/' and not end with")
 
-// errInvalidPatternBraceCapture - a service pattern brace capture is invalid
-const errInvalidPatternBraceCapture = cerr("invalid uri capturing braces")
+// errInvalidPatternBraceCapture - invalid brace capture
+const errInvalidPatternBraceCapture = cerr("invalid uri parameter")
 
-// errUnspecifiedBraceCapture - a parameter brace capture is not specified in the pattern
-const errUnspecifiedBraceCapture = cerr("capturing brace missing in the path")
+// errUnspecifiedBraceCapture - missing path brace capture
+const errUnspecifiedBraceCapture = cerr("missing uri parameter")
 
-// errMandatoryRename - capture/query parameters must have a rename
-const errMandatoryRename = cerr("capture and query parameters must have a 'name'")
+// errUndefinedBraceCapture - missing capturing brace definition
+const errUndefinedBraceCapture = cerr("missing uri parameter definition")
 
-// errUndefinedBraceCapture - a parameter brace capture in the pattern is not defined in parameters
-const errUndefinedBraceCapture = cerr("capturing brace missing input definition")
+// errMandatoryRename - capture/query parameters must be renamed
+const errMandatoryRename = cerr("uri and query parameters must be renamed")
 
 // errMissingDescription - a service is missing its description
 const errMissingDescription = cerr("missing description")
 
-// errIllegalOptionalURIParam - an URI parameter cannot be optional
-const errIllegalOptionalURIParam = cerr("URI parameter cannot be optional")
+// errIllegalOptionalURIParam - uri parameter cannot optional
+const errIllegalOptionalURIParam = cerr("uri parameter cannot be optional")
 
-// errOptionalOption - an output is optional
+// errOptionalOption - cannot have optional output
 const errOptionalOption = cerr("output cannot be optional")
 
-// errMissingParamDesc - a parameter is missing its description
+// errMissingParamDesc - missing parameter description
 const errMissingParamDesc = cerr("missing parameter description")
 
-// errUnknownDataType - a parameter has an unknown datatype name
-const errUnknownDataType = cerr("unknown data type")
+// errUnknownDataType - unknown parameter datatype
+const errUnknownDataType = cerr("unknown parameter datatype")
 
-// errIllegalParamName - a parameter has an illegal name
+// errIllegalParamName - illegal parameter name
 const errIllegalParamName = cerr("illegal parameter name")
 
-// errMissingParamType - a parameter has an illegal type
+// errMissingParamType - missing parameter type
 const errMissingParamType = cerr("missing parameter type")
 
-// errParamNameConflict - a parameter has a conflict with its name/rename field
-const errParamNameConflict = cerr("name conflict for parameter")
+// errParamNameConflict - name/rename conflict
+const errParamNameConflict = cerr("parameter name conflict")
