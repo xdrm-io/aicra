@@ -8,8 +8,17 @@ func (err cerr) Error() string {
 	return string(err)
 }
 
-// ErrNoServiceForHandler - no service matching this handler
-const ErrNoServiceForHandler = cerr("no service found for this handler")
+// ErrLateType - cannot add datatype after setting up the definition
+const ErrLateType = cerr("types cannot be added after Setup")
 
-// ErrNoHandlerForService - no handler matching this service
-const ErrNoHandlerForService = cerr("no handler found for this service")
+// ErrNotSetup - not set up yet
+const ErrNotSetup = cerr("not set up")
+
+// ErrAlreadySetup - already set up
+const ErrAlreadySetup = cerr("already set up")
+
+// ErrUnknownService - no service matching this handler
+const ErrUnknownService = cerr("unknown service")
+
+// ErrMissingHandler - missing handler
+const ErrMissingHandler = cerr("missing handler")

@@ -9,14 +9,14 @@ import (
 )
 
 // httpHandler wraps the aicra server to allow handling http requests
-type httpHandler Server
+type httpHandler Builder
 
 // ServeHTTP implements http.Handler and has to be called on each request
 func (server httpHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
 	// 1. find a matching service in the config
-	service := server.config.Find(req)
+	service := server.conf.Find(req)
 	if service == nil {
 		response := api.EmptyResponse().WithError(api.ErrorUnknownService)
 		response.ServeHTTP(res, req)
@@ -55,25 +55,15 @@ func (server httpHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 	}
 
 	// 6. find a matching handler
-	var foundHandler *handler
-	var found bool
-
-	for _, handler := range server.handlers {
-		if handler.Method == service.Method && handler.Path == service.Pattern {
-			foundHandler = handler
-			found = true
+	var handler *apiHandler
+	for _, h := range server.handlers {
+		if h.Method == service.Method && h.Path == service.Pattern {
+			handler = h
 		}
 	}
 
 	// 7. fail if found no handler
-	if foundHandler == nil {
-		if found {
-			r := api.EmptyResponse().WithError(api.ErrorUncallableService)
-			r.ServeHTTP(res, req)
-			logError(r)
-			return
-		}
-
+	if handler == nil {
 		r := api.EmptyResponse().WithError(api.ErrorUnknownService)
 		r.ServeHTTP(res, req)
 		logError(r)
@@ -91,7 +81,7 @@ func (server httpHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) 
 	apireq.Param = dataset.Data
 
 	// 10. execute
-	returned, apiErr := foundHandler.dynHandler.Handle(dataset.Data)
+	returned, apiErr := handler.dyn.Handle(dataset.Data)
 	response := api.EmptyResponse().WithError(apiErr)
 	for key, value := range returned {
 

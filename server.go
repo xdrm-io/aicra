@@ -2,61 +2,59 @@ package aicra
 
 import (
 	"fmt"
+	"io"
 	"net/http"
-	"os"
 
 	"git.xdrm.io/go/aicra/datatype"
 	"git.xdrm.io/go/aicra/dynfunc"
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
-// Server represents an AICRA instance featuring: type checkers, services
-type Server struct {
-	config   *config.Server
+// Builder for an aicra server
+type Builder struct {
+	conf     *config.Server
 	handlers []*apiHandler
 }
 
+// represents an server handler
 type apiHandler struct {
-	Method     string
-	Path       string
-	dynHandler *dynfunc.Handler
+	Method string
+	Path   string
+	dyn    *dynfunc.Handler
 }
 
-// New creates a framework instance from a configuration file
-func New(configPath string, dtypes ...datatype.T) (*Server, error) {
-	var (
-		err        error
-		configFile io.ReadCloser
-	)
-
-	// 1. init instance
-	var i = &Server{
-		config:   nil,
-		handlers: make([]*handler, 0),
+// AddType adds an available datatype to the api definition
+func (b *Builder) AddType(t datatype.T) {
+	if b.conf == nil {
+		b.conf = &config.Server{}
 	}
-
-	// 2. open config file
-	configFile, err = os.Open(configPath)
-	if err != nil {
-		return nil, err
+	if b.conf.Services != nil {
+		panic(ErrLateType)
 	}
-	defer configFile.Close()
-
-	// 3. load configuration
-	i.config, err = config.Parse(configFile, dtypes...)
-	if err != nil {
-		return nil, err
-	}
-
-	return i, nil
-
+	b.conf.Types = append(b.conf.Types, t)
 }
 
-// Handle sets a new handler for an HTTP method to a path
-func (s *Server) Handle(method, path string, fn interface{}) error {
+// Setup the builder with its api definition
+// panics if already setup
+func (b *Builder) Setup(r io.Reader) error {
+	if b.conf == nil {
+		b.conf = &config.Server{}
+	}
+	if b.conf.Services != nil {
+		panic(ErrAlreadySetup)
+	}
+	return b.conf.Parse(r)
+}
+
+// Bind a dynamic handler to a REST service
+func (b *Builder) Bind(method, path string, fn interface{}) error {
+	if b.conf.Services == nil {
+		return ErrNotSetup
+	}
+
 	// find associated service
 	var service *config.Service
-	for _, s := range s.config.Services {
+	for _, s := range b.conf.Services {
 		if method == s.Method && path == s.Pattern {
 			service = s
 			break
@@ -67,25 +65,26 @@ func (s *Server) Handle(method, path string, fn interface{}) error {
 		return fmt.Errorf("%s '%s': %w", method, path, ErrUnknownService)
 	}
 
-	dynHandler, err := dynfunc.Build(fn, *service)
+	dyn, err := dynfunc.Build(fn, *service)
 	if err != nil {
 		return fmt.Errorf("%s '%s' handler: %w", method, path, err)
 	}
 
-	s.handlers = append(s.handlers, &apiHandler{
-		Path:       path,
-		Method:     method,
-		dynHandler: dynHandler,
+	b.handlers = append(b.handlers, &apiHandler{
+		Path:   path,
+		Method: method,
+		dyn:    dyn,
 	})
 
 	return nil
 }
 
-// ToHTTPServer converts the server to a http.Handler
-func (s Server) ToHTTPServer() (http.Handler, error) {
-	for _, service := range s.config.Services {
+// Build a fully-featured HTTP server
+func (b Builder) Build() (http.Handler, error) {
+
+	for _, service := range b.conf.Services {
 		var hasAssociatedHandler bool
-		for _, handler := range s.handlers {
+		for _, handler := range b.handlers {
 			if handler.Method == service.Method && handler.Path == service.Pattern {
 				hasAssociatedHandler = true
 				break
@@ -96,5 +95,5 @@ func (s Server) ToHTTPServer() (http.Handler, error) {
 		}
 	}
 
-	return httpHandler(s), nil
+	return httpHandler(b), nil
 }
