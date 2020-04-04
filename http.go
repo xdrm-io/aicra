@@ -8,11 +8,11 @@ import (
 	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
-// httpServer wraps the aicra server to allow handling http requests
-type httpServer Server
+// httpHandler wraps the aicra server to allow handling http requests
+type httpHandler Server
 
 // ServeHTTP implements http.Handler and has to be called on each request
-func (server httpServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (server httpHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
 	// 1. find a matching service in the config

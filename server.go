@@ -2,7 +2,7 @@ package aicra
 
 import (
 	"fmt"
-	"io"
+	"net/http"
 	"os"
 
 	"git.xdrm.io/go/aicra/datatype"
@@ -81,24 +81,20 @@ func (s *Server) Handle(method, path string, fn interface{}) error {
 	return nil
 }
 
-// ToHTTPServer converts the server to a http server
-func (s Server) ToHTTPServer() (*httpServer, error) {
-
-	// check if handlers are missing
+// ToHTTPServer converts the server to a http.Handler
+func (s Server) ToHTTPServer() (http.Handler, error) {
 	for _, service := range s.config.Services {
-		found := false
+		var hasAssociatedHandler bool
 		for _, handler := range s.handlers {
 			if handler.Method == service.Method && handler.Path == service.Pattern {
-				found = true
+				hasAssociatedHandler = true
 				break
 			}
 		}
-		if !found {
-			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, ErrNoHandlerForService)
+		if !hasAssociatedHandler {
+			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, ErrMissingHandler)
 		}
 	}
 
-	// 2. cast to http server
-	httpServer := httpServer(s)
-	return &httpServer, nil
+	return httpHandler(s), nil
 }
