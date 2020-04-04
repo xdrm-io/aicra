@@ -1,10 +1,10 @@
 package aicra
 
 import (
-	"log"
 	"net/http"
 
 	"git.xdrm.io/go/aicra/api"
+	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
@@ -18,43 +18,18 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 1. find a matching service in the config
 	service := server.conf.Find(req)
 	if service == nil {
-		response := api.EmptyResponse().WithError(api.ErrorUnknownService)
-		response.ServeHTTP(res, req)
-		logError(response)
+		errorHandler(api.ErrorUnknownService)
 		return
 	}
 
-	// 2. build input parameter receiver
-	dataset := reqdata.New(service)
-
-	// 3. extract URI data
-	err := dataset.ExtractURI(req)
+	// 2. extract request data
+	dataset, err := extractRequestData(service, *req)
 	if err != nil {
-		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
-		response.ServeHTTP(res, req)
-		logError(response)
+		errorHandler(api.ErrorMissingParam)
 		return
 	}
 
-	// 4. extract query data
-	err = dataset.ExtractQuery(req)
-	if err != nil {
-		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
-		response.ServeHTTP(res, req)
-		logError(response)
-		return
-	}
-
-	// 5. extract form/json data
-	err = dataset.ExtractForm(req)
-	if err != nil {
-		response := api.EmptyResponse().WithError(api.ErrorMissingParam)
-		response.ServeHTTP(res, req)
-		logError(response)
-		return
-	}
-
-	// 6. find a matching handler
+	// 3. find a matching handler
 	var handler *apiHandler
 	for _, h := range server.handlers {
 		if h.Method == service.Method && h.Path == service.Pattern {
@@ -62,26 +37,16 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// 7. fail if found no handler
+	// 4. fail if found no handler
 	if handler == nil {
-		r := api.EmptyResponse().WithError(api.ErrorUnknownService)
-		r.ServeHTTP(res, req)
-		logError(r)
+		errorHandler(api.ErrorUncallableService)
 		return
 	}
 
-	// 8. build api.Request from http.Request
-	apireq, err := api.NewRequest(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// 9. feed request with scope & parameters
-	apireq.Scope = service.Scope
-	apireq.Param = dataset.Data
-
-	// 10. execute
+	// 5. execute
 	returned, apiErr := handler.dyn.Handle(dataset.Data)
+
+	// 6. build response from returned data
 	response := api.EmptyResponse().WithError(apiErr)
 	for key, value := range returned {
 
@@ -93,7 +58,7 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// 11. apply headers
+	// 7. apply headers
 	res.Header().Set("Content-Type", "application/json; charset=utf-8")
 	for key, values := range response.Headers {
 		for _, value := range values {
@@ -101,6 +66,37 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// 12. write to response
 	response.ServeHTTP(res, req)
+}
+
+func errorHandler(err api.Error) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		r := api.EmptyResponse().WithError(err)
+		r.ServeHTTP(res, req)
+		logError(r)
+	}
+}
+
+func extractRequestData(service *config.Service, req http.Request) (*reqdata.Set, error) {
+	dataset := reqdata.New(service)
+
+	// 3. extract URI data
+	err := dataset.ExtractURI(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. extract query data
+	err = dataset.ExtractQuery(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. extract form/json data
+	err = dataset.ExtractForm(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return dataset, nil
 }
