@@ -1,6 +1,7 @@
 package reqdata
 
 import (
+	"fmt"
 	"math"
 	"testing"
 )
@@ -24,7 +25,7 @@ func TestSimpleFloat(t *testing.T) {
 	tcases := []float64{12.3456789, -12.3456789, 0.0000001, -0.0000001}
 
 	for i, tcase := range tcases {
-		t.Run("case "+string(i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
 			p := parseParameter(tcase)
 
 			cast, canCast := p.(float64)
@@ -45,7 +46,7 @@ func TestSimpleBool(t *testing.T) {
 	tcases := []bool{true, false}
 
 	for i, tcase := range tcases {
-		t.Run("case "+string(i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
 			p := parseParameter(tcase)
 
 			cast, canCast := p.(bool)
@@ -136,7 +137,7 @@ func TestJsonPrimitiveBool(t *testing.T) {
 	}
 
 	for i, tcase := range tcases {
-		t.Run("case "+string(i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
 			p := parseParameter(tcase.Raw)
 
 			cast, canCast := p.(bool)
@@ -173,7 +174,7 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 	}
 
 	for i, tcase := range tcases {
-		t.Run("case "+string(i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
 			p := parseParameter(tcase.Raw)
 
 			cast, canCast := p.(float64)

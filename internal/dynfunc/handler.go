@@ -16,7 +16,7 @@ type Handler struct {
 
 // Build a handler from a service configuration and a dynamic function
 //
-// @fn must have as a signature : `func(inputStruct) (*outputStruct, api.Error)`
+// @fn must have as a signature : `func(inputStruct) (*outputStruct, api.Err)`
 //  - `inputStruct` is a struct{} containing a field for each service input (with valid reflect.Type)
 //  - `outputStruct` is a struct{} containing a field for each service output (with valid reflect.Type)
 //
@@ -46,8 +46,9 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 }
 
 // Handle binds input @data into the dynamic function and returns map output
-func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, api.Error) {
-	fnv := reflect.ValueOf(h.fn)
+func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, api.Err) {
+	var ert = reflect.TypeOf(api.Err{})
+	var fnv = reflect.ValueOf(h.fn)
 
 	callArgs := []reflect.Value{}
 
@@ -80,7 +81,12 @@ func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, a
 	// no output OR pointer to output struct is nil
 	outdata := make(map[string]interface{})
 	if len(h.spec.Output) < 1 || output[0].IsNil() {
-		return outdata, api.Error(output[len(output)-1].Int())
+		var structerr = output[len(output)-1].Convert(ert)
+		return outdata, api.Err{
+			Code:   int(structerr.FieldByName("Code").Int()),
+			Reason: structerr.FieldByName("Reason").String(),
+			Status: int(structerr.FieldByName("Status").Int()),
+		}
 	}
 
 	// extract struct from pointer
@@ -91,6 +97,11 @@ func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, a
 		outdata[name] = field.Interface()
 	}
 
-	// extract api.Error
-	return outdata, api.Error(output[len(output)-1].Int())
+	// extract api.Err
+	var structerr = output[len(output)-1].Convert(ert)
+	return outdata, api.Err{
+		Code:   int(structerr.FieldByName("Code").Int()),
+		Reason: structerr.FieldByName("Reason").String(),
+		Status: int(structerr.FieldByName("Status").Int()),
+	}
 }
