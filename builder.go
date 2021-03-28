@@ -115,5 +115,5 @@ func (b Builder) Build() (http.Handler, error) {
 		}
 	}
 
-	return Server(b), nil
+	return Handler(b), nil
 }
