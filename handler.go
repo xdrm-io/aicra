@@ -1,6 +1,7 @@
 package aicra
 
 import (
+	"log"
 	"net/http"
 
 	"git.xdrm.io/go/aicra/api"
@@ -13,6 +14,13 @@ type Handler Builder
 
 // ServeHTTP implements http.Handler
 func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if rc := recover(); rc != nil {
+			log.Printf("recovering request: %s\n", rc)
+			// try to send error response
+			api.EmptyResponse().WithError(api.ErrUncallableService).ServeHTTP(w, r)
+		}
+	}()
 	defer r.Body.Close()
 
 	// 1. find a matching service from config
