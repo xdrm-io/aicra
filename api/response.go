@@ -13,7 +13,7 @@ type Response struct {
 	Data    ResponseData
 	Status  int
 	Headers http.Header
-	err     Error
+	err     Err
 }
 
 // EmptyResponse creates an empty response.
@@ -21,13 +21,13 @@ func EmptyResponse() *Response {
 	return &Response{
 		Status:  http.StatusOK,
 		Data:    make(ResponseData),
-		err:     ErrorFailure,
+		err:     ErrFailure,
 		Headers: make(http.Header),
 	}
 }
 
 // WithError sets the error
-func (res *Response) WithError(err Error) *Response {
+func (res *Response) WithError(err Err) *Response {
 	res.err = err
 	return res
 }
@@ -53,7 +53,7 @@ func (res *Response) MarshalJSON() ([]byte, error) {
 }
 
 func (res *Response) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
-	w.WriteHeader(res.err.Status())
+	w.WriteHeader(res.err.Status)
 	encoded, err := json.Marshal(res)
 	if err != nil {
 		return err

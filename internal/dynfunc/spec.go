@@ -91,9 +91,9 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 		return errMissingHandlerOutput
 	}
 
-	// last output must be api.Error
+	// last output must be api.Err
 	errOutput := fnt.Out(fnt.NumOut() - 1)
-	if !errOutput.AssignableTo(reflect.TypeOf(api.ErrorUnknown)) {
+	if !errOutput.AssignableTo(reflect.TypeOf(api.ErrUnknown)) {
 		return errMissingHandlerErrorOutput
 	}
 

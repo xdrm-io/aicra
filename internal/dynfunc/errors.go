@@ -23,7 +23,7 @@ const errUnexpectedInput = cerr("unexpected input struct")
 const errMissingHandlerOutput = cerr("handler must have at least 1 output")
 
 // errMissingHandlerOutputError - missing error output for handler
-const errMissingHandlerOutputError = cerr("handler must have its last output of type api.Error")
+const errMissingHandlerOutputError = cerr("handler must have its last output of type api.Err")
 
 // errMissingRequestArgument - missing request argument for handler
 const errMissingRequestArgument = cerr("handler first argument must be of type api.Request")
@@ -47,4 +47,4 @@ const errMissingOutputFromConfig = cerr("missing a parameter from configuration"
 const errWrongParamTypeFromConfig = cerr("invalid struct field type")
 
 // errMissingHandlerErrorOutput - missing handler output error
-const errMissingHandlerErrorOutput = cerr("last output must be of type api.Error")
+const errMissingHandlerErrorOutput = cerr("last output must be of type api.Err")

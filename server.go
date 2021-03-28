@@ -18,14 +18,14 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// 1. find a matching service in the config
 	service := server.conf.Find(req)
 	if service == nil {
-		errorHandler(api.ErrorUnknownService).ServeHTTP(res, req)
+		handleError(api.ErrUnknownService, w, r)
 		return
 	}
 
 	// 2. extract request data
 	dataset, err := extractRequestData(service, *req)
 	if err != nil {
-		errorHandler(api.ErrorMissingParam).ServeHTTP(res, req)
+		handleError(api.ErrMissingParam, w, r)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	// 4. fail if found no handler
 	if handler == nil {
-		errorHandler(api.ErrorUncallableService).ServeHTTP(res, req)
+		handleError(api.ErrUncallableService, w, r)
 		return
 	}
 
@@ -69,29 +69,27 @@ func (server Server) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	response.ServeHTTP(res, req)
 }
 
-func errorHandler(err api.Error) http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		r := api.EmptyResponse().WithError(err)
-		r.ServeHTTP(res, req)
-	}
+func handleError(err api.Err, w http.ResponseWriter, r *http.Request) {
+	var response = api.EmptyResponse().WithError(err)
+	response.ServeHTTP(w, r)
 }
 
 func extractRequestData(service *config.Service, req http.Request) (*reqdata.T, error) {
-	dataset := reqdata.New(service)
+	var dataset = reqdata.New(service)
 
-	// 3. extract URI data
-	err := dataset.GetURI(req)
+	// URI data
+	var err = dataset.GetURI(req)
 	if err != nil {
 		return nil, err
 	}
 
-	// 4. extract query data
+	// query data
 	err = dataset.GetQuery(req)
 	if err != nil {
 		return nil, err
 	}
 
-	// 5. extract form/json data
+	// form/json data
 	err = dataset.GetForm(req)
 	if err != nil {
 		return nil, err
