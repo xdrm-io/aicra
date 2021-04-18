@@ -15,6 +15,8 @@ type Handler struct {
 	fn   interface{}
 	// whether fn uses api.Ctx as 1st argument
 	hasContext bool
+	// index in input arguments where the data struct must be
+	dataIndex int
 }
 
 // Build a handler from a service configuration and a dynamic function
@@ -39,13 +41,11 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 	}
 
 	h.hasContext = impl.NumIn() >= 1 && reflect.TypeOf(api.Ctx{}).AssignableTo(impl.In(0))
-
-	inputIndex := 0
 	if h.hasContext {
-		inputIndex = 1
+		h.dataIndex = 1
 	}
 
-	if err := h.spec.checkInput(impl, inputIndex); err != nil {
+	if err := h.spec.checkInput(impl, h.dataIndex); err != nil {
 		return nil, fmt.Errorf("input: %w", err)
 	}
 	if err := h.spec.checkOutput(impl); err != nil {
@@ -56,14 +56,19 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 }
 
 // Handle binds input @data into the dynamic function and returns map output
-func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, api.Err) {
+func (h *Handler) Handle(ctx api.Ctx, data map[string]interface{}) (map[string]interface{}, api.Err) {
 	var ert = reflect.TypeOf(api.Err{})
 	var fnv = reflect.ValueOf(h.fn)
 
 	callArgs := []reflect.Value{}
 
+	// bind context if used in handler
+	if h.hasContext {
+		callArgs = append(callArgs, reflect.ValueOf(ctx))
+	}
+
 	// bind input data
-	if fnv.Type().NumIn() > 0 {
+	if fnv.Type().NumIn() > h.dataIndex {
 		// create zero value struct
 		callStructPtr := reflect.New(fnv.Type().In(0))
 		callStruct := callStructPtr.Elem()

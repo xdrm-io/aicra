@@ -51,7 +51,8 @@ func (s Handler) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. pass execution to the handler
-	var outData, outErr = handler.dyn.Handle(input.Data)
+	ctx := api.Ctx{Res: w, Req: r}
+	var outData, outErr = handler.dyn.Handle(ctx, input.Data)
 
 	// 6. build res from returned data
 	var res = api.EmptyResponse().WithError(outErr)
