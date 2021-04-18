@@ -11,74 +11,193 @@ import (
 
 func TestInputCheck(t *testing.T) {
 	tcases := []struct {
+		Name  string
 		Input map[string]reflect.Type
 		Fn    interface{}
 		Err   error
 	}{
-		// no input
 		{
+			Name:  "no input 0 given",
 			Input: map[string]reflect.Type{},
 			Fn:    func() {},
 			Err:   nil,
 		},
-		// func must have noarguments if none specified
 		{
+			Name:  "no input 1 given",
+			Input: map[string]reflect.Type{},
+			Fn:    func(int) {},
+			Err:   errUnexpectedInput,
+		},
+		{
+			Name:  "no input 2 given",
 			Input: map[string]reflect.Type{},
 			Fn:    func(int, string) {},
 			Err:   errUnexpectedInput,
 		},
-		// missing input struct in func
 		{
+			Name: "1 input 0 given",
 			Input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func() {},
 			Err: errMissingHandlerArgumentParam,
 		},
-		// input not a struct
 		{
+			Name: "1 input non-struct given",
 			Input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(int) {},
 			Err: errMissingParamArgument,
 		},
-		// unexported param name
 		{
+			Name: "unexported input",
 			Input: map[string]reflect.Type{
 				"test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{}) {},
 			Err: errUnexportedName,
 		},
-		// input field missing
 		{
+			Name: "1 input empty struct given",
 			Input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{}) {},
 			Err: errMissingParamFromConfig,
 		},
-		// input field invalid type
 		{
+			Name: "1 input invalid given",
 			Input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{ Test1 string }) {},
 			Err: errWrongParamTypeFromConfig,
 		},
-		// input field valid type
 		{
+			Name: "1 input valid given",
 			Input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:  func(struct{ Test1 int }) {},
 			Err: nil,
 		},
+		{
+			Name: "1 input ptr empty struct given",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(int)),
+			},
+			Fn:  func(struct{}) {},
+			Err: errMissingParamFromConfig,
+		},
+		{
+			Name: "1 input ptr invalid given",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(int)),
+			},
+			Fn:  func(struct{ Test1 string }) {},
+			Err: errWrongParamTypeFromConfig,
+		},
+		{
+			Name: "1 input ptr invalid ptr type given",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(int)),
+			},
+			Fn:  func(struct{ Test1 *string }) {},
+			Err: errWrongParamTypeFromConfig,
+		},
+		{
+			Name: "1 input ptr valid given",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(int)),
+			},
+			Fn:  func(struct{ Test1 *int }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid string",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(string("")),
+			},
+			Fn:  func(struct{ Test1 string }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid uint",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(uint(0)),
+			},
+			Fn:  func(struct{ Test1 uint }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid float64",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(float64(0)),
+			},
+			Fn:  func(struct{ Test1 float64 }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid []byte",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf([]byte("")),
+			},
+			Fn:  func(struct{ Test1 []byte }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid []rune",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf([]rune("")),
+			},
+			Fn:  func(struct{ Test1 []rune }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid *string",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(string)),
+			},
+			Fn:  func(struct{ Test1 *string }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid *uint",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(uint)),
+			},
+			Fn:  func(struct{ Test1 *uint }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid *float64",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new(float64)),
+			},
+			Fn:  func(struct{ Test1 *float64 }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid *[]byte",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new([]byte)),
+			},
+			Fn:  func(struct{ Test1 *[]byte }) {},
+			Err: nil,
+		},
+		{
+			Name: "1 valid *[]rune",
+			Input: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(new([]rune)),
+			},
+			Fn:  func(struct{ Test1 *[]rune }) {},
+			Err: nil,
+		},
 	}
 
-	for i, tcase := range tcases {
-		t.Run(fmt.Sprintf("case.%d", i), func(t *testing.T) {
+	for _, tcase := range tcases {
+		t.Run(tcase.Name, func(t *testing.T) {
 			// mock spec
 			s := spec{
 				Input:  tcase.Input,
