@@ -11,8 +11,10 @@ import (
 
 // Handler represents a dynamic api handler
 type Handler struct {
-	spec spec
+	spec *spec
 	fn   interface{}
+	// whether fn uses api.Ctx as 1st argument
+	hasContext bool
 }
 
 // Build a handler from a service configuration and a dynamic function
@@ -30,16 +32,23 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 		fn:   fn,
 	}
 
-	fnv := reflect.ValueOf(fn)
+	impl := reflect.TypeOf(fn)
 
-	if fnv.Type().Kind() != reflect.Func {
+	if impl.Kind() != reflect.Func {
 		return nil, errHandlerNotFunc
 	}
 
-	if err := h.spec.checkInput(fnv); err != nil {
+	h.hasContext = impl.NumIn() >= 1 && reflect.TypeOf(api.Ctx{}).AssignableTo(impl.In(0))
+
+	inputIndex := 0
+	if h.hasContext {
+		inputIndex = 1
+	}
+
+	if err := h.spec.checkInput(impl, inputIndex); err != nil {
 		return nil, fmt.Errorf("input: %w", err)
 	}
-	if err := h.spec.checkOutput(fnv); err != nil {
+	if err := h.spec.checkOutput(impl); err != nil {
 		return nil, fmt.Errorf("output: %w", err)
 	}
 
