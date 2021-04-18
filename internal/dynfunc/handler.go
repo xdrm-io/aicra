@@ -2,6 +2,7 @@ package dynfunc
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 
 	"git.xdrm.io/go/aicra/api"
@@ -70,6 +71,29 @@ func (h *Handler) Handle(data map[string]interface{}) (map[string]interface{}, a
 			if !inData {
 				continue
 			}
+
+			var refvalue = reflect.ValueOf(value)
+
+			// T to pointer of T
+			if field.Kind() == reflect.Ptr {
+				var ptrType = field.Type().Elem()
+
+				if !refvalue.Type().ConvertibleTo(ptrType) {
+					log.Printf("Cannot convert %v into %v", refvalue.Type(), ptrType)
+					return nil, api.ErrUncallableService
+				}
+
+				ptr := reflect.New(ptrType)
+				ptr.Elem().Set(reflect.ValueOf(value).Convert(ptrType))
+
+				field.Set(ptr)
+				continue
+			}
+			if !reflect.ValueOf(value).Type().ConvertibleTo(field.Type()) {
+				log.Printf("Cannot convert %v into %v", reflect.ValueOf(value).Type(), field.Type())
+				return nil, api.ErrUncallableService
+			}
+
 			field.Set(reflect.ValueOf(value).Convert(field.Type()))
 		}
 		callArgs = append(callArgs, callStruct)
