@@ -12,6 +12,6 @@ import (
 // If required, set api.Ctx as the first argument of your handler; if you
 // don't need it, only use standard input arguments and it will be ignored
 type Ctx struct {
-	w http.ResponseWriter
-	r *http.Request
+	Res http.ResponseWriter
+	Req *http.Request
 }
