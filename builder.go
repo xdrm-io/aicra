@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/datatype"
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/dynfunc"
@@ -14,6 +15,7 @@ import (
 type Builder struct {
 	conf     *config.Server
 	handlers []*apiHandler
+	adapters []api.Adapter
 }
 
 // represents an api handler (method-pattern combination)
@@ -31,7 +33,21 @@ func (b *Builder) AddType(t datatype.T) {
 	if b.conf.Services != nil {
 		panic(errLateType)
 	}
+	if b.conf.Types == nil {
+		b.conf.Types = make([]datatype.T, 0)
+	}
 	b.conf.Types = append(b.conf.Types, t)
+}
+
+// Use adds an http adapter (middleware)
+func (b *Builder) Use(adapter api.Adapter) {
+	if b.conf == nil {
+		b.conf = &config.Server{}
+	}
+	if b.adapters == nil {
+		b.adapters = make([]api.Adapter, 0)
+	}
+	b.adapters = append(b.adapters, adapter)
 }
 
 // Setup the builder with its api definition file
