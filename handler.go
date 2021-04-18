@@ -12,8 +12,17 @@ import (
 // Handler wraps the builder to handle requests
 type Handler Builder
 
-// ServeHTTP implements http.Handler
+// ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var h = http.HandlerFunc(s.handleRequest)
+
+	for _, adapter := range s.adapters {
+		h = adapter(h)
+	}
+	h(w, r)
+}
+
+func (s Handler) handleRequest(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if rc := recover(); rc != nil {
 			log.Printf("recovering request: %s\n", rc)
