@@ -26,6 +26,7 @@ type Handler struct {
 //  - `outputStruct` is a struct{} containing a field for each service output (with valid reflect.Type)
 //
 // Special cases:
+//  - a first optional input parameter of type `api.Ctx` can be added
 //  - it there is no input, `inputStruct` must be omitted
 //  - it there is no output, `outputStruct` must be omitted
 func Build(fn interface{}, service config.Service) (*Handler, error) {
