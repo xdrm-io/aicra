@@ -9,14 +9,15 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
-type spec struct {
+// signature represents input/output arguments for a dynamic function
+type signature struct {
 	Input  map[string]reflect.Type
 	Output map[string]reflect.Type
 }
 
 // builds a spec from the configuration service
-func makeSpec(service config.Service) *spec {
-	s := &spec{
+func signatureFromService(service config.Service) *signature {
+	s := &signature{
 		Input:  make(map[string]reflect.Type),
 		Output: make(map[string]reflect.Type),
 	}
@@ -44,7 +45,7 @@ func makeSpec(service config.Service) *spec {
 }
 
 // checks for HandlerFn input arguments
-func (s *spec) checkInput(impl reflect.Type, index int) error {
+func (s *signature) checkInput(impl reflect.Type, index int) error {
 	var requiredInput, structIndex = index, index
 	if len(s.Input) > 0 { // arguments struct
 		requiredInput++
@@ -91,7 +92,7 @@ func (s *spec) checkInput(impl reflect.Type, index int) error {
 }
 
 // checks for HandlerFn output arguments
-func (s spec) checkOutput(impl reflect.Type) error {
+func (s signature) checkOutput(impl reflect.Type) error {
 	if impl.NumOut() < 1 {
 		return errMissingHandlerOutput
 	}

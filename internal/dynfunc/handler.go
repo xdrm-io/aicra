@@ -11,7 +11,7 @@ import (
 
 // Handler represents a dynamic api handler
 type Handler struct {
-	spec *spec
+	spec *signature
 	fn   interface{}
 	// whether fn uses api.Ctx as 1st argument
 	hasContext bool
@@ -31,7 +31,7 @@ type Handler struct {
 //  - it there is no output, `outputStruct` must be omitted
 func Build(fn interface{}, service config.Service) (*Handler, error) {
 	h := &Handler{
-		spec: makeSpec(service),
+		spec: signatureFromService(service),
 		fn:   fn,
 	}
 
@@ -82,8 +82,8 @@ func (h *Handler) Handle(ctx api.Ctx, data map[string]interface{}) (map[string]i
 			}
 
 			// get value from @data
-			value, inData := data[name]
-			if !inData {
+			value, provided := data[name]
+			if !provided {
 				continue
 			}
 
@@ -94,7 +94,7 @@ func (h *Handler) Handle(ctx api.Ctx, data map[string]interface{}) (map[string]i
 				var ptrType = field.Type().Elem()
 
 				if !refvalue.Type().ConvertibleTo(ptrType) {
-					log.Printf("Cannot convert %v into %v", refvalue.Type(), ptrType)
+					log.Printf("Cannot convert %v into *%v", refvalue.Type(), ptrType)
 					return nil, api.ErrUncallableService
 				}
 
@@ -104,12 +104,13 @@ func (h *Handler) Handle(ctx api.Ctx, data map[string]interface{}) (map[string]i
 				field.Set(ptr)
 				continue
 			}
+
 			if !reflect.ValueOf(value).Type().ConvertibleTo(field.Type()) {
 				log.Printf("Cannot convert %v into %v", reflect.ValueOf(value).Type(), field.Type())
 				return nil, api.ErrUncallableService
 			}
 
-			field.Set(reflect.ValueOf(value).Convert(field.Type()))
+			field.Set(refvalue.Convert(field.Type()))
 		}
 		callArgs = append(callArgs, callStruct)
 	}

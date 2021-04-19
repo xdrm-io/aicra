@@ -225,7 +225,7 @@ func TestInputCheck(t *testing.T) {
 			t.Parallel()
 
 			// mock spec
-			s := spec{
+			s := signature{
 				Input:  tcase.Input,
 				Output: nil,
 			}
@@ -371,7 +371,7 @@ func TestOutputCheck(t *testing.T) {
 			t.Parallel()
 
 			// mock spec
-			s := spec{
+			s := signature{
 				Input:  nil,
 				Output: tcase.Output,
 			}
