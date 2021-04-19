@@ -12,8 +12,6 @@ import (
 type spec struct {
 	Input  map[string]reflect.Type
 	Output map[string]reflect.Type
-	// HasContext defines whether the given handler has api.Ctx as first argument
-	HasContext bool
 }
 
 // builds a spec from the configuration service
