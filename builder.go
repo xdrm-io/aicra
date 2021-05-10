@@ -26,17 +26,18 @@ type apiHandler struct {
 }
 
 // AddType adds an available datatype to the api definition
-func (b *Builder) AddType(t datatype.T) {
+func (b *Builder) AddType(t datatype.T) error {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
-		panic(errLateType)
+		return errLateType
 	}
 	if b.conf.Types == nil {
 		b.conf.Types = make([]datatype.T, 0)
 	}
 	b.conf.Types = append(b.conf.Types, t)
+	return nil
 }
 
 // Use adds an http adapter (middleware)

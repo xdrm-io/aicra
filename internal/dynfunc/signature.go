@@ -9,14 +9,15 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
-type spec struct {
+// signature represents input/output arguments for a dynamic function
+type signature struct {
 	Input  map[string]reflect.Type
 	Output map[string]reflect.Type
 }
 
 // builds a spec from the configuration service
-func makeSpec(service config.Service) spec {
-	spec := spec{
+func signatureFromService(service config.Service) *signature {
+	s := &signature{
 		Input:  make(map[string]reflect.Type),
 		Output: make(map[string]reflect.Type),
 	}
@@ -27,40 +28,46 @@ func makeSpec(service config.Service) spec {
 		}
 		// make a pointer if optional
 		if param.Optional {
-			spec.Input[param.Rename] = reflect.PtrTo(param.ExtractType)
+			s.Input[param.Rename] = reflect.PtrTo(param.ExtractType)
 			continue
 		}
-		spec.Input[param.Rename] = param.ExtractType
+		s.Input[param.Rename] = param.ExtractType
 	}
 
 	for _, param := range service.Output {
 		if len(param.Rename) < 1 {
 			continue
 		}
-		spec.Output[param.Rename] = param.ExtractType
+		s.Output[param.Rename] = param.ExtractType
 	}
 
-	return spec
+	return s
 }
 
 // checks for HandlerFn input arguments
-func (s spec) checkInput(fnv reflect.Value) error {
-	fnt := fnv.Type()
+func (s *signature) checkInput(impl reflect.Type, index int) error {
+	var requiredInput, structIndex = index, index
+	if len(s.Input) > 0 { // arguments struct
+		requiredInput++
+	}
 
-	// no input -> ok
+	// missing arguments
+	if impl.NumIn() > requiredInput {
+		return errUnexpectedInput
+	}
+
+	// none required
 	if len(s.Input) == 0 {
-		if fnt.NumIn() > 0 {
-			return errUnexpectedInput
-		}
 		return nil
 	}
 
-	if fnt.NumIn() != 1 {
+	// too much arguments
+	if impl.NumIn() != requiredInput {
 		return errMissingHandlerArgumentParam
 	}
 
 	// arg must be a struct
-	structArg := fnt.In(0)
+	structArg := impl.In(structIndex)
 	if structArg.Kind() != reflect.Struct {
 		return errMissingParamArgument
 	}
@@ -85,14 +92,13 @@ func (s spec) checkInput(fnv reflect.Value) error {
 }
 
 // checks for HandlerFn output arguments
-func (s spec) checkOutput(fnv reflect.Value) error {
-	fnt := fnv.Type()
-	if fnt.NumOut() < 1 {
+func (s signature) checkOutput(impl reflect.Type) error {
+	if impl.NumOut() < 1 {
 		return errMissingHandlerOutput
 	}
 
 	// last output must be api.Err
-	errOutput := fnt.Out(fnt.NumOut() - 1)
+	errOutput := impl.Out(impl.NumOut() - 1)
 	if !errOutput.AssignableTo(reflect.TypeOf(api.ErrUnknown)) {
 		return errMissingHandlerErrorOutput
 	}
@@ -102,12 +108,12 @@ func (s spec) checkOutput(fnv reflect.Value) error {
 		return nil
 	}
 
-	if fnt.NumOut() != 2 {
+	if impl.NumOut() != 2 {
 		return errMissingParamOutput
 	}
 
 	// fail if first output is not a pointer to struct
-	structOutputPtr := fnt.Out(0)
+	structOutputPtr := impl.Out(0)
 	if structOutputPtr.Kind() != reflect.Ptr {
 		return errMissingParamOutput
 	}
