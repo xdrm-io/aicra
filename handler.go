@@ -59,11 +59,14 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		for b, perm := range list {
 			scope[a][b] = perm
 			for name, value := range input.Data {
-				scope[a][b] = strings.ReplaceAll(
-					scope[a][b],
-					fmt.Sprintf("[%s]", name),
-					fmt.Sprintf("[%v]", value),
+				var (
+					token       = fmt.Sprintf("[%s]", name)
+					replacement = ""
 				)
+				if value != nil {
+					replacement = fmt.Sprintf("[%v]", value)
+				}
+				scope[a][b] = strings.ReplaceAll(scope[a][b], token, replacement)
 			}
 		}
 	}
