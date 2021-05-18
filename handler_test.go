@@ -97,3 +97,145 @@ func TestWith(t *testing.T) {
 	}
 
 }
+
+func TestWithAuth(t *testing.T) {
+
+	tt := []struct {
+		name        string
+		manifest    string
+		permissions []string
+		granted     bool
+	}{
+		{
+			name:        "provide only requirement A",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A"},
+			granted:     true,
+		},
+		{
+			name:        "missing requirement",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{},
+			granted:     false,
+		},
+		{
+			name:        "missing requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{},
+			granted:     false,
+		},
+		{
+			name:        "missing some requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A"},
+			granted:     false,
+		},
+		{
+			name:        "provide requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A", "B"},
+			granted:     true,
+		},
+		{
+			name:        "missing OR requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"C"},
+			granted:     false,
+		},
+		{
+			name:        "provide 1 OR requirement",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A"},
+			granted:     true,
+		},
+		{
+			name:        "provide both OR requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A", "B"},
+			granted:     true,
+		},
+		{
+			name:        "missing composite OR requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{},
+			granted:     false,
+		},
+		{
+			name:        "missing partial composite OR requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A", "C"},
+			granted:     false,
+		},
+		{
+			name:        "provide 1 composite OR requirement",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A", "B", "C"},
+			granted:     true,
+		},
+		{
+			name:        "provide both composite OR requirements",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A", "B", "C", "D"},
+			granted:     true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := &Builder{}
+			if err := addBuiltinTypes(builder); err != nil {
+				t.Fatalf("unexpected error <%v>", err)
+			}
+
+			// tester middleware (last executed)
+			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
+				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+					if a.Granted() == tc.granted {
+						return
+					}
+					if a.Granted() {
+						t.Fatalf("unexpected granted auth")
+					} else {
+						t.Fatalf("expected granted auth")
+					}
+				}
+			})
+
+			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
+				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+					a.Active = tc.permissions
+					next(a, w, r)
+				}
+			})
+
+			err := builder.Setup(strings.NewReader(tc.manifest))
+			if err != nil {
+				t.Fatalf("setup: unexpected error <%v>", err)
+			}
+
+			pathHandler := func(ctx api.Ctx) (*struct{}, api.Err) {
+				return nil, api.ErrNotImplemented
+			}
+
+			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
+				t.Fatalf("bind: unexpected error <%v>", err)
+			}
+
+			handler, err := builder.Build()
+			if err != nil {
+				t.Fatalf("build: unexpected error <%v>", err)
+			}
+
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/path", &bytes.Buffer{})
+
+			// test request
+			handler.ServeHTTP(response, request)
+			if response.Body == nil {
+				t.Fatalf("response has no body")
+			}
+
+		})
+	}
+
+}

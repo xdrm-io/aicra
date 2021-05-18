@@ -50,6 +50,29 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var auth = api.Auth{
+		Required: service.Scope,
+		Active:   []string{},
+	}
+
+	// 5. run auth-aware middlewares
+	var h = api.AuthHandlerFunc(func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+		if !a.Granted() {
+			handleError(api.ErrPermission, w, r)
+			return
+		}
+
+		s.handle(input, handler, service, w, r)
+	})
+
+	for _, adapter := range s.authAdapters {
+		h = adapter(h)
+	}
+	h(auth, w, r)
+
+}
+
+func (s *Handler) handle(input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
 	// 5. pass execution to the handler
 	ctx := api.Ctx{Res: w, Req: r}
 	var outData, outErr = handler.dyn.Handle(ctx, input.Data)
