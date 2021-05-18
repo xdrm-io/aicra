@@ -13,7 +13,7 @@ type Handler Builder
 
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var h = http.HandlerFunc(s.handleRequest)
+	var h = http.HandlerFunc(s.resolve)
 
 	for _, adapter := range s.adapters {
 		h = adapter(h)
@@ -21,7 +21,7 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h(w, r)
 }
 
-func (s Handler) handleRequest(w http.ResponseWriter, r *http.Request) {
+func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// 1. find a matching service from config
 	var service = s.conf.Find(r)
 	if service == nil {
@@ -50,6 +50,29 @@ func (s Handler) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var auth = api.Auth{
+		Required: service.Scope,
+		Active:   []string{},
+	}
+
+	// 5. run auth-aware middlewares
+	var h = api.AuthHandlerFunc(func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+		if !a.Granted() {
+			handleError(api.ErrPermission, w, r)
+			return
+		}
+
+		s.handle(input, handler, service, w, r)
+	})
+
+	for _, adapter := range s.authAdapters {
+		h = adapter(h)
+	}
+	h(auth, w, r)
+
+}
+
+func (s *Handler) handle(input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
 	// 5. pass execution to the handler
 	ctx := api.Ctx{Res: w, Req: r}
 	var outData, outErr = handler.dyn.Handle(ctx, input.Data)

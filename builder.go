@@ -13,9 +13,10 @@ import (
 
 // Builder for an aicra server
 type Builder struct {
-	conf     *config.Server
-	handlers []*apiHandler
-	adapters []api.Adapter
+	conf         *config.Server
+	handlers     []*apiHandler
+	adapters     []api.Adapter
+	authAdapters []api.AuthAdapter
 }
 
 // represents an api handler (method-pattern combination)
@@ -40,8 +41,8 @@ func (b *Builder) AddType(t datatype.T) error {
 	return nil
 }
 
-// Use adds an http adapter (middleware)
-func (b *Builder) Use(adapter api.Adapter) {
+// With adds an http adapter (middleware)
+func (b *Builder) With(adapter api.Adapter) {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
@@ -49,6 +50,17 @@ func (b *Builder) Use(adapter api.Adapter) {
 		b.adapters = make([]api.Adapter, 0)
 	}
 	b.adapters = append(b.adapters, adapter)
+}
+
+// WithAuth adds an http adapter with auth capabilities (middleware)
+func (b *Builder) WithAuth(adapter api.AuthAdapter) {
+	if b.conf == nil {
+		b.conf = &config.Server{}
+	}
+	if b.authAdapters == nil {
+		b.authAdapters = make([]api.AuthAdapter, 0)
+	}
+	b.authAdapters = append(b.authAdapters, adapter)
 }
 
 // Setup the builder with its api definition file
