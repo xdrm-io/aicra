@@ -13,7 +13,7 @@ type Err struct {
 	// error small description
 	Reason string `json:"reason"`
 	// associated HTTP status
-	Status int
+	Status int `json:"-"`
 }
 
 func (e Err) Error() string {
