@@ -1,7 +1,9 @@
 package aicra
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
@@ -50,8 +52,27 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// replace format '[a]' in scope where 'a' is an existing input's name
+	scope := make([][]string, len(service.Scope))
+	for a, list := range service.Scope {
+		scope[a] = make([]string, len(list))
+		for b, perm := range list {
+			scope[a][b] = perm
+			for name, value := range input.Data {
+				var (
+					token       = fmt.Sprintf("[%s]", name)
+					replacement = ""
+				)
+				if value != nil {
+					replacement = fmt.Sprintf("[%v]", value)
+				}
+				scope[a][b] = strings.ReplaceAll(scope[a][b], token, replacement)
+			}
+		}
+	}
+
 	var auth = api.Auth{
-		Required: service.Scope,
+		Required: scope,
 		Active:   []string{},
 	}
 
