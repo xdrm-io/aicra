@@ -140,7 +140,7 @@ func main() {
 
 First of all, the configuration uses `json`.
 
-> Quick note if you thought: "I have JSON, I would have preferred yaml, or even xml !"
+> Quick note if you thought: "I hate JSON, I would have preferred yaml, or even xml !"
 >
 > I've had a hard time deciding and testing different formats including yaml and xml.
 > But as it describes our entire api and is crucial for our server to keep working over updates; xml would have been too verbose with growth and yaml on the other side would have been too difficult to read. Json sits in the right spot for this.
