@@ -1,64 +1,79 @@
-# | aicra |
+<p align="center">
+  <a href="https://git.xdrm.io/go/aicra">
+    <img src="https://git.xdrm.io/go/aicra/raw/branch/feature/improve-readme/readme.assets/logo.png" alt="aicra logo" width="200" height="200">
+  </a>
+</p>
 
-[![Go version](https://img.shields.io/badge/go_version-1.10.3-blue.svg)](https://golang.org/doc/go1.10)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Go Report Card](https://goreportcard.com/badge/git.xdrm.io/go/aicra)](https://goreportcard.com/report/git.xdrm.io/go/aicra)
-[![Go doc](https://godoc.org/git.xdrm.io/go/aicra?status.svg)](https://godoc.org/git.xdrm.io/go/aicra)
-[![Build Status](https://drone.xdrm.io/api/badges/go/aicra/status.svg)](https://drone.xdrm.io/go/aicra)
+<h3 align="center">aicra</h3>
 
-----
+<p align="center">
+  Fast, intuitive, and powerful configuration-driven engine for faster and easier <em>REST</em> development.
+</p>
 
-`aicra` is a lightweight and idiomatic API engine for building Go services. It's especially good at helping you write large REST API services that remain maintainable as your project grows.
+[![Go version](https://img.shields.io/badge/go_version-1.16-blue.svg)](https://golang.org/doc/go1.16) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Go Report Card](https://goreportcard.com/badge/git.xdrm.io/go/aicra)](https://goreportcard.com/report/git.xdrm.io/go/aicra) [![Go doc](https://godoc.org/git.xdrm.io/go/aicra?status.svg)](https://godoc.org/git.xdrm.io/go/aicra) [![Build Status](https://drone.xdrm.io/api/badges/go/aicra/status.svg)](https://drone.xdrm.io/go/aicra)
 
-The focus of the project is to allow you to build a fully featured REST API in an elegant, comfortable and inexpensive way. This is achieved by using a configuration file to drive the server. The configuration format describes the whole API: routes, input arguments, expected output, permissions, etc.
+## Presentation
 
-TL;DR: `aicra` is a fast configuration-driven REST API engine.
+`aicra` is a lightweight and idiomatic configuration-driven engine for building REST services. It's especially good at helping you write large APIs that remain maintainable as your project grows.
 
-Repetitive tasks is automatically processed by `aicra` from your configuration file, you just have to implement your handlers.
+The focus of the project is to allow you to build a fully-featured REST API in an elegant, comfortable and inexpensive way. This is achieved by using a single configuration file to drive the server. This one file describes your entire API: methods, uris, input data, expected output, permissions, etc.
 
-The engine automates :
-- catching input data (_url, query, form-data, json, url-encoded_)
-- handling missing input data (_required arguments_)
-- handling input data validation
-- checking for mandatory output parameters
-- checking for missing method implementations
-- checking for handler signature (input and output arguments)
+Repetitive tasks are automatically processed by `aicra` based on your configuration, you're left with implementing your handlers (_usually business logic_).
 
-> An example project is available [here](https://git.xdrm.io/go/articles-api)
-
-### Table of contents
+## Table of contents
 
 <!-- toc -->
 
-  * [Installation](#installation)
-- [Usage](#usage)
-      - [Create a server](#create-a-server)
-      - [Create a handler](#create-a-handler)
-- [Configuration](#configuration)
-      - [Global format](#global-format)
-        * [Input section](#input-section)
-          + [Format](#format)
-      - [Example](#example)
+- [Installation](#installation)
+- [What's automated](#whats-automated)
+- [Getting started](#getting-started)
+- [Configuration file](#configuration-file)
+  * [Services](#services)
+  * [Input and output parameters](#input-and-output-parameters)
+  * [Example](#example)
+- [Writing your code](#writing-your-code)
 - [Changelog](#changelog)
 
 <!-- tocstop -->
 
 ## Installation
 
-You need a recent machine with `go` [installed](https://golang.org/doc/install). The package has not been tested under **go1.14**.
+To install the aicra package, you need to install Go and set your Go workspace first.
+> not tested under Go 1.14
 
-
+1. you can use the below Go command to install aicra.
 ```bash
-go get -u git.xdrm.io/go/aicra
+$ go get -u git.xdrm.io/go/aicra
+```
+2. Import it in your code:
+```go
+import "git.xdrm.io/go/aicra"
 ```
 
+## What's automated
 
-# Usage
+As the configuration file is here to make your life easier, let's take a quick look at what you do not have to do ; or in other words, what does `aicra` automates.
 
+Http requests are only accepted when they have the permissions you have defined. If unauthorized, the request is rejected with an error response.
 
-#### Create a server
+Request data is automatically extracted and validated before it reaches your code. If a request has missing or invalid data an automatic error response is sent.
 
-The code below sets up and creates an HTTP server from the `api.json` configuration.
+When launching the server, it ensures everything is ok and won't start until fixed. You will get errors for:
+- handler signature does not match the configuration
+- a configuration service has no handler
+- a handler does not match any service
+
+The same applies if your configuration is invalid:
+- unknown HTTP method
+- invalid uri
+- uri collision between 2 services
+- missing fields
+- unknown data type
+- input name collision
+
+## Getting started
+
+Here is the minimal code to launch your aicra server assuming your configuration file is `api.json`.
 
 ```go
 package main
@@ -76,13 +91,13 @@ import (
 func main() {
     builder := &aicra.Builder{}
 
-    // register available validators
+    // register data validators
     builder.AddType(builtin.BoolDataType{})
     builder.AddType(builtin.UintDataType{})
     builder.AddType(builtin.StringDataType{})
 
     // load your configuration
-    config, err := os.Open("./api.json")
+    config, err := os.Open("api.json")
     if err != nil {
         log.Fatalf("cannot open config: %s", err)
     }
@@ -92,11 +107,14 @@ func main() {
         log.Fatalf("invalid config: %s", err)
     }
 
-    // bind your handlers
-    builder.Bind(http.MethodGet, "/user/{id}", getUserById)
-    builder.Bind(http.MethodGet, "/user/{id}/username", getUsernameByID)
+    // bind handlers
+    err = builder.Bind(http.MethodGet, "/user/{id}", getUserById)
+    if err != nil {
+        log.Fatalf("cannog bind GET /user/{id}: %s", err)
+    }
+    // ...
 
-    // build the handler and start listening
+    // build your services
     handler, err := builder.Build()
     if err != nil {
         log.Fatalf("cannot build handler: %s", err)
@@ -106,22 +124,123 @@ func main() {
 ```
 
 If you want to use HTTPS, you can configure your own `http.Server`.
-
 ```go
 func main() {
     server := &http.Server{
         Addr:      "localhost:8080",
 		TLSConfig: tls.Config{},
-        // aicra handler
-		Handler:   handler,
+        // ...
+		Handler:   AICRAHandler,
 	}
-
     server.ListenAndServe()
 }
 ```
 
+## Configuration file
 
-#### Create a handler
+First of all, the configuration uses `json`.
+
+> Quick note if you thought: "I have JSON, I would have preferred yaml, or even xml !"
+>
+> I've had a hard time deciding and testing different formats including yaml and xml.
+> But as it describes our entire api and is crucial for our server to keep working over updates; xml would have been too verbose with growth and yaml on the other side would have been too difficult to read. Json sits in the right spot for this.
+
+Let's take a quick look at the configuration format !
+
+> if you don't like boring explanations and prefer a working example, see [here](https://git.xdrm.io/go/articles-api/src/master/api.json)
+
+### Services
+
+To begin with, the configuration file defines a list of services. Each one is defined by:
+- `method` an HTTP method
+- `path` an uri pattern (can contain variables)
+- `info` a short description of what it does
+- `scope` a list of the required permissions
+- `in` a list of input arguments
+- `out` a list of output arguments
+```json
+[
+    {
+        "method": "GET",
+        "path": "/article",
+        "scope": [["author", "reader"], ["admin"]],
+        "info": "returns all available articles",
+        "in": {},
+        "out": {}
+    }
+]
+```
+
+The `scope` is a 2-dimensional list of permissions. The first list means **or**, the second means **and**, it allows for complex permission combinations. The example above can be translated to: this method requires users to have permissions (author **and** reader) **or** (admin)
+
+### Input and output parameters
+
+Input and output parameters share the same format, featuring:
+- `info` a short description of what it is
+- `type` its data type (_c.f. validation_)
+- `?` whether it is mandatory or optional
+- `name` a custom name for easy access in code
+```json
+[
+    {
+        "method": "PUT",
+        "path": "/article/{id}",
+        "scope": [["author"]],
+        "info": "updates an article",
+        "in": {
+            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
+            "GET@title": { "info": "...", "type": "?string", "name": "title" },
+            "content":   { "info": "...", "type": "string"                   }
+        },
+        "out": {
+            "title":   { "info": "updated article title",   "type": "string" },
+            "content": { "info": "updated article content", "type": "string" }
+        }
+    }
+]
+```
+
+If a parameter is optional you just have to prefix its type with a question mark, by default all parameters are mandatory.
+
+The format of the key of input arguments defines where it comes from:
+1. `{param}` is an URI parameter that is extracted from the `"path"`
+2. `GET@param` is an URL parameter that is extracted from the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
+3. `param` is a body parameter that can be extracted from 3 formats independently:
+    - _url encoded_: data send in the body following the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
+    - _multipart_: data send in the body with a dedicated [format](https://tools.ietf.org/html/rfc2388#section-3). This format can be quite heavy but allows to transmit data as well as files.
+    - _JSON_: data sent in the body as a json object ; The _Content-Type_ header must be `application/json` for it to work.
+
+### Example
+```json
+[
+    {
+        "method": "PUT",
+        "path": "/article/{id}",
+        "scope": [["author"]],
+        "info": "updates an article",
+        "in": {
+            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
+            "GET@title": { "info": "...", "type": "?string", "name": "title" },
+            "content":   { "info": "...", "type": "string"                   }
+        },
+        "out": {
+            "id":      { "info": "updated article id",      "type": "uint"   },
+            "title":   { "info": "updated article title",   "type": "string" },
+            "content": { "info": "updated article content", "type": "string" }
+        }
+    }
+]
+```
+
+1. `{id}` is extracted from the end of the URI and is a number compliant with the `int` type checker. It is renamed `ID`, this new name will be sent to the handler.
+2. `GET@title` is extracted from the query (_e.g. [http://host/uri?get-var=value](http://host/uri?get-var=value)_). It must be a valid `string` or not given at all (the `?` at the beginning of the type tells that the argument is **optional**) ; it will be named `title`.
+3. `content` can be extracted from json, multipart or url-encoded data; it makes no difference and only give clients a choice over the technology to use. If not renamed, the variable will be given to the handler with its original name `content`.
+
+
+
+## Writing your code
+
+Besides your main package where you launch your server, you will need to create handlers matching services from the configuration.
 
 The code below implements a simple handler.
 ```go
@@ -151,9 +270,9 @@ func myHandler(r req) (*res, api.Err) {
 }
 ```
 
-If your handler signature does not match the configuration exactly, the server will print out the error and will not start.
+If your handler signature does not match the configuration exactly, the server will print out the error and won't start.
 
-The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json; client will then always have to manage the same format.
+The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json; clients have to manage the same format for every response.
 ```json
 {
     "error": {
@@ -163,83 +282,7 @@ The `api.Err` type automatically maps to HTTP status codes and error description
 }
 ```
 
-
-# Configuration
-
-The whole api behavior is described inside a json file (_e.g. usually api.json_). For a better understanding of the format, take a look at this working [configuration](https://git.xdrm.io/go/articles-api/src/master/api.json).
-
-The configuration file defines :
-- routes and their methods
-- every input argument for each method
-- every output for each method
-- scope permissions (list of permissions required by clients)
-- input policy :
-    - type of argument (_c.f. data types_)
-    - required/optional
-    - variable renaming
-
-#### Global format
-
-The root of the json file must feature an array containing your requests definitions. For each, you will have to create fields described in the table above.
-
-- `info`: Short description of the method
-- `in`: List of arguments that the clients will have to provide. [Read more](#input-arguments).
-- `out`: List of output data that your controllers will output. It has the same syntax as the `in` field but optional parameters are not allowed.
-- `scope`: A 2-dimensional array of permissions. The first level means **or**, the second means **and**. It allows to combine permissions in complex ways.
-    - Example: `[["A", "B"], ["C", "D"]]` translates to : this method requires users to have permissions (A **and** B) **or** (C **and** D)
-
-
-##### Input section
-
-Input arguments defines what data from the HTTP request the method requires. `aicra` is able to extract 3 types of data :
-
-- **URI** - data from inside the request path. For instance, if your controller is bound to the `/user/{id}` URI, you can set the input argument `{id}` matching this uri part.
-- **Query** - data at the end of the URL following the standard [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
-- **Form** - data send from the body of the request ; it can be extracted in 3 ways:
-    - _URL encoded_: data send in the body following the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
-    - _Multipart_: data send in the body with a dedicated [format](https://tools.ietf.org/html/rfc2388#section-3). This format can be quite heavy but allows to transmit data as well as files.
-    - _JSON_: data send in the body as a json object ; each key being a variable name, each value its content. Note that the 'Content-Type' header must be set to `application/json` for the API to use it.
-
-> For Form data, the 3 methods can be used at once for different arguments; for instance if you need to send a file to an aicra server as well as other parameters, you can use JSON for parameters and Multipart for the file.
-
-###### Format
-
-The `in` field describes as list of arguments where the key is the argument name, and the value defines how to manage the variable.
-
-
-Variable names from **URI** or **Query** must be named accordingly :
-- an **URI** variable `{var}` from your request route must be named `{var}` in the `in` section
-- a variable `var` in the **Query** has to be named `GET@var` in the `in` section
-
-
-#### Example
-```json
-[
-    {
-        "method": "PUT",
-        "path": "/article/{id}",
-        "scope": [["author"]],
-        "info": "updates an article",
-        "in": {
-            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
-            "GET@title": { "info": "...", "type": "?string", "name": "title" },
-            "content":   { "info": "...", "type": "string"                   }
-        },
-        "out": {
-            "id":      { "info": "updated article id",      "type": "uint"   },
-            "title":   { "info": "updated article title",   "type": "string" },
-            "content": { "info": "updated article content", "type": "string" }
-        }
-    }
-]
-```
-
-1. `{id}` is extracted from the end of the URI and is a number compliant with the `int` type checker. It is renamed `id`, this new name will be sent to the handler.
-2. `GET@title` is extracted from the query (_e.g. [http://host/uri?get-var=value](http://host/uri?get-var=value)_). It must be a valid `string` or not given at all (the `?` at the beginning of the type tells that the argument is **optional**) ; it will be named `title`.
-3. `content` can be extracted from json, multipart or url-encoded data; it makes no difference and only give clients a choice over the technology to use. If not renamed, the variable will be given to the handler with its original name `content`.
-
-
-# Changelog
+## Changelog
 
 - [x] human-readable json configuration
 - [x] nested routes (*i.e. `/user/{id}` and `/user/post/{id}`*)
