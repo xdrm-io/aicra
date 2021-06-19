@@ -261,7 +261,7 @@ type res struct{
     Output2 bool
 }
 
-func myHandler(r req) (*res, api.Err) {
+func myHandler(ctx *api.Context, r req) (*res, api.Err) {
     err := doSomething()
     if err != nil {
         return nil, api.ErrFailure
