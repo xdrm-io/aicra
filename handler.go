@@ -1,12 +1,14 @@
 package aicra
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/internal/ctx"
 	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
@@ -94,11 +96,17 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Handler) handle(input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
-	// 5. pass execution to the handler
-	ctx := api.Context{Res: w, Req: r}
-	var outData, outErr = handler.dyn.Handle(ctx, input.Data)
+	// build context with builtin data
+	c := r.Context()
+	c = context.WithValue(c, ctx.Request, r)
+	c = context.WithValue(c, ctx.Response, w)
+	c = context.WithValue(c, ctx.Auth, w)
+	apictx := &api.Context{Context: c}
 
-	// 6. build res from returned data
+	// pass execution to the handler
+	var outData, outErr = handler.dyn.Handle(apictx, input.Data)
+
+	// build response from returned arguments
 	var res = api.EmptyResponse().WithError(outErr)
 	for key, value := range outData {
 

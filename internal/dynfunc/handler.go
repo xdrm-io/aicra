@@ -9,73 +9,69 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
-// Handler represents a dynamic api handler
+// Handler represents a dynamic aicra service handler
 type Handler struct {
-	spec *signature
-	fn   interface{}
-	// whether fn uses api.Ctx as 1st argument
-	hasContext bool
-	// index in input arguments where the data struct must be
-	dataIndex int
+	// signature defined from the service configuration
+	signature *Signature
+	// fn provided function that will be the service's handler
+	fn interface{}
 }
 
-// Build a handler from a service configuration and a dynamic function
-//
-// @fn must have as a signature : `func(inputStruct) (*outputStruct, api.Err)`
-//  - `inputStruct` is a struct{} containing a field for each service input (with valid reflect.Type)
-//  - `outputStruct` is a struct{} containing a field for each service output (with valid reflect.Type)
+// Build a handler from a dynamic function and checks its signature against a
+// service configuration
+//e
+// `fn` must have as a signature : `func(*api.Context, in) (*out, api.Err)`
+//  - `in` is a struct{} containing a field for each service input (with valid reflect.Type)
+//  - `out` is a struct{} containing a field for each service output (with valid reflect.Type)
 //
 // Special cases:
-//  - a first optional input parameter of type `api.Ctx` can be added
-//  - it there is no input, `inputStruct` must be omitted
-//  - it there is no output, `outputStruct` must be omitted
+//  - it there is no input, `in` MUST be omitted
+//  - it there is no output, `out` MUST be omitted
 func Build(fn interface{}, service config.Service) (*Handler, error) {
-	h := &Handler{
-		spec: signatureFromService(service),
-		fn:   fn,
-	}
+	var (
+		h = &Handler{
+			signature: BuildSignature(service),
+			fn:        fn,
+		}
+		fnType = reflect.TypeOf(fn)
+	)
 
-	impl := reflect.TypeOf(fn)
-
-	if impl.Kind() != reflect.Func {
+	if fnType.Kind() != reflect.Func {
 		return nil, errHandlerNotFunc
 	}
-
-	h.hasContext = impl.NumIn() >= 1 && reflect.TypeOf(api.Context{}).AssignableTo(impl.In(0))
-	if h.hasContext {
-		h.dataIndex = 1
-	}
-
-	if err := h.spec.checkInput(impl, h.dataIndex); err != nil {
+	if err := h.signature.ValidateInput(fnType); err != nil {
 		return nil, fmt.Errorf("input: %w", err)
 	}
-	if err := h.spec.checkOutput(impl); err != nil {
+	if err := h.signature.ValidateOutput(fnType); err != nil {
 		return nil, fmt.Errorf("output: %w", err)
 	}
 
 	return h, nil
 }
 
-// Handle binds input @data into the dynamic function and returns map output
-func (h *Handler) Handle(ctx api.Context, data map[string]interface{}) (map[string]interface{}, api.Err) {
-	var ert = reflect.TypeOf(api.Err{})
-	var fnv = reflect.ValueOf(h.fn)
+// Handle binds input `data` into the dynamic function and returns an output map
+func (h *Handler) Handle(ctx *api.Context, data map[string]interface{}) (map[string]interface{}, api.Err) {
+	var (
+		ert      = reflect.TypeOf(api.Err{})
+		fnv      = reflect.ValueOf(h.fn)
+		callArgs = make([]reflect.Value, 0)
+	)
 
-	callArgs := []reflect.Value{}
+	// bind context
+	callArgs = append(callArgs, reflect.ValueOf(ctx))
 
-	// bind context if used in handler
-	if h.hasContext {
-		callArgs = append(callArgs, reflect.ValueOf(ctx))
-	}
+	inputStructRequired := fnv.Type().NumIn() > 1
 
-	// bind input data
-	if fnv.Type().NumIn() > h.dataIndex {
+	// bind input arguments
+	if inputStructRequired {
 		// create zero value struct
-		callStructPtr := reflect.New(fnv.Type().In(0))
-		callStruct := callStructPtr.Elem()
+		var (
+			callStructPtr = reflect.New(fnv.Type().In(1))
+			callStruct    = callStructPtr.Elem()
+		)
 
 		// set each field
-		for name := range h.spec.Input {
+		for name := range h.signature.Input {
 			field := callStruct.FieldByName(name)
 			if !field.CanSet() {
 				continue
@@ -115,12 +111,12 @@ func (h *Handler) Handle(ctx api.Context, data map[string]interface{}) (map[stri
 		callArgs = append(callArgs, callStruct)
 	}
 
-	// call the HandlerFn
+	// call the handler
 	output := fnv.Call(callArgs)
 
 	// no output OR pointer to output struct is nil
 	outdata := make(map[string]interface{})
-	if len(h.spec.Output) < 1 || output[0].IsNil() {
+	if len(h.signature.Output) < 1 || output[0].IsNil() {
 		var structerr = output[len(output)-1].Convert(ert)
 		return outdata, api.Err{
 			Code:   int(structerr.FieldByName("Code").Int()),
@@ -132,7 +128,7 @@ func (h *Handler) Handle(ctx api.Context, data map[string]interface{}) (map[stri
 	// extract struct from pointer
 	returnStruct := output[0].Elem()
 
-	for name := range h.spec.Output {
+	for name := range h.signature.Output {
 		field := returnStruct.FieldByName(name)
 		outdata[name] = field.Interface()
 	}

@@ -82,9 +82,9 @@ func TestWith(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx api.Context) (*struct{}, api.Err) {
+	pathHandler := func(ctx *api.Context) (*struct{}, api.Err) {
 		// write value from middlewares into response
-		value := ctx.Req.Context().Value(key)
+		value := ctx.Value(key)
 		if value == nil {
 			t.Fatalf("nothing found in context")
 		}
@@ -93,7 +93,7 @@ func TestWith(t *testing.T) {
 			t.Fatalf("cannot cast context data to int")
 		}
 		// write to response
-		ctx.Res.Write([]byte(fmt.Sprintf("#%d#", cast)))
+		ctx.ResponseWriter().Write([]byte(fmt.Sprintf("#%d#", cast)))
 
 		return nil, api.ErrSuccess
 	}
@@ -237,7 +237,7 @@ func TestWithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx api.Context) (*struct{}, api.Err) {
+			pathHandler := func(ctx *api.Context) (*struct{}, api.Err) {
 				return nil, api.ErrNotImplemented
 			}
 
@@ -290,7 +290,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(*api.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -311,7 +311,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(*api.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/666",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -332,7 +332,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(*api.Context, struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"prefix.user[123].suffix"},
@@ -354,7 +354,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}",
-			handler: func(struct {
+			handler: func(*api.Context, struct {
 				Prefix uint
 				User   uint
 			}) (*struct{}, api.Err) {
@@ -381,7 +381,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}",
-			handler: func(struct {
+			handler: func(*api.Context, struct {
 				Prefix uint
 				User   uint
 			}) (*struct{}, api.Err) {
@@ -409,7 +409,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(struct {
+			handler: func(*api.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
@@ -438,7 +438,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(struct {
+			handler: func(*api.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
