@@ -95,7 +95,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 func (s *Handler) handle(input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
 	// 5. pass execution to the handler
-	ctx := api.Ctx{Res: w, Req: r}
+	ctx := api.Context{Res: w, Req: r}
 	var outData, outErr = handler.dyn.Handle(ctx, input.Data)
 
 	// 6. build res from returned data

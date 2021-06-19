@@ -21,21 +21,21 @@ func TestInputCheck(t *testing.T) {
 			Name:  "no input 0 given",
 			Input: map[string]reflect.Type{},
 			Fn:    func() {},
-			FnCtx: func(api.Ctx) {},
+			FnCtx: func(api.Context) {},
 			Err:   nil,
 		},
 		{
 			Name:  "no input 1 given",
 			Input: map[string]reflect.Type{},
 			Fn:    func(int) {},
-			FnCtx: func(api.Ctx, int) {},
+			FnCtx: func(api.Context, int) {},
 			Err:   errUnexpectedInput,
 		},
 		{
 			Name:  "no input 2 given",
 			Input: map[string]reflect.Type{},
 			Fn:    func(int, string) {},
-			FnCtx: func(api.Ctx, int, string) {},
+			FnCtx: func(api.Context, int, string) {},
 			Err:   errUnexpectedInput,
 		},
 		{
@@ -44,7 +44,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:    func() {},
-			FnCtx: func(api.Ctx) {},
+			FnCtx: func(api.Context) {},
 			Err:   errMissingHandlerArgumentParam,
 		},
 		{
@@ -53,7 +53,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:    func(int) {},
-			FnCtx: func(api.Ctx, int) {},
+			FnCtx: func(api.Context, int) {},
 			Err:   errMissingParamArgument,
 		},
 		{
@@ -62,7 +62,7 @@ func TestInputCheck(t *testing.T) {
 				"test1": reflect.TypeOf(int(0)),
 			},
 			Fn:    func(struct{}) {},
-			FnCtx: func(api.Ctx, struct{}) {},
+			FnCtx: func(api.Context, struct{}) {},
 			Err:   errUnexportedName,
 		},
 		{
@@ -71,7 +71,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:    func(struct{}) {},
-			FnCtx: func(api.Ctx, struct{}) {},
+			FnCtx: func(api.Context, struct{}) {},
 			Err:   errMissingParamFromConfig,
 		},
 		{
@@ -80,7 +80,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:    func(struct{ Test1 string }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 string }) {},
+			FnCtx: func(api.Context, struct{ Test1 string }) {},
 			Err:   errWrongParamTypeFromConfig,
 		},
 		{
@@ -89,7 +89,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(int(0)),
 			},
 			Fn:    func(struct{ Test1 int }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 int }) {},
+			FnCtx: func(api.Context, struct{ Test1 int }) {},
 			Err:   nil,
 		},
 		{
@@ -98,7 +98,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(int)),
 			},
 			Fn:    func(struct{}) {},
-			FnCtx: func(api.Ctx, struct{}) {},
+			FnCtx: func(api.Context, struct{}) {},
 			Err:   errMissingParamFromConfig,
 		},
 		{
@@ -107,7 +107,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(int)),
 			},
 			Fn:    func(struct{ Test1 string }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 string }) {},
+			FnCtx: func(api.Context, struct{ Test1 string }) {},
 			Err:   errWrongParamTypeFromConfig,
 		},
 		{
@@ -116,7 +116,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(int)),
 			},
 			Fn:    func(struct{ Test1 *string }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *string }) {},
+			FnCtx: func(api.Context, struct{ Test1 *string }) {},
 			Err:   errWrongParamTypeFromConfig,
 		},
 		{
@@ -125,7 +125,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(int)),
 			},
 			Fn:    func(struct{ Test1 *int }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *int }) {},
+			FnCtx: func(api.Context, struct{ Test1 *int }) {},
 			Err:   nil,
 		},
 		{
@@ -134,7 +134,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(string("")),
 			},
 			Fn:    func(struct{ Test1 string }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 string }) {},
+			FnCtx: func(api.Context, struct{ Test1 string }) {},
 			Err:   nil,
 		},
 		{
@@ -143,7 +143,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(uint(0)),
 			},
 			Fn:    func(struct{ Test1 uint }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 uint }) {},
+			FnCtx: func(api.Context, struct{ Test1 uint }) {},
 			Err:   nil,
 		},
 		{
@@ -152,7 +152,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(float64(0)),
 			},
 			Fn:    func(struct{ Test1 float64 }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 float64 }) {},
+			FnCtx: func(api.Context, struct{ Test1 float64 }) {},
 			Err:   nil,
 		},
 		{
@@ -161,7 +161,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf([]byte("")),
 			},
 			Fn:    func(struct{ Test1 []byte }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 []byte }) {},
+			FnCtx: func(api.Context, struct{ Test1 []byte }) {},
 			Err:   nil,
 		},
 		{
@@ -170,7 +170,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf([]rune("")),
 			},
 			Fn:    func(struct{ Test1 []rune }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 []rune }) {},
+			FnCtx: func(api.Context, struct{ Test1 []rune }) {},
 			Err:   nil,
 		},
 		{
@@ -179,7 +179,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(string)),
 			},
 			Fn:    func(struct{ Test1 *string }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *string }) {},
+			FnCtx: func(api.Context, struct{ Test1 *string }) {},
 			Err:   nil,
 		},
 		{
@@ -188,7 +188,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(uint)),
 			},
 			Fn:    func(struct{ Test1 *uint }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *uint }) {},
+			FnCtx: func(api.Context, struct{ Test1 *uint }) {},
 			Err:   nil,
 		},
 		{
@@ -197,7 +197,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new(float64)),
 			},
 			Fn:    func(struct{ Test1 *float64 }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *float64 }) {},
+			FnCtx: func(api.Context, struct{ Test1 *float64 }) {},
 			Err:   nil,
 		},
 		{
@@ -206,7 +206,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new([]byte)),
 			},
 			Fn:    func(struct{ Test1 *[]byte }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *[]byte }) {},
+			FnCtx: func(api.Context, struct{ Test1 *[]byte }) {},
 			Err:   nil,
 		},
 		{
@@ -215,7 +215,7 @@ func TestInputCheck(t *testing.T) {
 				"Test1": reflect.TypeOf(new([]rune)),
 			},
 			Fn:    func(struct{ Test1 *[]rune }) {},
-			FnCtx: func(api.Ctx, struct{ Test1 *[]rune }) {},
+			FnCtx: func(api.Context, struct{ Test1 *[]rune }) {},
 			Err:   nil,
 		},
 	}

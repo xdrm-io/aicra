@@ -138,7 +138,7 @@ func TestInput(t *testing.T) {
 				input[key] = val
 			}
 
-			var output, err = handler.Handle(api.Ctx{}, input)
+			var output, err = handler.Handle(api.Context{}, input)
 			if err != tcase.ExpectedErr {
 				t.Fatalf("expected api error <%v> got <%v>", tcase.ExpectedErr, err)
 			}

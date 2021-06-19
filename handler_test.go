@@ -82,7 +82,7 @@ func TestWith(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx api.Ctx) (*struct{}, api.Err) {
+	pathHandler := func(ctx api.Context) (*struct{}, api.Err) {
 		// write value from middlewares into response
 		value := ctx.Req.Context().Value(key)
 		if value == nil {
@@ -237,7 +237,7 @@ func TestWithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx api.Ctx) (*struct{}, api.Err) {
+			pathHandler := func(ctx api.Context) (*struct{}, api.Err) {
 				return nil, api.ErrNotImplemented
 			}
 

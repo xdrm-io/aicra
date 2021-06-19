@@ -41,7 +41,7 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 		return nil, errHandlerNotFunc
 	}
 
-	h.hasContext = impl.NumIn() >= 1 && reflect.TypeOf(api.Ctx{}).AssignableTo(impl.In(0))
+	h.hasContext = impl.NumIn() >= 1 && reflect.TypeOf(api.Context{}).AssignableTo(impl.In(0))
 	if h.hasContext {
 		h.dataIndex = 1
 	}
@@ -57,7 +57,7 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 }
 
 // Handle binds input @data into the dynamic function and returns map output
-func (h *Handler) Handle(ctx api.Ctx, data map[string]interface{}) (map[string]interface{}, api.Err) {
+func (h *Handler) Handle(ctx api.Context, data map[string]interface{}) (map[string]interface{}, api.Err) {
 	var ert = reflect.TypeOf(api.Err{})
 	var fnv = reflect.ValueOf(h.fn)
 
