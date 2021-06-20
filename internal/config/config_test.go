@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.xdrm.io/go/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/datatype/builtin"
 )
 
 func TestLegalServiceName(t *testing.T) {

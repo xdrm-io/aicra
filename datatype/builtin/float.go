@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 // FloatDataType is what its name tells

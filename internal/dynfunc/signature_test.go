@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.xdrm.io/go/aicra/api"
+	"github.com/xdrm-io/aicra/api"
 )
 
 func TestInputCheck(t *testing.T) {

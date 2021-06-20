@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.xdrm.io/go/aicra/api"
+	"github.com/xdrm-io/aicra/api"
 )
 
 type testsignature Signature

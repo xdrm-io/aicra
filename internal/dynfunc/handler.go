@@ -6,8 +6,8 @@ import (
 	"log"
 	"reflect"
 
-	"git.xdrm.io/go/aicra/api"
-	"git.xdrm.io/go/aicra/internal/config"
+	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 // Handler represents a dynamic aicra service handler

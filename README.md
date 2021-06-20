@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://git.xdrm.io/go/aicra">
-    <img src="https://git.xdrm.io/go/aicra/raw/branch/0.4.0/readme.assets/logo.png" alt="aicra logo" width="200" height="200">
+  <a href="https://github.com/xdrm-io/aicra">
+    <img src="https://github.com/xdrm-io/aicra/raw/0.4.0/readme.assets/logo.png" alt="aicra logo" width="200" height="200">
   </a>
 </p>
 
@@ -10,7 +10,10 @@
   Fast, intuitive, and powerful configuration-driven engine for faster and easier <em>REST</em> development.
 </p>
 
-[![Go version](https://img.shields.io/badge/go_version-1.16-blue.svg)](https://golang.org/doc/go1.16) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Go Report Card](https://goreportcard.com/badge/git.xdrm.io/go/aicra)](https://goreportcard.com/report/git.xdrm.io/go/aicra) [![Go doc](https://godoc.org/git.xdrm.io/go/aicra?status.svg)](https://godoc.org/git.xdrm.io/go/aicra) [![Build Status](https://drone.xdrm.io/api/badges/go/aicra/status.svg)](https://drone.xdrm.io/go/aicra)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go version](https://img.shields.io/badge/go_version-1.16-blue.svg)](https://golang.org/doc/go1.16)
+[![Go doc](https://pkg.go.dev/badge/github.com/xdrm-io/aicra)](https://pkg.go.dev/github.com/xdrm-io/aicra)
+[![Go Report Card](https://goreportcard.com/badge/github.com/xdrm-io/aicra)](https://goreportcard.com/report/github.com/xdrm-io/aicra)
 
 ## Presentation
 
@@ -43,11 +46,11 @@ To install the aicra package, you need to install Go and set your Go workspace f
 
 1. you can use the below Go command to install aicra.
 ```bash
-$ go get -u git.xdrm.io/go/aicra
+$ go get -u github.com/xdrm-io/aicra
 ```
 2. Import it in your code:
 ```go
-import "git.xdrm.io/go/aicra"
+import "github.com/xdrm-io/aicra"
 ```
 
 ## What's automated
@@ -83,9 +86,9 @@ import (
     "net/http"
     "os"
 
-    "git.xdrm.io/go/aicra"
-    "git.xdrm.io/go/aicra/api"
-    "git.xdrm.io/go/aicra/datatype/builtin"
+    "github.com/xdrm-io/aicra"
+    "github.com/xdrm-io/aicra/api"
+    "github.com/xdrm-io/aicra/datatype/builtin"
 )
 
 func main() {

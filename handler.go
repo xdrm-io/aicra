@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"git.xdrm.io/go/aicra/api"
-	"git.xdrm.io/go/aicra/internal/config"
-	"git.xdrm.io/go/aicra/internal/ctx"
-	"git.xdrm.io/go/aicra/internal/reqdata"
+	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/internal/ctx"
+	"github.com/xdrm-io/aicra/internal/reqdata"
 )
 
 // Handler wraps the builder to handle requests

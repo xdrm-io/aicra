@@ -5,7 +5,7 @@ import (
 	"math"
 	"reflect"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 // UintDataType is what its name tells

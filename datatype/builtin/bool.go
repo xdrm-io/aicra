@@ -3,7 +3,7 @@ package builtin
 import (
 	"reflect"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 // BoolDataType is what its name tells
