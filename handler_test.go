@@ -3,6 +3,7 @@ package aicra_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -48,15 +49,15 @@ func TestWith(t *testing.T) {
 	type ckey int
 	const key ckey = 0
 
-	middleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+	middleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newr := r
 
 			// first time -> store 1
 			value := r.Context().Value(key)
 			if value == nil {
 				newr = r.WithContext(context.WithValue(r.Context(), key, int(1)))
-				next(w, newr)
+				next.ServeHTTP(w, newr)
 				return
 			}
 
@@ -67,8 +68,8 @@ func TestWith(t *testing.T) {
 			}
 			cast++
 			newr = r.WithContext(context.WithValue(r.Context(), key, cast))
-			next(w, newr)
-		}
+			next.ServeHTTP(w, newr)
+		})
 	}
 
 	// add middleware @n times
@@ -82,9 +83,9 @@ func TestWith(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx api.Ctx) (*struct{}, api.Err) {
+	pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
 		// write value from middlewares into response
-		value := ctx.Req.Context().Value(key)
+		value := ctx.Value(key)
 		if value == nil {
 			t.Fatalf("nothing found in context")
 		}
@@ -93,7 +94,7 @@ func TestWith(t *testing.T) {
 			t.Fatalf("cannot cast context data to int")
 		}
 		// write to response
-		ctx.Res.Write([]byte(fmt.Sprintf("#%d#", cast)))
+		api.GetResponseWriter(ctx).Write([]byte(fmt.Sprintf("#%d#", cast)))
 
 		return nil, api.ErrSuccess
 	}
@@ -212,8 +213,13 @@ func TestWithAuth(t *testing.T) {
 			}
 
 			// tester middleware (last executed)
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
+
 					if a.Granted() == tc.granted {
 						return
 					}
@@ -222,14 +228,20 @@ func TestWithAuth(t *testing.T) {
 					} else {
 						t.Fatalf("expected granted auth")
 					}
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
+
 					a.Active = tc.permissions
-					next(a, w, r)
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
 			err := builder.Setup(strings.NewReader(tc.manifest))
@@ -237,7 +249,7 @@ func TestWithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx api.Ctx) (*struct{}, api.Err) {
+			pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
 				return nil, api.ErrNotImplemented
 			}
 
@@ -257,6 +269,97 @@ func TestWithAuth(t *testing.T) {
 			handler.ServeHTTP(response, request)
 			if response.Body == nil {
 				t.Fatalf("response has no body")
+			}
+
+		})
+	}
+
+}
+
+func TestPermissionError(t *testing.T) {
+
+	tt := []struct {
+		name        string
+		manifest    string
+		permissions []string
+		granted     bool
+	}{
+		{
+			name:        "permission fulfilled",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A"},
+			granted:     true,
+		},
+		{
+			name:        "missing permission",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{},
+			granted:     false,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := &aicra.Builder{}
+			if err := addBuiltinTypes(builder); err != nil {
+				t.Fatalf("unexpected error <%v>", err)
+			}
+
+			// add active permissions
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
+
+					a.Active = tc.permissions
+					next.ServeHTTP(w, r)
+				})
+			})
+
+			err := builder.Setup(strings.NewReader(tc.manifest))
+			if err != nil {
+				t.Fatalf("setup: unexpected error <%v>", err)
+			}
+
+			pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
+				return nil, api.ErrNotImplemented
+			}
+
+			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
+				t.Fatalf("bind: unexpected error <%v>", err)
+			}
+
+			handler, err := builder.Build()
+			if err != nil {
+				t.Fatalf("build: unexpected error <%v>", err)
+			}
+
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/path", &bytes.Buffer{})
+
+			// test request
+			handler.ServeHTTP(response, request)
+			if response.Body == nil {
+				t.Fatalf("response has no body")
+			}
+			type jsonResponse struct {
+				Err api.Err `json:"error"`
+			}
+			var res jsonResponse
+			err = json.Unmarshal(response.Body.Bytes(), &res)
+			if err != nil {
+				t.Fatalf("cannot unmarshal response: %s", err)
+			}
+
+			expectedError := api.ErrNotImplemented
+			if !tc.granted {
+				expectedError = api.ErrPermission
+			}
+
+			if res.Err.Code != expectedError.Code {
+				t.Fatalf("expected error code %d got %d", expectedError.Code, res.Err.Code)
 			}
 
 		})
@@ -290,7 +393,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -311,7 +414,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/666",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -332,7 +435,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"prefix.user[123].suffix"},
@@ -354,7 +457,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}",
-			handler: func(struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 			}) (*struct{}, api.Err) {
@@ -381,7 +484,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}",
-			handler: func(struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 			}) (*struct{}, api.Err) {
@@ -409,7 +512,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
@@ -438,7 +541,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
@@ -460,8 +563,12 @@ func TestDynamicScope(t *testing.T) {
 			}
 
 			// tester middleware (last executed)
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
 					if a.Granted() == tc.granted {
 						return
 					}
@@ -470,15 +577,20 @@ func TestDynamicScope(t *testing.T) {
 					} else {
 						t.Fatalf("expected granted auth")
 					}
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
 			// update permissions
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
 					a.Active = tc.permissions
-					next(a, w, r)
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
 			err := builder.Setup(strings.NewReader(tc.manifest))

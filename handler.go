@@ -1,12 +1,14 @@
 package aicra
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/internal/config"
+	"git.xdrm.io/go/aicra/internal/ctx"
 	"git.xdrm.io/go/aicra/internal/reqdata"
 )
 
@@ -15,30 +17,31 @@ type Handler Builder
 
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var h = http.HandlerFunc(s.resolve)
+	var h http.Handler = http.HandlerFunc(s.resolve)
 
-	for _, adapter := range s.adapters {
-		h = adapter(h)
+	for _, mw := range s.middlewares {
+		h = mw(h)
 	}
-	h(w, r)
+	h.ServeHTTP(w, r)
 }
 
+// ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
-	// 1. find a matching service from config
+	// 1ind a matching service from config
 	var service = s.conf.Find(r)
 	if service == nil {
 		handleError(api.ErrUnknownService, w, r)
 		return
 	}
 
-	// 2. extract request data
+	// extract request data
 	var input, err = extractInput(service, *r)
 	if err != nil {
 		handleError(api.ErrMissingParam, w, r)
 		return
 	}
 
-	// 3. find a matching handler
+	// find a matching handler
 	var handler *apiHandler
 	for _, h := range s.handlers {
 		if h.Method == service.Method && h.Path == service.Pattern {
@@ -46,59 +49,50 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 4. fail on no matching handler
+	// fail on no matching handler
 	if handler == nil {
 		handleError(api.ErrUncallableService, w, r)
 		return
 	}
 
-	// replace format '[a]' in scope where 'a' is an existing input's name
-	scope := make([][]string, len(service.Scope))
-	for a, list := range service.Scope {
-		scope[a] = make([]string, len(list))
-		for b, perm := range list {
-			scope[a][b] = perm
-			for name, value := range input.Data {
-				var (
-					token       = fmt.Sprintf("[%s]", name)
-					replacement = ""
-				)
-				if value != nil {
-					replacement = fmt.Sprintf("[%v]", value)
-				}
-				scope[a][b] = strings.ReplaceAll(scope[a][b], token, replacement)
-			}
-		}
-	}
+	// build context with builtin data
+	c := r.Context()
+	c = context.WithValue(c, ctx.Request, r)
+	c = context.WithValue(c, ctx.Response, w)
+	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, input.Data))
 
-	var auth = api.Auth{
-		Required: scope,
-		Active:   []string{},
-	}
-
-	// 5. run auth-aware middlewares
-	var h = api.AuthHandlerFunc(func(a api.Auth, w http.ResponseWriter, r *http.Request) {
-		if !a.Granted() {
+	// create http handler
+	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := api.GetAuth(r.Context())
+		if auth == nil {
 			handleError(api.ErrPermission, w, r)
 			return
 		}
 
-		s.handle(input, handler, service, w, r)
+		// reject non granted requests
+		if !auth.Granted() {
+			handleError(api.ErrPermission, w, r)
+			return
+		}
+
+		// use context defined in the request
+		s.handle(r.Context(), input, handler, service, w, r)
 	})
 
-	for _, adapter := range s.authAdapters {
-		h = adapter(h)
+	// run middlewares the handler
+	for _, mw := range s.ctxMiddlewares {
+		h = mw(h)
 	}
-	h(auth, w, r)
 
+	// serve using the context with values
+	h.ServeHTTP(w, r.WithContext(c))
 }
 
-func (s *Handler) handle(input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
-	// 5. pass execution to the handler
-	ctx := api.Ctx{Res: w, Req: r}
-	var outData, outErr = handler.dyn.Handle(ctx, input.Data)
+func (s *Handler) handle(c context.Context, input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
+	// pass execution to the handler
+	var outData, outErr = handler.dyn.Handle(c, input.Data)
 
-	// 6. build res from returned data
+	// build response from returned arguments
 	var res = api.EmptyResponse().WithError(outErr)
 	for key, value := range outData {
 
@@ -148,4 +142,36 @@ func extractInput(service *config.Service, req http.Request) (*reqdata.T, error)
 	}
 
 	return dataset, nil
+}
+
+// buildAuth builds the api.Auth struct from the service scope configuration
+//
+// it replaces format '[a]' in scope where 'a' is an existing input argument's
+// name with its value
+func buildAuth(scope [][]string, in map[string]interface{}) *api.Auth {
+	updated := make([][]string, len(scope))
+
+	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
+	// name
+	for a, list := range scope {
+		updated[a] = make([]string, len(list))
+		for b, perm := range list {
+			updated[a][b] = perm
+			for name, value := range in {
+				var (
+					token       = fmt.Sprintf("[%s]", name)
+					replacement = ""
+				)
+				if value != nil {
+					replacement = fmt.Sprintf("[%v]", value)
+				}
+				updated[a][b] = strings.ReplaceAll(updated[a][b], token, replacement)
+			}
+		}
+	}
+
+	return &api.Auth{
+		Required: updated,
+		Active:   []string{},
+	}
 }

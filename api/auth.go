@@ -21,7 +21,7 @@ type Auth struct {
 
 // Granted returns whether the authorization is granted
 // i.e. Auth.Active fulfills Auth.Required
-func (a Auth) Granted() bool {
+func (a *Auth) Granted() bool {
 	var nothingRequired = true
 
 	// first dimension: OR ; at least one is valid
@@ -43,7 +43,7 @@ func (a Auth) Granted() bool {
 }
 
 // returns whether Auth.Active fulfills (contains) all @required roles
-func (a Auth) fulfills(required []string) bool {
+func (a *Auth) fulfills(required []string) bool {
 	for _, requiredRole := range required {
 		var found = false
 		for _, activeRole := range a.Active {

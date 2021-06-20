@@ -107,12 +107,17 @@ func main() {
         log.Fatalf("invalid config: %s", err)
     }
 
+    // add http middlewares (logger)
+    builder.With(func(next http.Handler) http.Handler{ /* ... */ })
+
+    // add contextual middlewares (authentication)
+    builder.WithContext(func(next http.Handler) http.Handler{ /* ... */ })
+
     // bind handlers
     err = builder.Bind(http.MethodGet, "/user/{id}", getUserById)
     if err != nil {
         log.Fatalf("cannog bind GET /user/{id}: %s", err)
     }
-    // ...
 
     // build your services
     handler, err := builder.Build()
@@ -261,7 +266,7 @@ type res struct{
     Output2 bool
 }
 
-func myHandler(r req) (*res, api.Err) {
+func myHandler(ctx context.Context, r req) (*res, api.Err) {
     err := doSomething()
     if err != nil {
         return nil, api.ErrFailure

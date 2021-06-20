@@ -1,17 +1,44 @@
 package api
 
 import (
+	"context"
 	"net/http"
+
+	"git.xdrm.io/go/aicra/internal/ctx"
 )
 
-// Ctx contains additional information for handlers
-//
-// usually input/output arguments built by aicra are sufficient
-// but the Ctx lets you manage your request from scratch if required
-//
-// If required, set api.Ctx as the first argument of your handler; if you
-// don't need it, only use standard input arguments and it will be ignored
-type Ctx struct {
-	Res http.ResponseWriter
-	Req *http.Request
+// GetRequest extracts the current request from a context.Context
+func GetRequest(c context.Context) *http.Request {
+	var (
+		raw      = c.Value(ctx.Request)
+		cast, ok = raw.(*http.Request)
+	)
+	if !ok {
+		return nil
+	}
+	return cast
+}
+
+// GetResponseWriter extracts the response writer from a context.Context
+func GetResponseWriter(c context.Context) http.ResponseWriter {
+	var (
+		raw      = c.Value(ctx.Response)
+		cast, ok = raw.(http.ResponseWriter)
+	)
+	if !ok {
+		return nil
+	}
+	return cast
+}
+
+// GetAuth returns the api.Auth associated with this request from a context.Context
+func GetAuth(c context.Context) *Auth {
+	var (
+		raw      = c.Value(ctx.Auth)
+		cast, ok = raw.(*Auth)
+	)
+	if !ok {
+		return nil
+	}
+	return cast
 }

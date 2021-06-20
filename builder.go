@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 
-	"git.xdrm.io/go/aicra/api"
 	"git.xdrm.io/go/aicra/datatype"
 	"git.xdrm.io/go/aicra/internal/config"
 	"git.xdrm.io/go/aicra/internal/dynfunc"
@@ -13,10 +12,16 @@ import (
 
 // Builder for an aicra server
 type Builder struct {
-	conf         *config.Server
-	handlers     []*apiHandler
-	adapters     []api.Adapter
-	authAdapters []api.AuthAdapter
+	// the server configuration defining available services
+	conf *config.Server
+	// user-defined handlers bound to services from the configuration
+	handlers []*apiHandler
+	// http middlewares wrapping the entire http connection (e.g. logger)
+	middlewares []func(http.Handler) http.Handler
+	// custom middlewares only wrapping the service handler of a request
+	// they will benefit from the request's context that contains service-specific
+	// information (e.g. required permisisons from the configuration)
+	ctxMiddlewares []func(http.Handler) http.Handler
 }
 
 // represents an api handler (method-pattern combination)
@@ -41,26 +46,36 @@ func (b *Builder) AddType(t datatype.T) error {
 	return nil
 }
 
-// With adds an http adapter (middleware)
-func (b *Builder) With(adapter api.Adapter) {
+// With adds an http middleware on top of the http connection
+//
+// Authentication management can only be done with the WithContext() methods as
+// the service associated with the request has not been found at this stage.
+// This stage is perfect for logging or generic request management.
+func (b *Builder) With(mw func(http.Handler) http.Handler) {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
-	if b.adapters == nil {
-		b.adapters = make([]api.Adapter, 0)
+	if b.middlewares == nil {
+		b.middlewares = make([]func(http.Handler) http.Handler, 0)
 	}
-	b.adapters = append(b.adapters, adapter)
+	b.middlewares = append(b.middlewares, mw)
 }
 
-// WithAuth adds an http adapter with auth capabilities (middleware)
-func (b *Builder) WithAuth(adapter api.AuthAdapter) {
+// WithContext adds an http middleware with the fully loaded context
+//
+// Logging or generic request management should be done with the With() method as
+// it wraps the full http connection. Middlewares added through this method only
+// wrap the user-defined service handler. The context.Context is filled with useful
+// data that can be access with api.GetRequest(), api.GetResponseWriter(),
+// api.GetAuth(), etc methods.
+func (b *Builder) WithContext(mw func(http.Handler) http.Handler) {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
-	if b.authAdapters == nil {
-		b.authAdapters = make([]api.AuthAdapter, 0)
+	if b.ctxMiddlewares == nil {
+		b.ctxMiddlewares = make([]func(http.Handler) http.Handler, 0)
 	}
-	b.authAdapters = append(b.authAdapters, adapter)
+	b.ctxMiddlewares = append(b.ctxMiddlewares, mw)
 }
 
 // Setup the builder with its api definition file

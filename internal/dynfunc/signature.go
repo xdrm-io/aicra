@@ -1,6 +1,7 @@
 package dynfunc
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -9,15 +10,17 @@ import (
 	"git.xdrm.io/go/aicra/internal/config"
 )
 
-// signature represents input/output arguments for a dynamic function
-type signature struct {
-	Input  map[string]reflect.Type
+// Signature represents input/output arguments for service from the aicra configuration
+type Signature struct {
+	// Input arguments of the service
+	Input map[string]reflect.Type
+	// Output arguments of the service
 	Output map[string]reflect.Type
 }
 
-// builds a spec from the configuration service
-func signatureFromService(service config.Service) *signature {
-	s := &signature{
+// BuildSignature builds a signature for a service configuration
+func BuildSignature(service config.Service) *Signature {
+	s := &Signature{
 		Input:  make(map[string]reflect.Type),
 		Output: make(map[string]reflect.Type),
 	}
@@ -44,31 +47,37 @@ func signatureFromService(service config.Service) *signature {
 	return s
 }
 
-// checks for HandlerFn input arguments
-func (s *signature) checkInput(impl reflect.Type, index int) error {
-	var requiredInput, structIndex = index, index
-	if len(s.Input) > 0 { // arguments struct
-		requiredInput++
+// ValidateInput validates a handler's input arguments against the service signature
+func (s *Signature) ValidateInput(handlerType reflect.Type) error {
+	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
+
+	// missing or invalid first arg: context.Context
+	if handlerType.NumIn() < 1 {
+		return errMissingHandlerContextArgument
+	}
+	firstArgType := handlerType.In(0)
+
+	if !firstArgType.Implements(ctxType) {
+		return fmt.Errorf("fock")
 	}
 
-	// missing arguments
-	if impl.NumIn() > requiredInput {
-		return errUnexpectedInput
-	}
-
-	// none required
+	// no input required
 	if len(s.Input) == 0 {
+		// input struct provided
+		if handlerType.NumIn() > 1 {
+			return errUnexpectedInput
+		}
 		return nil
 	}
 
 	// too much arguments
-	if impl.NumIn() != requiredInput {
-		return errMissingHandlerArgumentParam
+	if handlerType.NumIn() > 2 {
+		return errMissingHandlerInputArgument
 	}
 
 	// arg must be a struct
-	structArg := impl.In(structIndex)
-	if structArg.Kind() != reflect.Struct {
+	inStruct := handlerType.In(1)
+	if inStruct.Kind() != reflect.Struct {
 		return errMissingParamArgument
 	}
 
@@ -78,9 +87,9 @@ func (s *signature) checkInput(impl reflect.Type, index int) error {
 			return fmt.Errorf("%s: %w", name, errUnexportedName)
 		}
 
-		field, exists := structArg.FieldByName(name)
+		field, exists := inStruct.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, errMissingParamFromConfig)
+			return fmt.Errorf("%s: %w", name, errMissingConfigArgument)
 		}
 
 		if !ptype.AssignableTo(field.Type) {
@@ -91,16 +100,18 @@ func (s *signature) checkInput(impl reflect.Type, index int) error {
 	return nil
 }
 
-// checks for HandlerFn output arguments
-func (s signature) checkOutput(impl reflect.Type) error {
-	if impl.NumOut() < 1 {
-		return errMissingHandlerOutput
+// ValidateOutput validates a handler's output arguments against the service signature
+func (s Signature) ValidateOutput(handlerType reflect.Type) error {
+	errType := reflect.TypeOf(api.ErrUnknown)
+
+	if handlerType.NumOut() < 1 {
+		return errMissingHandlerErrorArgument
 	}
 
 	// last output must be api.Err
-	errOutput := impl.Out(impl.NumOut() - 1)
-	if !errOutput.AssignableTo(reflect.TypeOf(api.ErrUnknown)) {
-		return errMissingHandlerErrorOutput
+	lastArgType := handlerType.Out(handlerType.NumOut() - 1)
+	if !lastArgType.AssignableTo(errType) {
+		return errMissingHandlerErrorArgument
 	}
 
 	// no output -> ok
@@ -108,19 +119,19 @@ func (s signature) checkOutput(impl reflect.Type) error {
 		return nil
 	}
 
-	if impl.NumOut() != 2 {
-		return errMissingParamOutput
+	if handlerType.NumOut() < 2 {
+		return errMissingHandlerOutputArgument
 	}
 
 	// fail if first output is not a pointer to struct
-	structOutputPtr := impl.Out(0)
-	if structOutputPtr.Kind() != reflect.Ptr {
-		return errMissingParamOutput
+	outStructPtr := handlerType.Out(0)
+	if outStructPtr.Kind() != reflect.Ptr {
+		return errWrongOutputArgumentType
 	}
 
-	structOutput := structOutputPtr.Elem()
-	if structOutput.Kind() != reflect.Struct {
-		return errMissingParamOutput
+	outStruct := outStructPtr.Elem()
+	if outStruct.Kind() != reflect.Struct {
+		return errWrongOutputArgumentType
 	}
 
 	// fail on invalid output
@@ -129,9 +140,9 @@ func (s signature) checkOutput(impl reflect.Type) error {
 			return fmt.Errorf("%s: %w", name, errUnexportedName)
 		}
 
-		field, exists := structOutput.FieldByName(name)
+		field, exists := outStruct.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, errMissingOutputFromConfig)
+			return fmt.Errorf("%s: %w", name, errMissingConfigArgument)
 		}
 
 		// ignore types evalutating to nil
