@@ -3,6 +3,7 @@ package aicra_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -268,6 +269,97 @@ func TestWithAuth(t *testing.T) {
 			handler.ServeHTTP(response, request)
 			if response.Body == nil {
 				t.Fatalf("response has no body")
+			}
+
+		})
+	}
+
+}
+
+func TestPermissionError(t *testing.T) {
+
+	tt := []struct {
+		name        string
+		manifest    string
+		permissions []string
+		granted     bool
+	}{
+		{
+			name:        "permission fulfilled",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{"A"},
+			granted:     true,
+		},
+		{
+			name:        "missing permission",
+			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			permissions: []string{},
+			granted:     false,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := &aicra.Builder{}
+			if err := addBuiltinTypes(builder); err != nil {
+				t.Fatalf("unexpected error <%v>", err)
+			}
+
+			// add active permissions
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
+
+					a.Active = tc.permissions
+					next.ServeHTTP(w, r)
+				})
+			})
+
+			err := builder.Setup(strings.NewReader(tc.manifest))
+			if err != nil {
+				t.Fatalf("setup: unexpected error <%v>", err)
+			}
+
+			pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
+				return nil, api.ErrNotImplemented
+			}
+
+			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
+				t.Fatalf("bind: unexpected error <%v>", err)
+			}
+
+			handler, err := builder.Build()
+			if err != nil {
+				t.Fatalf("build: unexpected error <%v>", err)
+			}
+
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/path", &bytes.Buffer{})
+
+			// test request
+			handler.ServeHTTP(response, request)
+			if response.Body == nil {
+				t.Fatalf("response has no body")
+			}
+			type jsonResponse struct {
+				Err api.Err `json:"error"`
+			}
+			var res jsonResponse
+			err = json.Unmarshal(response.Body.Bytes(), &res)
+			if err != nil {
+				t.Fatalf("cannot unmarshal response: %s", err)
+			}
+
+			expectedError := api.ErrNotImplemented
+			if !tc.granted {
+				expectedError = api.ErrPermission
+			}
+
+			if res.Err.Code != expectedError.Code {
+				t.Fatalf("expected error code %d got %d", expectedError.Code, res.Err.Code)
 			}
 
 		})
