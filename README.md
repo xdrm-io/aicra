@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://git.xdrm.io/go/aicra">
-    <img src="https://git.xdrm.io/go/aicra/raw/branch/feature/improve-readme/readme.assets/logo.png" alt="aicra logo" width="200" height="200">
+    <img src="https://git.xdrm.io/go/aicra/raw/branch/0.4.0/readme.assets/logo.png" alt="aicra logo" width="200" height="200">
   </a>
 </p>
 
