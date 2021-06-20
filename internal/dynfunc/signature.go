@@ -1,6 +1,7 @@
 package dynfunc
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -48,11 +49,16 @@ func BuildSignature(service config.Service) *Signature {
 
 // ValidateInput validates a handler's input arguments against the service signature
 func (s *Signature) ValidateInput(handlerType reflect.Type) error {
-	ctxType := reflect.TypeOf(api.Context{})
+	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
 
-	// missing or invalid first arg: api.Context
-	if handlerType.NumIn() < 1 || ctxType.AssignableTo(handlerType.In(0)) {
+	// missing or invalid first arg: context.Context
+	if handlerType.NumIn() < 1 {
 		return errMissingHandlerContextArgument
+	}
+	firstArgType := handlerType.In(0)
+
+	if !firstArgType.Implements(ctxType) {
+		return fmt.Errorf("fock")
 	}
 
 	// no input required

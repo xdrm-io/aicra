@@ -1,6 +1,7 @@
 package aicra
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -72,7 +73,7 @@ func TestBind(t *testing.T) {
 			Config:        "[]",
 			HandlerMethod: "",
 			HandlerPath:   "",
-			HandlerFn:     func(*api.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       errUnknownService,
 			BuildErr:      nil,
 		},
@@ -108,7 +109,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodPost,
 			HandlerPath:   "/path",
-			HandlerFn:     func(*api.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       errUnknownService,
 			BuildErr:      errMissingHandler,
 		},
@@ -126,7 +127,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodGet,
 			HandlerPath:   "/paths",
-			HandlerFn:     func(*api.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       errUnknownService,
 			BuildErr:      errMissingHandler,
 		},
@@ -144,7 +145,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodGet,
 			HandlerPath:   "/path",
-			HandlerFn:     func(*api.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       nil,
 			BuildErr:      nil,
 		},
@@ -164,7 +165,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodGet,
 			HandlerPath:   "/path",
-			HandlerFn:     func(*api.Context, struct{ Name int }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context, struct{ Name int }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       nil,
 			BuildErr:      nil,
 		},
@@ -184,7 +185,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodGet,
 			HandlerPath:   "/path",
-			HandlerFn:     func(*api.Context, struct{ Name uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context, struct{ Name uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       nil,
 			BuildErr:      nil,
 		},
@@ -204,7 +205,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodGet,
 			HandlerPath:   "/path",
-			HandlerFn:     func(*api.Context, struct{ Name string }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context, struct{ Name string }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       nil,
 			BuildErr:      nil,
 		},
@@ -224,7 +225,7 @@ func TestBind(t *testing.T) {
 			]`,
 			HandlerMethod: http.MethodGet,
 			HandlerPath:   "/path",
-			HandlerFn:     func(*api.Context, struct{ Name bool }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			HandlerFn:     func(context.Context, struct{ Name bool }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			BindErr:       nil,
 			BuildErr:      nil,
 		},

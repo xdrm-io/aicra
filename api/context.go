@@ -7,12 +7,8 @@ import (
 	"git.xdrm.io/go/aicra/internal/ctx"
 )
 
-// Context is a simple wrapper around context.Context that adds helper methods
-// to access additional information
-type Context struct{ context.Context }
-
-// Request current request
-func (c Context) Request() *http.Request {
+// GetRequest extracts the current request from a context.Context
+func GetRequest(c context.Context) *http.Request {
 	var (
 		raw      = c.Value(ctx.Request)
 		cast, ok = raw.(*http.Request)
@@ -23,8 +19,8 @@ func (c Context) Request() *http.Request {
 	return cast
 }
 
-// ResponseWriter for this request
-func (c Context) ResponseWriter() http.ResponseWriter {
+// GetResponseWriter extracts the response writer from a context.Context
+func GetResponseWriter(c context.Context) http.ResponseWriter {
 	var (
 		raw      = c.Value(ctx.Response)
 		cast, ok = raw.(http.ResponseWriter)
@@ -35,8 +31,8 @@ func (c Context) ResponseWriter() http.ResponseWriter {
 	return cast
 }
 
-// Auth associated with this request
-func (c Context) Auth() *Auth {
+// GetAuth returns the api.Auth associated with this request from a context.Context
+func GetAuth(c context.Context) *Auth {
 	var (
 		raw      = c.Value(ctx.Auth)
 		cast, ok = raw.(*Auth)

@@ -14,7 +14,7 @@ const errHandlerNotFunc = cerr("handler must be a func")
 const errNoServiceForHandler = cerr("no service found for this handler")
 
 // errMissingHandlerArgumentParam - missing params arguments for handler
-const errMissingHandlerContextArgument = cerr("missing handler first argument of type *api.Context")
+const errMissingHandlerContextArgument = cerr("missing handler first argument of type context.Context")
 
 // errMissingHandlerInputArgument - missing params arguments for handler
 const errMissingHandlerInputArgument = cerr("missing handler argument: input struct")

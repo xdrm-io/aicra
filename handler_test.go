@@ -48,15 +48,15 @@ func TestWith(t *testing.T) {
 	type ckey int
 	const key ckey = 0
 
-	middleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
+	middleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newr := r
 
 			// first time -> store 1
 			value := r.Context().Value(key)
 			if value == nil {
 				newr = r.WithContext(context.WithValue(r.Context(), key, int(1)))
-				next(w, newr)
+				next.ServeHTTP(w, newr)
 				return
 			}
 
@@ -67,8 +67,8 @@ func TestWith(t *testing.T) {
 			}
 			cast++
 			newr = r.WithContext(context.WithValue(r.Context(), key, cast))
-			next(w, newr)
-		}
+			next.ServeHTTP(w, newr)
+		})
 	}
 
 	// add middleware @n times
@@ -82,7 +82,7 @@ func TestWith(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx *api.Context) (*struct{}, api.Err) {
+	pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
 		// write value from middlewares into response
 		value := ctx.Value(key)
 		if value == nil {
@@ -93,7 +93,7 @@ func TestWith(t *testing.T) {
 			t.Fatalf("cannot cast context data to int")
 		}
 		// write to response
-		ctx.ResponseWriter().Write([]byte(fmt.Sprintf("#%d#", cast)))
+		api.GetResponseWriter(ctx).Write([]byte(fmt.Sprintf("#%d#", cast)))
 
 		return nil, api.ErrSuccess
 	}
@@ -212,8 +212,13 @@ func TestWithAuth(t *testing.T) {
 			}
 
 			// tester middleware (last executed)
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
+
 					if a.Granted() == tc.granted {
 						return
 					}
@@ -222,14 +227,20 @@ func TestWithAuth(t *testing.T) {
 					} else {
 						t.Fatalf("expected granted auth")
 					}
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
+
 					a.Active = tc.permissions
-					next(a, w, r)
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
 			err := builder.Setup(strings.NewReader(tc.manifest))
@@ -237,7 +248,7 @@ func TestWithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx *api.Context) (*struct{}, api.Err) {
+			pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
 				return nil, api.ErrNotImplemented
 			}
 
@@ -290,7 +301,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(*api.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -311,7 +322,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(*api.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/666",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -332,7 +343,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(*api.Context, struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"prefix.user[123].suffix"},
@@ -354,7 +365,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}",
-			handler: func(*api.Context, struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 			}) (*struct{}, api.Err) {
@@ -381,7 +392,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}",
-			handler: func(*api.Context, struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 			}) (*struct{}, api.Err) {
@@ -409,7 +420,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(*api.Context, struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
@@ -438,7 +449,7 @@ func TestDynamicScope(t *testing.T) {
 				}
 			]`,
 			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(*api.Context, struct {
+			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
@@ -460,8 +471,12 @@ func TestDynamicScope(t *testing.T) {
 			}
 
 			// tester middleware (last executed)
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
 					if a.Granted() == tc.granted {
 						return
 					}
@@ -470,15 +485,20 @@ func TestDynamicScope(t *testing.T) {
 					} else {
 						t.Fatalf("expected granted auth")
 					}
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
 			// update permissions
-			builder.WithAuth(func(next api.AuthHandlerFunc) api.AuthHandlerFunc {
-				return func(a api.Auth, w http.ResponseWriter, r *http.Request) {
+			builder.WithContext(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					a := api.GetAuth(r.Context())
+					if a == nil {
+						t.Fatalf("cannot access api.Auth form request context")
+					}
 					a.Active = tc.permissions
-					next(a, w, r)
-				}
+					next.ServeHTTP(w, r)
+				})
 			})
 
 			err := builder.Setup(strings.NewReader(tc.manifest))

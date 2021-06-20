@@ -1,6 +1,7 @@
 package dynfunc
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -52,7 +53,7 @@ func TestInput(t *testing.T) {
 		{
 			Name:           "none required none provided",
 			Spec:           (&testsignature{}).withArgs(),
-			Fn:             func(*api.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			Fn:             func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
 			HasContext:     false,
 			Input:          []interface{}{},
 			ExpectedOutput: []interface{}{},
@@ -61,7 +62,7 @@ func TestInput(t *testing.T) {
 		{
 			Name: "int proxy (0)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx *api.Context, in intstruct) (*intstruct, api.Err) {
+			Fn: func(ctx context.Context, in intstruct) (*intstruct, api.Err) {
 				return &intstruct{P1: in.P1}, api.ErrSuccess
 			},
 			HasContext:     false,
@@ -72,7 +73,7 @@ func TestInput(t *testing.T) {
 		{
 			Name: "int proxy (11)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx *api.Context, in intstruct) (*intstruct, api.Err) {
+			Fn: func(ctx context.Context, in intstruct) (*intstruct, api.Err) {
 				return &intstruct{P1: in.P1}, api.ErrSuccess
 			},
 			HasContext:     false,
@@ -83,7 +84,7 @@ func TestInput(t *testing.T) {
 		{
 			Name: "*int proxy (nil)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx *api.Context, in intptrstruct) (*intptrstruct, api.Err) {
+			Fn: func(ctx context.Context, in intptrstruct) (*intptrstruct, api.Err) {
 				return &intptrstruct{P1: in.P1}, api.ErrSuccess
 			},
 			HasContext:     false,
@@ -94,7 +95,7 @@ func TestInput(t *testing.T) {
 		{
 			Name: "*int proxy (28)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx *api.Context, in intptrstruct) (*intstruct, api.Err) {
+			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, api.Err) {
 				return &intstruct{P1: *in.P1}, api.ErrSuccess
 			},
 			HasContext:     false,
@@ -105,7 +106,7 @@ func TestInput(t *testing.T) {
 		{
 			Name: "*int proxy (13)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx *api.Context, in intptrstruct) (*intstruct, api.Err) {
+			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, api.Err) {
 				return &intstruct{P1: *in.P1}, api.ErrSuccess
 			},
 			HasContext:     false,
@@ -131,7 +132,7 @@ func TestInput(t *testing.T) {
 				input[key] = val
 			}
 
-			var output, err = handler.Handle(&api.Context{}, input)
+			var output, err = handler.Handle(context.Background(), input)
 			if err != tcase.ExpectedErr {
 				t.Fatalf("expected api error <%v> got <%v>", tcase.ExpectedErr, err)
 			}

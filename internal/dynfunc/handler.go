@@ -1,6 +1,7 @@
 package dynfunc
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"reflect"
@@ -50,7 +51,7 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 }
 
 // Handle binds input `data` into the dynamic function and returns an output map
-func (h *Handler) Handle(ctx *api.Context, data map[string]interface{}) (map[string]interface{}, api.Err) {
+func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[string]interface{}, api.Err) {
 	var (
 		ert      = reflect.TypeOf(api.Err{})
 		fnv      = reflect.ValueOf(h.fn)
