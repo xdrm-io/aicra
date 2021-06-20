@@ -9,42 +9,41 @@ import (
 
 // response for an service call
 type response struct {
-	Data    map[string]interface{}
-	Status  int
-	Headers http.Header
-	err     api.Err
+	Data   map[string]interface{}
+	Status int
+	err    api.Err
 }
 
 // newResponse creates an empty response.
 func newResponse() *response {
 	return &response{
-		Status:  http.StatusOK,
-		Data:    make(map[string]interface{}),
-		err:     api.ErrFailure,
-		Headers: make(http.Header),
+		Status: http.StatusOK,
+		Data:   make(map[string]interface{}),
+		err:    api.ErrFailure,
 	}
 }
 
 // WithError sets the response error
-func (res *response) WithError(err api.Err) *response {
-	res.err = err
-	return res
+func (r *response) WithError(err api.Err) *response {
+	r.err = err
+	return r
 }
 
-// SetValue sets a response value
-func (res *response) SetValue(name string, value interface{}) {
-	res.Data[name] = value
+// WithValue sets a response value
+func (r *response) WithValue(name string, value interface{}) *response {
+	r.Data[name] = value
+	return r
 }
 
 // MarshalJSON generates the JSON representation of the response
 //
 // implements json.Marshaler
-func (res *response) MarshalJSON() ([]byte, error) {
+func (r *response) MarshalJSON() ([]byte, error) {
 	fmt := make(map[string]interface{})
-	for k, v := range res.Data {
+	for k, v := range r.Data {
 		fmt[k] = v
 	}
-	fmt["error"] = res.err
+	fmt["error"] = r.err
 	return json.Marshal(fmt)
 }
 
@@ -54,9 +53,8 @@ func (res *response) MarshalJSON() ([]byte, error) {
 func (res *response) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(res.err.Status)
 	encoded, err := json.Marshal(res)
-	if err != nil {
-		return err
+	if err == nil {
+		w.Write(encoded)
 	}
-	w.Write(encoded)
-	return nil
+	return err
 }

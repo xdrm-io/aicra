@@ -102,7 +102,7 @@ func (s *Handler) handle(c context.Context, input *reqdata.T, handler *apiHandle
 		// find original name from 'rename' field
 		for name, param := range service.Output {
 			if param.Rename == key {
-				res.SetValue(name, value)
+				res.WithValue(name, value)
 			}
 		}
 	}
