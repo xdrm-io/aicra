@@ -58,7 +58,7 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 	firstArgType := handlerType.In(0)
 
 	if !firstArgType.Implements(ctxType) {
-		return fmt.Errorf("fock")
+		return ErrMissingHandlerContextArgument
 	}
 
 	// no input required
