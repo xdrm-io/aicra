@@ -1,50 +1,52 @@
 package dynfunc
 
-// cerr allows you to create constant "const" error with type boxing.
-type cerr string
+// Err allows you to create constant "const" error with type boxing.
+type Err string
 
-func (err cerr) Error() string {
+func (err Err) Error() string {
 	return string(err)
 }
 
-// errHandlerNotFunc - handler is not a func
-const errHandlerNotFunc = cerr("handler must be a func")
+const (
+	// ErrHandlerNotFunc - handler is not a func
+	ErrHandlerNotFunc = Err("handler must be a func")
 
-// errNoServiceForHandler - no service matching this handler
-const errNoServiceForHandler = cerr("no service found for this handler")
+	// ErrNoServiceForHandler - no service matching this handler
+	ErrNoServiceForHandler = Err("no service found for this handler")
 
-// errMissingHandlerArgumentParam - missing params arguments for handler
-const errMissingHandlerContextArgument = cerr("missing handler first argument of type context.Context")
+	// errMissingHandlerArgumentParam - missing params arguments for handler
+	ErrMissingHandlerContextArgument = Err("missing handler first argument of type context.Context")
 
-// errMissingHandlerInputArgument - missing params arguments for handler
-const errMissingHandlerInputArgument = cerr("missing handler argument: input struct")
+	// ErrMissingHandlerInputArgument - missing params arguments for handler
+	ErrMissingHandlerInputArgument = Err("missing handler argument: input struct")
 
-// errUnexpectedInput - input argument is not expected
-const errUnexpectedInput = cerr("unexpected input struct")
+	// ErrUnexpectedInput - input argument is not expected
+	ErrUnexpectedInput = Err("unexpected input struct")
 
-// errMissingHandlerOutputArgument - missing output for handler
-const errMissingHandlerOutputArgument = cerr("missing handler first output argument: output struct")
+	// ErrMissingHandlerOutputArgument - missing output for handler
+	ErrMissingHandlerOutputArgument = Err("missing handler first output argument: output struct")
 
-// errMissingHandlerOutputError - missing error output for handler
-const errMissingHandlerOutputError = cerr("missing handler last output argument of type api.Err")
+	// ErrMissingHandlerOutputError - missing error output for handler
+	ErrMissingHandlerOutputError = Err("missing handler last output argument of type api.Err")
 
-// errMissingRequestArgument - missing request argument for handler
-const errMissingRequestArgument = cerr("handler first argument must be of type api.Request")
+	// ErrMissingRequestArgument - missing request argument for handler
+	ErrMissingRequestArgument = Err("handler first argument must be of type api.Request")
 
-// errMissingParamArgument - missing parameters argument for handler
-const errMissingParamArgument = cerr("handler second argument must be a struct")
+	// ErrMissingParamArgument - missing parameters argument for handler
+	ErrMissingParamArgument = Err("handler second argument must be a struct")
 
-// errUnexportedName - argument is unexported in struct
-const errUnexportedName = cerr("unexported name")
+	// ErrUnexportedName - argument is unexported in struct
+	ErrUnexportedName = Err("unexported name")
 
-// errWrongOutputArgumentType - wrong type for output first argument
-const errWrongOutputArgumentType = cerr("handler first output argument must be a *struct")
+	// ErrWrongOutputArgumentType - wrong type for output first argument
+	ErrWrongOutputArgumentType = Err("handler first output argument must be a *struct")
 
-// errMissingConfigArgument - missing an input/output argument in handler struct
-const errMissingConfigArgument = cerr("missing an argument from the configuration")
+	// ErrMissingConfigArgument - missing an input/output argument in handler struct
+	ErrMissingConfigArgument = Err("missing an argument from the configuration")
 
-// errWrongParamTypeFromConfig - a configuration parameter type is invalid in the handler param struct
-const errWrongParamTypeFromConfig = cerr("invalid struct field type")
+	// ErrWrongParamTypeFromConfig - a configuration parameter type is invalid in the handler param struct
+	ErrWrongParamTypeFromConfig = Err("invalid struct field type")
 
-// errMissingHandlerErrorArgument - missing handler output error
-const errMissingHandlerErrorArgument = cerr("last output must be of type api.Err")
+	// ErrMissingHandlerErrorArgument - missing handler output error
+	ErrMissingHandlerErrorArgument = Err("last output must be of type api.Err")
+)

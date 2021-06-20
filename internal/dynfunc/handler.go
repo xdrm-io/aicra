@@ -38,7 +38,7 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 	)
 
 	if fnType.Kind() != reflect.Func {
-		return nil, errHandlerNotFunc
+		return nil, ErrHandlerNotFunc
 	}
 	if err := h.signature.ValidateInput(fnType); err != nil {
 		return nil, fmt.Errorf("input: %w", err)
