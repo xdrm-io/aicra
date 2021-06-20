@@ -2,10 +2,23 @@ package validator_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
+
+func TestString_ReflectType(t *testing.T) {
+	t.Parallel()
+
+	var (
+		dt       = validator.StringType{}
+		expected = reflect.TypeOf(string("abc"))
+	)
+	if dt.GoType() != expected {
+		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
+	}
+}
 
 func TestString_AvailableTypes(t *testing.T) {
 	t.Parallel()
