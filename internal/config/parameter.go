@@ -3,7 +3,7 @@ package config
 import (
 	"reflect"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 // Parameter represents a parameter definition (from api.json)

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 // Server definition

@@ -3,7 +3,7 @@ package builtin
 import (
 	"reflect"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 // AnyDataType is what its name tells

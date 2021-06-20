@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.xdrm.io/go/aicra/internal/config"
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 func getEmptyService() *config.Service {

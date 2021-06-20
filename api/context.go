@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"git.xdrm.io/go/aicra/internal/ctx"
+	"github.com/xdrm-io/aicra/internal/ctx"
 )
 
 // GetRequest extracts the current request from a context.Context

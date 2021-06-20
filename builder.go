@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	"git.xdrm.io/go/aicra/datatype"
-	"git.xdrm.io/go/aicra/internal/config"
-	"git.xdrm.io/go/aicra/internal/dynfunc"
+	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/internal/dynfunc"
 )
 
 // Builder for an aicra server

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.xdrm.io/go/aicra/api"
-	"git.xdrm.io/go/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/datatype/builtin"
 )
 
 func addBuiltinTypes(b *Builder) error {

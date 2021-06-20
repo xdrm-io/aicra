@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strings"
 
-	"git.xdrm.io/go/aicra/api"
-	"git.xdrm.io/go/aicra/internal/config"
+	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 // Signature represents input/output arguments for service from the aicra configuration

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git.xdrm.io/go/aicra/datatype"
+	"github.com/xdrm-io/aicra/datatype"
 )
 
 var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)

@@ -6,8 +6,8 @@ import (
 	"io"
 	"reflect"
 
-	"git.xdrm.io/go/aicra/internal/config"
-	"git.xdrm.io/go/aicra/internal/multipart"
+	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/internal/multipart"
 
 	"net/http"
 	"strings"
