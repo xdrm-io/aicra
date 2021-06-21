@@ -4,19 +4,19 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // FloatDataType is what its name tells
 type FloatDataType struct{}
 
-// Type returns the type of data
-func (FloatDataType) Type() reflect.Type {
+// GoType returns the type of data
+func (FloatDataType) GoType() reflect.Type {
 	return reflect.TypeOf(float64(0))
 }
 
-// Build returns the validator
-func (FloatDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
+// Validator returns the validator
+func (FloatDataType) Validator(typeName string, registry ...validator.Type) validator.ValidateFunc {
 	// nothing if type not handled
 	if typeName != "float64" && typeName != "float" {
 		return nil

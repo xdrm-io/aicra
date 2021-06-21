@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator/builtin"
 )
 
 func TestAny_AvailableTypes(t *testing.T) {
@@ -26,7 +26,7 @@ func TestAny_AvailableTypes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		validator := dt.Build(test.Type)
+		validator := dt.Validator(test.Type)
 
 		if validator == nil {
 			if test.Handled {
@@ -47,7 +47,7 @@ func TestAny_AlwaysTrue(t *testing.T) {
 
 	const typeName = "any"
 
-	validator := builtin.AnyDataType{}.Build(typeName)
+	validator := builtin.AnyDataType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()

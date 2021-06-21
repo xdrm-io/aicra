@@ -12,26 +12,26 @@ import (
 
 	"github.com/xdrm-io/aicra"
 	"github.com/xdrm-io/aicra/api"
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator/builtin"
 )
 
 func addBuiltinTypes(b *aicra.Builder) error {
-	if err := b.AddType(builtin.AnyDataType{}); err != nil {
+	if err := b.Validate(builtin.AnyDataType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.BoolDataType{}); err != nil {
+	if err := b.Validate(builtin.BoolDataType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.FloatDataType{}); err != nil {
+	if err := b.Validate(builtin.FloatDataType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.IntDataType{}); err != nil {
+	if err := b.Validate(builtin.IntDataType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.StringDataType{}); err != nil {
+	if err := b.Validate(builtin.StringDataType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.UintDataType{}); err != nil {
+	if err := b.Validate(builtin.UintDataType{}); err != nil {
 		return err
 	}
 	return nil

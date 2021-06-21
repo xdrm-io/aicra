@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator/builtin"
 )
 
 func TestLegalServiceName(t *testing.T) {
@@ -239,7 +239,7 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 		}
 	]`)
 	srv := &Server{}
-	srv.Types = append(srv.Types, builtin.AnyDataType{})
+	srv.Validators = append(srv.Validators, builtin.AnyDataType{})
 	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
@@ -275,8 +275,8 @@ func TestOptionalParam(t *testing.T) {
 		}
 	]`)
 	srv := &Server{}
-	srv.Types = append(srv.Types, builtin.AnyDataType{})
-	srv.Types = append(srv.Types, builtin.BoolDataType{})
+	srv.Validators = append(srv.Validators, builtin.AnyDataType{})
+	srv.Validators = append(srv.Validators, builtin.BoolDataType{})
 	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
@@ -588,7 +588,7 @@ func TestParseParameters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Types = append(srv.Types, builtin.AnyDataType{})
+			srv.Validators = append(srv.Validators, builtin.AnyDataType{})
 			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if err == nil && test.Error != nil {
@@ -827,8 +827,8 @@ func TestServiceCollision(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Types = append(srv.Types, builtin.StringDataType{})
-			srv.Types = append(srv.Types, builtin.UintDataType{})
+			srv.Validators = append(srv.Validators, builtin.StringDataType{})
+			srv.Validators = append(srv.Validators, builtin.UintDataType{})
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err == nil && test.Error != nil {
@@ -997,9 +997,9 @@ func TestMatchSimple(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Types = append(srv.Types, builtin.AnyDataType{})
-			srv.Types = append(srv.Types, builtin.IntDataType{})
-			srv.Types = append(srv.Types, builtin.BoolDataType{})
+			srv.Validators = append(srv.Validators, builtin.AnyDataType{})
+			srv.Validators = append(srv.Validators, builtin.IntDataType{})
+			srv.Validators = append(srv.Validators, builtin.BoolDataType{})
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {
@@ -1081,9 +1081,9 @@ func TestFindPriority(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Types = append(srv.Types, builtin.AnyDataType{})
-			srv.Types = append(srv.Types, builtin.IntDataType{})
-			srv.Types = append(srv.Types, builtin.BoolDataType{})
+			srv.Validators = append(srv.Validators, builtin.AnyDataType{})
+			srv.Validators = append(srv.Validators, builtin.IntDataType{})
+			srv.Validators = append(srv.Validators, builtin.BoolDataType{})
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {

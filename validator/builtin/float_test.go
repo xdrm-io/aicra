@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator/builtin"
 )
 
 func TestFloat64_AvailableTypes(t *testing.T) {
@@ -33,7 +33,7 @@ func TestFloat64_AvailableTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Type, func(t *testing.T) {
-			validator := dt.Build(test.Type)
+			validator := dt.Validator(test.Type)
 			if validator == nil {
 				if test.Handled {
 					t.Errorf("expect %q to be handled", test.Type)
@@ -56,7 +56,7 @@ func TestFloat64_Values(t *testing.T) {
 
 	const typeName = "float"
 
-	validator := builtin.FloatDataType{}.Build(typeName)
+	validator := builtin.FloatDataType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()

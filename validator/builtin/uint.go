@@ -5,19 +5,19 @@ import (
 	"math"
 	"reflect"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // UintDataType is what its name tells
 type UintDataType struct{}
 
-// Type returns the type of data
-func (UintDataType) Type() reflect.Type {
+// GoType returns the type of data
+func (UintDataType) GoType() reflect.Type {
 	return reflect.TypeOf(uint(0))
 }
 
-// Build returns the validator
-func (UintDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
+// Validator returns the validator
+func (UintDataType) Validator(typeName string, registry ...validator.Type) validator.ValidateFunc {
 	// nothing if type not handled
 	if typeName != "uint" {
 		return nil

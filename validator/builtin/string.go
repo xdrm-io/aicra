@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 var fixedLengthRegex = regexp.MustCompile(`^string\((\d+)\)$`)
@@ -14,14 +14,14 @@ var variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
 // StringDataType is what its name tells
 type StringDataType struct{}
 
-// Type returns the type of data
-func (StringDataType) Type() reflect.Type {
+// GoType returns the type of data
+func (StringDataType) GoType() reflect.Type {
 	return reflect.TypeOf(string(""))
 }
 
-// Build returns the validator.
+// Validator returns the validator.
 // availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
-func (s StringDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
+func (s StringDataType) Validator(typeName string, registry ...validator.Type) validator.ValidateFunc {
 	simple := typeName == "string"
 	fixedLengthMatches := fixedLengthRegex.FindStringSubmatch(typeName)
 	variableLengthMatches := variableLengthRegex.FindStringSubmatch(typeName)

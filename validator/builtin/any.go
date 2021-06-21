@@ -3,19 +3,19 @@ package builtin
 import (
 	"reflect"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // AnyDataType is what its name tells
 type AnyDataType struct{}
 
-// Type returns the type of data
-func (AnyDataType) Type() reflect.Type {
+// GoType returns the type of data
+func (AnyDataType) GoType() reflect.Type {
 	return reflect.TypeOf(interface{}(nil))
 }
 
-// Build returns the validator
-func (AnyDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
+// Validator returns the validator
+func (AnyDataType) Validator(typeName string, registry ...validator.Type) validator.ValidateFunc {
 	// nothing if type not handled
 	if typeName != "any" {
 		return nil

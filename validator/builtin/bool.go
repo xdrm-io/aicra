@@ -3,19 +3,19 @@ package builtin
 import (
 	"reflect"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // BoolDataType is what its name tells
 type BoolDataType struct{}
 
-// Type returns the type of data
-func (BoolDataType) Type() reflect.Type {
+// GoType returns the type of data
+func (BoolDataType) GoType() reflect.Type {
 	return reflect.TypeOf(true)
 }
 
-// Build returns the validator
-func (BoolDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
+// Validator returns the validator
+func (BoolDataType) Validator(typeName string, registry ...validator.Type) validator.ValidateFunc {
 	// nothing if type not handled
 	if typeName != "bool" {
 		return nil

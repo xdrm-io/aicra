@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator/builtin"
 )
 
 func TestUint_AvailableTypes(t *testing.T) {
@@ -27,7 +27,7 @@ func TestUint_AvailableTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Type, func(t *testing.T) {
-			validator := dt.Build(test.Type)
+			validator := dt.Validator(test.Type)
 			if validator == nil {
 				if test.Handled {
 					t.Errorf("expect %q to be handled", test.Type)
@@ -50,7 +50,7 @@ func TestUint_Values(t *testing.T) {
 
 	const typeName = "uint"
 
-	validator := builtin.UintDataType{}.Build(typeName)
+	validator := builtin.UintDataType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
