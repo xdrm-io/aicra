@@ -17,6 +17,9 @@ const (
 	// errMissingHandlerArgumentParam - missing params arguments for handler
 	ErrMissingHandlerContextArgument = Err("missing handler first argument of type context.Context")
 
+	// ErrInvalidHandlerContextArgument - missing handler output error
+	ErrInvalidHandlerContextArgument = Err("first input argument should be of type context.Context")
+
 	// ErrMissingHandlerInputArgument - missing params arguments for handler
 	ErrMissingHandlerInputArgument = Err("missing handler argument: input struct")
 
@@ -26,11 +29,11 @@ const (
 	// ErrMissingHandlerOutputArgument - missing output for handler
 	ErrMissingHandlerOutputArgument = Err("missing handler first output argument: output struct")
 
-	// ErrMissingHandlerOutputError - missing error output for handler
-	ErrMissingHandlerOutputError = Err("missing handler last output argument of type api.Err")
+	// ErrMissingHandlerErrorArgument - missing error output for handler
+	ErrMissingHandlerErrorArgument = Err("missing handler last output argument of type api.Err")
 
-	// ErrMissingRequestArgument - missing request argument for handler
-	ErrMissingRequestArgument = Err("handler first argument must be of type api.Request")
+	// ErrInvalidHandlerErrorArgument - missing handler output error
+	ErrInvalidHandlerErrorArgument = Err("last output must be of type api.Err")
 
 	// ErrMissingParamArgument - missing parameters argument for handler
 	ErrMissingParamArgument = Err("handler second argument must be a struct")
@@ -46,7 +49,4 @@ const (
 
 	// ErrWrongParamTypeFromConfig - a configuration parameter type is invalid in the handler param struct
 	ErrWrongParamTypeFromConfig = Err("invalid struct field type")
-
-	// ErrMissingHandlerErrorArgument - missing handler output error
-	ErrMissingHandlerErrorArgument = Err("last output must be of type api.Err")
 )

@@ -8,382 +8,562 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
-func TestInputCheck(t *testing.T) {
-	tcases := []struct {
-		Name  string
-		Input map[string]reflect.Type
-		Fn    interface{}
-		FnCtx interface{}
-		Err   error
+func TestInputValidation(t *testing.T) {
+	tt := []struct {
+		name  string
+		input map[string]reflect.Type
+		fn    interface{}
+		err   error
 	}{
 		{
-			Name:  "no input 0 given",
-			Input: map[string]reflect.Type{},
-			Fn:    func(context.Context) {},
-			FnCtx: func(context.Context) {},
-			Err:   nil,
+			name:  "missing context",
+			input: map[string]reflect.Type{},
+			fn:    func() {},
+			err:   ErrMissingHandlerContextArgument,
 		},
 		{
-			Name:  "no input 1 given",
-			Input: map[string]reflect.Type{},
-			Fn:    func(context.Context, int) {},
-			FnCtx: func(context.Context, int) {},
-			Err:   ErrUnexpectedInput,
+			name:  "invalid context",
+			input: map[string]reflect.Type{},
+			fn:    func(int) {},
+			err:   ErrInvalidHandlerContextArgument,
 		},
 		{
-			Name:  "no input 2 given",
-			Input: map[string]reflect.Type{},
-			Fn:    func(context.Context, int, string) {},
-			FnCtx: func(context.Context, int, string) {},
-			Err:   ErrUnexpectedInput,
+			name:  "no input 0 given",
+			input: map[string]reflect.Type{},
+			fn:    func(context.Context) {},
+			err:   nil,
 		},
 		{
-			Name: "1 input 0 given",
-			Input: map[string]reflect.Type{
+			name:  "no input 1 given",
+			input: map[string]reflect.Type{},
+			fn:    func(context.Context, int) {},
+			err:   ErrUnexpectedInput,
+		},
+		{
+			name:  "no input 2 given",
+			input: map[string]reflect.Type{},
+			fn:    func(context.Context, int, string) {},
+			err:   ErrUnexpectedInput,
+		},
+		{
+			name: "1 input 0 given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:    func(context.Context) {},
-			FnCtx: func(context.Context) {},
-			Err:   ErrMissingHandlerInputArgument,
+			fn:  func(context.Context) {},
+			err: ErrMissingHandlerInputArgument,
 		},
 		{
-			Name: "1 input non-struct given",
-			Input: map[string]reflect.Type{
+			name: "1 input non-struct given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:    func(context.Context, int) {},
-			FnCtx: func(context.Context, int) {},
-			Err:   ErrMissingParamArgument,
+			fn:  func(context.Context, int) {},
+			err: ErrMissingParamArgument,
 		},
 		{
-			Name: "unexported input",
-			Input: map[string]reflect.Type{
+			name: "unexported input",
+			input: map[string]reflect.Type{
 				"test1": reflect.TypeOf(int(0)),
 			},
-			Fn:    func(context.Context, struct{}) {},
-			FnCtx: func(context.Context, struct{}) {},
-			Err:   ErrUnexportedName,
+			fn:  func(context.Context, struct{}) {},
+			err: ErrUnexportedName,
 		},
 		{
-			Name: "1 input empty struct given",
-			Input: map[string]reflect.Type{
+			name: "1 input empty struct given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:    func(context.Context, struct{}) {},
-			FnCtx: func(context.Context, struct{}) {},
-			Err:   ErrMissingConfigArgument,
+			fn:  func(context.Context, struct{}) {},
+			err: ErrMissingConfigArgument,
 		},
 		{
-			Name: "1 input invalid given",
-			Input: map[string]reflect.Type{
+			name: "1 input invalid given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:    func(context.Context, struct{ Test1 string }) {},
-			FnCtx: func(context.Context, struct{ Test1 string }) {},
-			Err:   ErrWrongParamTypeFromConfig,
+			fn:  func(context.Context, struct{ Test1 string }) {},
+			err: ErrWrongParamTypeFromConfig,
 		},
 		{
-			Name: "1 input valid given",
-			Input: map[string]reflect.Type{
+			name: "1 input valid given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:    func(context.Context, struct{ Test1 int }) {},
-			FnCtx: func(context.Context, struct{ Test1 int }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 int }) {},
+			err: nil,
 		},
 		{
-			Name: "1 input ptr empty struct given",
-			Input: map[string]reflect.Type{
+			name: "1 input ptr empty struct given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(int)),
 			},
-			Fn:    func(context.Context, struct{}) {},
-			FnCtx: func(context.Context, struct{}) {},
-			Err:   ErrMissingConfigArgument,
+			fn:  func(context.Context, struct{}) {},
+			err: ErrMissingConfigArgument,
 		},
 		{
-			Name: "1 input ptr invalid given",
-			Input: map[string]reflect.Type{
+			name: "1 input ptr invalid given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(int)),
 			},
-			Fn:    func(context.Context, struct{ Test1 string }) {},
-			FnCtx: func(context.Context, struct{ Test1 string }) {},
-			Err:   ErrWrongParamTypeFromConfig,
+			fn:  func(context.Context, struct{ Test1 string }) {},
+			err: ErrWrongParamTypeFromConfig,
 		},
 		{
-			Name: "1 input ptr invalid ptr type given",
-			Input: map[string]reflect.Type{
+			name: "1 input ptr invalid ptr type given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(int)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *string }) {},
-			FnCtx: func(context.Context, struct{ Test1 *string }) {},
-			Err:   ErrWrongParamTypeFromConfig,
+			fn:  func(context.Context, struct{ Test1 *string }) {},
+			err: ErrWrongParamTypeFromConfig,
 		},
 		{
-			Name: "1 input ptr valid given",
-			Input: map[string]reflect.Type{
+			name: "1 input ptr valid given",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(int)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *int }) {},
-			FnCtx: func(context.Context, struct{ Test1 *int }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 *int }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid string",
-			Input: map[string]reflect.Type{
+			name: "1 valid string",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(string("")),
 			},
-			Fn:    func(context.Context, struct{ Test1 string }) {},
-			FnCtx: func(context.Context, struct{ Test1 string }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 string }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid uint",
-			Input: map[string]reflect.Type{
+			name: "1 valid uint",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(uint(0)),
 			},
-			Fn:    func(context.Context, struct{ Test1 uint }) {},
-			FnCtx: func(context.Context, struct{ Test1 uint }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 uint }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid float64",
-			Input: map[string]reflect.Type{
+			name: "1 valid float64",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(float64(0)),
 			},
-			Fn:    func(context.Context, struct{ Test1 float64 }) {},
-			FnCtx: func(context.Context, struct{ Test1 float64 }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 float64 }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid []byte",
-			Input: map[string]reflect.Type{
+			name: "1 valid []byte",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf([]byte("")),
 			},
-			Fn:    func(context.Context, struct{ Test1 []byte }) {},
-			FnCtx: func(context.Context, struct{ Test1 []byte }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 []byte }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid []rune",
-			Input: map[string]reflect.Type{
+			name: "1 valid []rune",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf([]rune("")),
 			},
-			Fn:    func(context.Context, struct{ Test1 []rune }) {},
-			FnCtx: func(context.Context, struct{ Test1 []rune }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 []rune }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid *string",
-			Input: map[string]reflect.Type{
+			name: "1 valid *string",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(string)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *string }) {},
-			FnCtx: func(context.Context, struct{ Test1 *string }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 *string }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid *uint",
-			Input: map[string]reflect.Type{
+			name: "1 valid *uint",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(uint)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *uint }) {},
-			FnCtx: func(context.Context, struct{ Test1 *uint }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 *uint }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid *float64",
-			Input: map[string]reflect.Type{
+			name: "1 valid *float64",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new(float64)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *float64 }) {},
-			FnCtx: func(context.Context, struct{ Test1 *float64 }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 *float64 }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid *[]byte",
-			Input: map[string]reflect.Type{
+			name: "1 valid *[]byte",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new([]byte)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *[]byte }) {},
-			FnCtx: func(context.Context, struct{ Test1 *[]byte }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 *[]byte }) {},
+			err: nil,
 		},
 		{
-			Name: "1 valid *[]rune",
-			Input: map[string]reflect.Type{
+			name: "1 valid *[]rune",
+			input: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(new([]rune)),
 			},
-			Fn:    func(context.Context, struct{ Test1 *[]rune }) {},
-			FnCtx: func(context.Context, struct{ Test1 *[]rune }) {},
-			Err:   nil,
+			fn:  func(context.Context, struct{ Test1 *[]rune }) {},
+			err: nil,
 		},
 	}
 
-	for _, tcase := range tcases {
-		t.Run(tcase.Name, func(t *testing.T) {
-			t.Parallel()
-
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			// mock spec
 			s := Signature{
-				Input:  tcase.Input,
+				Input:  tc.input,
 				Output: nil,
 			}
 
-			err := s.ValidateInput(reflect.TypeOf(tcase.FnCtx))
-			if err == nil && tcase.Err != nil {
-				t.Errorf("expected an error: '%s'", tcase.Err.Error())
-				t.FailNow()
+			err := s.ValidateInput(reflect.TypeOf(tc.fn))
+			if err == nil && tc.err != nil {
+				t.Fatalf("expected an error: '%s'", tc.err.Error())
 			}
-			if err != nil && tcase.Err == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
-				t.FailNow()
+			if err != nil && tc.err == nil {
+				t.Fatalf("unexpected error: '%s'", err.Error())
 			}
 
-			if err != nil && tcase.Err != nil {
-				if !errors.Is(err, tcase.Err) {
-					t.Errorf("expected the error <%s> got <%s>", tcase.Err, err)
-					t.FailNow()
+			if err != nil && tc.err != nil {
+				if !errors.Is(err, tc.err) {
+					t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
 				}
 			}
 		})
 	}
 }
 
-func TestOutputCheck(t *testing.T) {
-	tcases := []struct {
-		Output map[string]reflect.Type
-		Fn     interface{}
-		Err    error
+func TestOutputValidation(t *testing.T) {
+	tt := []struct {
+		name   string
+		output map[string]reflect.Type
+		fn     interface{}
+		err    error
 	}{
-		// no input -> missing api.Err
 		{
-			Output: map[string]reflect.Type{},
-			Fn:     func(context.Context) {},
-			Err:    ErrMissingHandlerOutputArgument,
+			name:   "no output missing err",
+			output: map[string]reflect.Type{},
+			fn:     func() {},
+			err:    ErrMissingHandlerErrorArgument,
 		},
-		// no input -> with last type not api.Err
 		{
-			Output: map[string]reflect.Type{},
-			Fn:     func(context.Context) bool { return true },
-			Err:    ErrMissingHandlerErrorArgument,
+			name:   "no output invalid err",
+			output: map[string]reflect.Type{},
+			fn:     func() bool { return true },
+			err:    ErrInvalidHandlerErrorArgument,
 		},
-		// no input -> with api.Err
 		{
-			Output: map[string]reflect.Type{},
-			Fn:     func(context.Context) api.Err { return api.ErrSuccess },
-			Err:    nil,
+			name:   "1 output none required",
+			output: map[string]reflect.Type{},
+			fn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			err:    nil,
 		},
-		// no input -> missing context.Context
 		{
-			Output: map[string]reflect.Type{},
-			Fn:     func(context.Context) api.Err { return api.ErrSuccess },
-			Err:    ErrMissingHandlerContextArgument,
-		},
-		// no input -> invlaid context.Context type
-		{
-			Output: map[string]reflect.Type{},
-			Fn:     func(context.Context, int) api.Err { return api.ErrSuccess },
-			Err:    ErrMissingHandlerContextArgument,
-		},
-		// func can have output if not specified
-		{
-			Output: map[string]reflect.Type{},
-			Fn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
-			Err:    nil,
-		},
-		// missing output struct in func
-		{
-			Output: map[string]reflect.Type{
+			name: "no output 1 required",
+			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() api.Err { return api.ErrSuccess },
-			Err: ErrWrongOutputArgumentType,
+			fn:  func() api.Err { return api.ErrSuccess },
+			err: ErrMissingHandlerOutputArgument,
 		},
-		// output not a pointer
 		{
-			Output: map[string]reflect.Type{
+			name: "invalid int output",
+			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() (int, api.Err) { return 0, api.ErrSuccess },
-			Err: ErrWrongOutputArgumentType,
+			fn:  func() (int, api.Err) { return 0, api.ErrSuccess },
+			err: ErrWrongOutputArgumentType,
 		},
-		// output not a pointer to struct
 		{
-			Output: map[string]reflect.Type{
+			name: "invalid int ptr output",
+			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() (*int, api.Err) { return nil, api.ErrSuccess },
-			Err: ErrWrongOutputArgumentType,
+			fn:  func() (*int, api.Err) { return nil, api.ErrSuccess },
+			err: ErrWrongOutputArgumentType,
 		},
-		// unexported param name
 		{
-			Output: map[string]reflect.Type{
+			name: "invalid struct output",
+			output: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(int(0)),
+			},
+			fn:  func() (struct{ Test1 int }, api.Err) { return struct{ Test1 int }{Test1: 1}, api.ErrSuccess },
+			err: ErrWrongOutputArgumentType,
+		},
+		{
+			name: "unexported param",
+			output: map[string]reflect.Type{
 				"test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() (*struct{}, api.Err) { return nil, api.ErrSuccess },
-			Err: ErrUnexportedName,
+			fn:  func() (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			err: ErrUnexportedName,
 		},
-		// output field missing
 		{
-			Output: map[string]reflect.Type{
+			name: "missing output param",
+			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() (*struct{}, api.Err) { return nil, api.ErrSuccess },
-			Err: ErrMissingConfigArgument,
+			fn:  func() (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			err: ErrMissingConfigArgument,
 		},
-		// output field invalid type
 		{
-			Output: map[string]reflect.Type{
+			name: "invalid output param",
+			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() (*struct{ Test1 string }, api.Err) { return nil, api.ErrSuccess },
-			Err: ErrWrongParamTypeFromConfig,
+			fn:  func() (*struct{ Test1 string }, api.Err) { return nil, api.ErrSuccess },
+			err: ErrWrongParamTypeFromConfig,
 		},
-		// output field valid type
 		{
-			Output: map[string]reflect.Type{
+			name: "valid param",
+			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			Fn:  func() (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
-			Err: nil,
+			fn:  func() (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
+			err: nil,
 		},
-		// ignore type check on nil type
 		{
-			Output: map[string]reflect.Type{
+			name: "2 valid params",
+			output: map[string]reflect.Type{
+				"Test1": reflect.TypeOf(int(0)),
+				"Test2": reflect.TypeOf(string("")),
+			},
+			fn: func() (*struct {
+				Test1 int
+				Test2 string
+			}, api.Err) {
+				return nil, api.ErrSuccess
+			},
+			err: nil,
+		},
+		{
+			name: "nil type ignore typecheck",
+			output: map[string]reflect.Type{
 				"Test1": nil,
 			},
-			Fn:  func() (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
-			Err: nil,
+			fn:  func() (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
+			err: nil,
 		},
 	}
 
-	for i, tcase := range tcases {
-		t.Run(fmt.Sprintf("case.%d", i), func(t *testing.T) {
-			t.Parallel()
-
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			// mock spec
 			s := Signature{
 				Input:  nil,
-				Output: tcase.Output,
+				Output: tc.output,
 			}
 
-			err := s.ValidateOutput(reflect.TypeOf(tcase.Fn))
-			if err == nil && tcase.Err != nil {
-				t.Errorf("expected an error: '%s'", tcase.Err.Error())
-				t.FailNow()
+			err := s.ValidateOutput(reflect.TypeOf(tc.fn))
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
 			}
-			if err != nil && tcase.Err == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
-				t.FailNow()
+		})
+	}
+}
+
+func TestServiceValidation(t *testing.T) {
+
+	tt := []struct {
+		name string
+		in   []*config.Parameter
+		out  []*config.Parameter
+		fn   interface{}
+		err  error
+	}{
+		{
+			name: "missing context",
+			fn:   func() {},
+			err:  ErrMissingHandlerContextArgument,
+		},
+		{
+			name: "invalid context",
+			fn:   func(int) {},
+			err:  ErrInvalidHandlerContextArgument,
+		},
+		{
+			name: "missing error",
+			fn:   func(context.Context) {},
+			err:  ErrMissingHandlerErrorArgument,
+		},
+		{
+			name: "invalid error",
+			fn:   func(context.Context) int { return 1 },
+			err:  ErrInvalidHandlerErrorArgument,
+		},
+		{
+			name: "no in no out",
+			fn:   func(context.Context) api.Err { return api.ErrSuccess },
+			err:  nil,
+		},
+		{
+			name: "unamed in",
+			in: []*config.Parameter{
+				{
+					Rename: "", // should be ignored
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			err: nil,
+		},
+		{
+			name: "missing in",
+			in: []*config.Parameter{
+				{
+					Rename: "Test1",
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			err: ErrMissingHandlerInputArgument,
+		},
+		{
+			name: "valid in",
+			in: []*config.Parameter{
+				{
+					Rename: "Test1",
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context, struct{ Test1 int }) api.Err { return api.ErrSuccess },
+			err: nil,
+		},
+		{
+			name: "optional in not ptr",
+			in: []*config.Parameter{
+				{
+					Rename:   "Test1",
+					GoType:   reflect.TypeOf(int(0)),
+					Optional: true,
+				},
+			},
+			fn:  func(context.Context, struct{ Test1 int }) api.Err { return api.ErrSuccess },
+			err: ErrWrongParamTypeFromConfig,
+		},
+		{
+			name: "valid optional in",
+			in: []*config.Parameter{
+				{
+					Rename:   "Test1",
+					GoType:   reflect.TypeOf(int(0)),
+					Optional: true,
+				},
+			},
+			fn:  func(context.Context, struct{ Test1 *int }) api.Err { return api.ErrSuccess },
+			err: nil,
+		},
+
+		{
+			name: "unamed out",
+			out: []*config.Parameter{
+				{
+					Rename: "", // should be ignored
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			err: nil,
+		},
+		{
+			name: "missing out struct",
+			out: []*config.Parameter{
+				{
+					Rename: "Test1",
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			err: ErrMissingHandlerOutputArgument,
+		},
+		{
+			name: "invalid out struct type",
+			out: []*config.Parameter{
+				{
+					Rename: "Test1",
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) (int, api.Err) { return 0, api.ErrSuccess },
+			err: ErrWrongOutputArgumentType,
+		},
+		{
+			name: "missing out",
+			out: []*config.Parameter{
+				{
+					Rename: "Test1",
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			err: ErrMissingConfigArgument,
+		},
+		{
+			name: "valid out",
+			out: []*config.Parameter{
+				{
+					Rename: "Test1",
+					GoType: reflect.TypeOf(int(0)),
+				},
+			},
+			fn:  func(context.Context) (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
+			err: nil,
+		},
+		{
+			name: "optional out not ptr",
+			out: []*config.Parameter{
+				{
+					Rename:   "Test1",
+					GoType:   reflect.TypeOf(int(0)),
+					Optional: true,
+				},
+			},
+			fn:  func(context.Context) (*struct{ Test1 *int }, api.Err) { return nil, api.ErrSuccess },
+			err: ErrWrongParamTypeFromConfig,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			service := config.Service{
+				Input:  make(map[string]*config.Parameter),
+				Output: make(map[string]*config.Parameter),
 			}
 
-			if err != nil && tcase.Err != nil {
-				if !errors.Is(err, tcase.Err) {
-					t.Errorf("expected the error <%s> got <%s>", tcase.Err, err)
-					t.FailNow()
+			// fill service with arguments
+			if tc.in != nil && len(tc.in) > 0 {
+				for i, in := range tc.in {
+					service.Input[fmt.Sprintf("%d", i)] = in
 				}
+			}
+			if tc.out != nil && len(tc.out) > 0 {
+				for i, out := range tc.out {
+					service.Output[fmt.Sprintf("%d", i)] = out
+				}
+			}
+
+			s := BuildSignature(service)
+
+			err := s.ValidateInput(reflect.TypeOf(tc.fn))
+			if err != nil {
+				if !errors.Is(err, tc.err) {
+					t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
+				}
+				return
+			}
+			err = s.ValidateOutput(reflect.TypeOf(tc.fn))
+			if err != nil {
+				if !errors.Is(err, tc.err) {
+					t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
+				}
+				return
+			}
+
+			// no error encountered but expected 1
+			if tc.err != nil {
+				t.Fatalf("expected an error <%v>", tc.err)
 			}
 		})
 	}

@@ -58,7 +58,7 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 	firstArgType := handlerType.In(0)
 
 	if !firstArgType.Implements(ctxType) {
-		return ErrMissingHandlerContextArgument
+		return ErrInvalidHandlerContextArgument
 	}
 
 	// no input required
@@ -71,7 +71,7 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 	}
 
 	// too much arguments
-	if handlerType.NumIn() > 2 {
+	if handlerType.NumIn() != 2 {
 		return ErrMissingHandlerInputArgument
 	}
 
@@ -111,10 +111,10 @@ func (s Signature) ValidateOutput(handlerType reflect.Type) error {
 	// last output must be api.Err
 	lastArgType := handlerType.Out(handlerType.NumOut() - 1)
 	if !lastArgType.AssignableTo(errType) {
-		return ErrMissingHandlerErrorArgument
+		return ErrInvalidHandlerErrorArgument
 	}
 
-	// no output -> ok
+	// no output required -> ok
 	if len(s.Output) == 0 {
 		return nil
 	}
