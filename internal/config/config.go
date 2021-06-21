@@ -21,12 +21,12 @@ type Server struct {
 func (srv *Server) Parse(r io.Reader) error {
 	err := json.NewDecoder(r).Decode(&srv.Services)
 	if err != nil {
-		return fmt.Errorf("%s: %w", errRead, err)
+		return fmt.Errorf("%s: %w", ErrRead, err)
 	}
 
 	err = srv.validate()
 	if err != nil {
-		return fmt.Errorf("%s: %w", errFormat, err)
+		return fmt.Errorf("%s: %w", ErrFormat, err)
 	}
 	return nil
 }
@@ -41,7 +41,7 @@ func (server Server) validate(datatypes ...validator.Type) error {
 	}
 
 	if err := server.collide(); err != nil {
-		return fmt.Errorf("%s: %w", errFormat, err)
+		return fmt.Errorf("%s: %w", ErrFormat, err)
 	}
 	return nil
 }
@@ -105,14 +105,14 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 
 		// both captures -> as we cannot check, consider a collision
 		if aIsCapture && bIsCapture {
-			errors = append(errors, fmt.Errorf("%w (path %s and %s)", errPatternCollision, aPart, bPart))
+			errors = append(errors, fmt.Errorf("%w (path %s and %s)", ErrPatternCollision, aPart, bPart))
 			continue
 		}
 
 		// no capture -> check strict equality
 		if !aIsCapture && !bIsCapture {
 			if aPart == bPart {
-				errors = append(errors, fmt.Errorf("%w (same path '%s')", errPatternCollision, aPart))
+				errors = append(errors, fmt.Errorf("%w (same path '%s')", ErrPatternCollision, aPart))
 				continue
 			}
 		}
@@ -123,13 +123,13 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 
 			// fail if no type or no validator
 			if !exists || input.Validator == nil {
-				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", errPatternCollision, aPart))
+				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", ErrPatternCollision, aPart))
 				continue
 			}
 
 			// fail if not valid
 			if _, valid := input.Validator(bPart); valid {
-				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", errPatternCollision, aPart, bPart))
+				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", ErrPatternCollision, aPart, bPart))
 				continue
 			}
 
@@ -139,13 +139,13 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 
 			// fail if no type or no validator
 			if !exists || input.Validator == nil {
-				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", errPatternCollision, bPart))
+				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", ErrPatternCollision, bPart))
 				continue
 			}
 
 			// fail if not valid
 			if _, valid := input.Validator(aPart); valid {
-				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", errPatternCollision, bPart, aPart))
+				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", ErrPatternCollision, bPart, aPart))
 				continue
 			}
 		}

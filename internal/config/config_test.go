@@ -21,15 +21,15 @@ func TestLegalServiceName(t *testing.T) {
 		// empty
 		{
 			`[ { "method": "GET", "info": "a", "path": "" } ]`,
-			errInvalidPattern,
+			ErrInvalidPattern,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "no-starting-slash" } ]`,
-			errInvalidPattern,
+			ErrInvalidPattern,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "ending-slash/" } ]`,
-			errInvalidPattern,
+			ErrInvalidPattern,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/" } ]`,
@@ -45,35 +45,35 @@ func TestLegalServiceName(t *testing.T) {
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}" } ]`,
-			errInvalidPatternBraceCapture,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}a" } ]`,
-			errInvalidPatternBraceCapture,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}" } ]`,
-			errUndefinedBraceCapture,
+			ErrUndefinedBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}/abc" } ]`,
-			errInvalidPatternBraceCapture,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}s/abc" } ]`,
-			errInvalidPatternBraceCapture,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/abc" } ]`,
-			errUndefinedBraceCapture,
+			ErrUndefinedBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{b{races}s/abc" } ]`,
-			errInvalidPatternBraceCapture,
+			ErrInvalidPatternBraceCapture,
 		},
 		{
 			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/}abc" } ]`,
-			errInvalidPatternBraceCapture,
+			ErrInvalidPatternBraceCapture,
 		},
 	}
 
@@ -143,8 +143,8 @@ func TestAvailableMethods(t *testing.T) {
 				t.FailNow()
 			}
 
-			if !test.ValidMethod && !errors.Is(err, errUnknownMethod) {
-				t.Errorf("expected error <%s> got <%s>", errUnknownMethod, err)
+			if !test.ValidMethod && !errors.Is(err, ErrUnknownMethod) {
+				t.Errorf("expected error <%s> got <%s>", ErrUnknownMethod, err)
 				t.FailNow()
 			}
 		})
@@ -184,7 +184,7 @@ func TestParseMissingMethodDescription(t *testing.T) {
 			`[ { "method": "GET", "path": "/" }]`,
 			false,
 		},
-		{ // missing description
+		{ // missing descriptiontype
 			`[ { "method": "GET", "path": "/subservice" }]`,
 			false,
 		},
@@ -217,8 +217,8 @@ func TestParseMissingMethodDescription(t *testing.T) {
 				t.FailNow()
 			}
 
-			if !test.ValidDescription && !errors.Is(err, errMissingDescription) {
-				t.Errorf("expected error <%s> got <%s>", errMissingDescription, err)
+			if !test.ValidDescription && !errors.Is(err, ErrMissingDescription) {
+				t.Errorf("expected error <%s> got <%s>", ErrMissingDescription, err)
 				t.FailNow()
 			}
 		})
@@ -321,7 +321,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMissingParamDesc,
+			ErrMissingParamDesc,
 		},
 		{ // invalid param name suffix
 			`[
@@ -334,7 +334,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMissingParamDesc,
+			ErrMissingParamDesc,
 		},
 
 		{ // missing param description
@@ -348,7 +348,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMissingParamDesc,
+			ErrMissingParamDesc,
 		},
 		{ // empty param description
 			`[
@@ -361,7 +361,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMissingParamDesc,
+			ErrMissingParamDesc,
 		},
 
 		{ // missing param type
@@ -375,7 +375,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMissingParamType,
+			ErrMissingParamType,
 		},
 		{ // empty param type
 			`[
@@ -388,7 +388,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMissingParamType,
+			ErrMissingParamType,
 		},
 		{ // invalid type (optional mark only)
 			`[
@@ -402,7 +402,7 @@ func TestParseParameters(t *testing.T) {
 				}
 			]`,
 
-			errMissingParamType,
+			ErrMissingParamType,
 		},
 		{ // valid description + valid type
 			`[
@@ -444,7 +444,7 @@ func TestParseParameters(t *testing.T) {
 				}
 			]`,
 			// 2 possible errors as map order is not deterministic
-			errParamNameConflict,
+			ErrParamNameConflict,
 		},
 		{ // rename conflict with name
 			`[
@@ -459,7 +459,7 @@ func TestParseParameters(t *testing.T) {
 				}
 			]`,
 			// 2 possible errors as map order is not deterministic
-			errParamNameConflict,
+			ErrParamNameConflict,
 		},
 		{ // rename conflict with rename
 			`[
@@ -474,7 +474,7 @@ func TestParseParameters(t *testing.T) {
 				}
 			]`,
 			// 2 possible errors as map order is not deterministic
-			errParamNameConflict,
+			ErrParamNameConflict,
 		},
 
 		{ // both renamed with no conflict
@@ -503,7 +503,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMandatoryRename,
+			ErrMandatoryRename,
 		},
 		{
 			`[
@@ -516,7 +516,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errMandatoryRename,
+			ErrMandatoryRename,
 		},
 		{
 			`[
@@ -556,7 +556,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errIllegalOptionalURIParam,
+			ErrIllegalOptionalURIParam,
 		},
 		{ // URI parameter not specified
 			`[
@@ -569,7 +569,7 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			errUnspecifiedBraceCapture,
+			ErrUnspecifiedBraceCapture,
 		},
 		{ // URI parameter not defined
 			`[
@@ -580,7 +580,7 @@ func TestParseParameters(t *testing.T) {
 					"in": { }
 				}
 			]`,
-			errUndefinedBraceCapture,
+			ErrUndefinedBraceCapture,
 		},
 	}
 
@@ -637,7 +637,7 @@ func TestServiceCollision(t *testing.T) {
 					"info": "info", "in": {}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[
@@ -672,7 +672,7 @@ func TestServiceCollision(t *testing.T) {
 					}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[
@@ -698,7 +698,7 @@ func TestServiceCollision(t *testing.T) {
 					}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[
@@ -711,7 +711,7 @@ func TestServiceCollision(t *testing.T) {
 					}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[
@@ -750,7 +750,7 @@ func TestServiceCollision(t *testing.T) {
 					}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[
@@ -789,7 +789,7 @@ func TestServiceCollision(t *testing.T) {
 					}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[
@@ -804,7 +804,7 @@ func TestServiceCollision(t *testing.T) {
 					}
 				}
 			]`,
-			errPatternCollision,
+			ErrPatternCollision,
 		},
 		{
 			`[

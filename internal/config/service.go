@@ -113,7 +113,7 @@ func (svc *Service) validate(datatypes ...validator.Type) error {
 
 	// check description
 	if len(strings.Trim(svc.Description, " \t\r\n")) < 1 {
-		return fmt.Errorf("field 'description': %w", errMissingDescription)
+		return fmt.Errorf("field 'description': %w", ErrMissingDescription)
 	}
 
 	// check input parameters
@@ -125,7 +125,7 @@ func (svc *Service) validate(datatypes ...validator.Type) error {
 	// fail if a brace capture remains undefined
 	for _, capture := range svc.Captures {
 		if capture.Ref == nil {
-			return fmt.Errorf("field 'in': %s: %w", capture.Name, errUndefinedBraceCapture)
+			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrUndefinedBraceCapture)
 		}
 	}
 
@@ -144,7 +144,7 @@ func (svc *Service) isMethodAvailable() error {
 			return nil
 		}
 	}
-	return errUnknownMethod
+	return ErrUnknownMethod
 }
 
 func (svc *Service) isPatternValid() error {
@@ -152,13 +152,13 @@ func (svc *Service) isPatternValid() error {
 
 	// empty pattern
 	if length < 1 {
-		return errInvalidPattern
+		return ErrInvalidPattern
 	}
 
 	if length > 1 {
 		// pattern not starting with '/' or ending with '/'
 		if svc.Pattern[0] != '/' || svc.Pattern[length-1] == '/' {
-			return errInvalidPattern
+			return ErrInvalidPattern
 		}
 	}
 
@@ -166,7 +166,7 @@ func (svc *Service) isPatternValid() error {
 	parts := SplitURL(svc.Pattern)
 	for i, part := range parts {
 		if len(part) < 1 {
-			return errInvalidPattern
+			return ErrInvalidPattern
 		}
 
 		// if brace capture
@@ -187,7 +187,7 @@ func (svc *Service) isPatternValid() error {
 
 		// fail on invalid format
 		if strings.ContainsAny(part, "{}") {
-			return errInvalidPatternBraceCapture
+			return ErrInvalidPatternBraceCapture
 		}
 
 	}
@@ -206,7 +206,7 @@ func (svc *Service) validateInput(types []validator.Type) error {
 	// for each parameter
 	for paramName, param := range svc.Input {
 		if len(paramName) < 1 {
-			return fmt.Errorf("%s: %w", paramName, errIllegalParamName)
+			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
 		}
 
 		// fail if brace capture does not exists in pattern
@@ -223,7 +223,7 @@ func (svc *Service) validateInput(types []validator.Type) error {
 				}
 			}
 			if !found {
-				return fmt.Errorf("%s: %w", paramName, errUnspecifiedBraceCapture)
+				return fmt.Errorf("%s: %w", paramName, ErrUnspecifiedBraceCapture)
 			}
 			iscapture = true
 
@@ -246,7 +246,7 @@ func (svc *Service) validateInput(types []validator.Type) error {
 
 		// fail if capture or query without rename
 		if len(param.Rename) < 1 && (iscapture || isquery) {
-			return fmt.Errorf("%s: %w", paramName, errMandatoryRename)
+			return fmt.Errorf("%s: %w", paramName, ErrMandatoryRename)
 		}
 
 		// use param name if no rename
@@ -261,7 +261,7 @@ func (svc *Service) validateInput(types []validator.Type) error {
 
 		// capture parameter cannot be optional
 		if iscapture && param.Optional {
-			return fmt.Errorf("%s: %w", paramName, errIllegalOptionalURIParam)
+			return fmt.Errorf("%s: %w", paramName, ErrIllegalOptionalURIParam)
 		}
 
 		// fail on name/rename conflict
@@ -275,7 +275,7 @@ func (svc *Service) validateInput(types []validator.Type) error {
 			// 3.2.2. Not-renamed field matches a renamed field
 			// 3.2.3. Renamed field matches name
 			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
-				return fmt.Errorf("%s: %w", paramName, errParamNameConflict)
+				return fmt.Errorf("%s: %w", paramName, ErrParamNameConflict)
 			}
 
 		}
@@ -296,7 +296,7 @@ func (svc *Service) validateOutput(types []validator.Type) error {
 	// for each parameter
 	for paramName, param := range svc.Output {
 		if len(paramName) < 1 {
-			return fmt.Errorf("%s: %w", paramName, errIllegalParamName)
+			return fmt.Errorf("%s: %w", paramName, ErrIllegalParamName)
 		}
 
 		// use param name if no rename
@@ -310,7 +310,7 @@ func (svc *Service) validateOutput(types []validator.Type) error {
 		}
 
 		if param.Optional {
-			return fmt.Errorf("%s: %w", paramName, errOptionalOption)
+			return fmt.Errorf("%s: %w", paramName, ErrOptionalOption)
 		}
 
 		// fail on name/rename conflict
@@ -324,7 +324,7 @@ func (svc *Service) validateOutput(types []validator.Type) error {
 			// 3.2.2. Not-renamed field matches a renamed field
 			// 3.2.3. Renamed field matches name
 			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
-				return fmt.Errorf("%s: %w", paramName, errParamNameConflict)
+				return fmt.Errorf("%s: %w", paramName, ErrParamNameConflict)
 			}
 
 		}
