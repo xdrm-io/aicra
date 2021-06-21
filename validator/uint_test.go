@@ -1,17 +1,17 @@
-package builtin_test
+package validator_test
 
 import (
 	"fmt"
 	"math"
 	"testing"
 
-	"github.com/xdrm-io/aicra/validator/builtin"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 func TestUint_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	dt := builtin.UintDataType{}
+	dt := validator.UintType{}
 
 	tests := []struct {
 		Type    string
@@ -50,7 +50,7 @@ func TestUint_Values(t *testing.T) {
 
 	const typeName = "uint"
 
-	validator := builtin.UintDataType{}.Validator(typeName)
+	validator := validator.UintType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()

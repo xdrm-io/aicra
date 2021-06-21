@@ -96,9 +96,9 @@ func main() {
     builder := &aicra.Builder{}
 
     // add custom type validators
-    builder.Validate(builtin.BoolDataType{})
-    builder.Validate(builtin.UintDataType{})
-    builder.Validate(builtin.StringDataType{})
+    builder.Validate(validator.BoolDataType{})
+    builder.Validate(validator.UintDataType{})
+    builder.Validate(validator.StringDataType{})
 
     // load your configuration
     config, err := os.Open("api.json")

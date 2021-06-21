@@ -1,24 +1,27 @@
-package builtin
+package validator
 
 import (
 	"encoding/json"
 	"reflect"
-
-	"github.com/xdrm-io/aicra/validator"
 )
 
-// FloatDataType is what its name tells
-type FloatDataType struct{}
+// FloatType makes the "float" (or "float64") type available in the aicra configuration
+// It considers valid:
+// - float64
+// - int (since it does not overflow)
+// - uint (since it does not overflow)
+// - strings containing json-compatible floats
+// - []byte containing json-compatible floats
+type FloatType struct{}
 
-// GoType returns the type of data
-func (FloatDataType) GoType() reflect.Type {
+// GoType returns the `float64` type
+func (FloatType) GoType() reflect.Type {
 	return reflect.TypeOf(float64(0))
 }
 
-// Validator returns the validator
-func (FloatDataType) Validator(typeName string, registry ...validator.Type) validator.ValidateFunc {
-	// nothing if type not handled
-	if typeName != "float64" && typeName != "float" {
+// Validator for float64 values
+func (FloatType) Validator(typename string, avail ...Type) ValidateFunc {
+	if typename != "float64" && typename != "float" {
 		return nil
 	}
 	return func(value interface{}) (interface{}, bool) {

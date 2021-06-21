@@ -37,17 +37,17 @@ type Type interface {
 	// - `VarcharType.Validator("varchar(1,3)")` validates any string
 	//   with a length between 1 and 3
 	//
-	// The `registry` argument represents all other available Types. It allows a
+	// The `avail` argument represents all other available Types. It allows a
 	// Type to use other available Types internally.
 	//
 	// recursive example: slices
-	// - `SliceType.Validator("[]int", reg...)` validates a slice containing
+	// - `SliceType.Validator("[]int", avail...)` validates a slice containing
 	//   values that are valide to the `IntType`
-	// - `SliceType.Validator("[]varchar", reg...)` validates a slice containing
+	// - `SliceType.Validator("[]varchar", avail...)` validates a slice containing
 	//   values that are valid to the `VarcharType`
 	//
 	// and so on.. this works for maps, structs, etc
-	Validator(typename string, registry ...Type) ValidateFunc
+	Validator(typename string, avail ...Type) ValidateFunc
 
 	// GoType must return the go type associated with the output type of ValidateFunc.
 	// It is used to define handlers' signature from the configuration file.

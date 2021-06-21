@@ -1,16 +1,16 @@
-package builtin_test
+package validator_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/xdrm-io/aicra/validator/builtin"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 func TestAny_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	dt := builtin.AnyDataType{}
+	dt := validator.AnyType{}
 
 	tests := []struct {
 		Type    string
@@ -47,7 +47,7 @@ func TestAny_AlwaysTrue(t *testing.T) {
 
 	const typeName = "any"
 
-	validator := builtin.AnyDataType{}.Validator(typeName)
+	validator := validator.AnyType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()

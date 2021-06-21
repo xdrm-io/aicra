@@ -1,28 +1,34 @@
-package builtin_test
+package validator_test
 
 import (
 	"fmt"
 	"math"
 	"testing"
 
-	"github.com/xdrm-io/aicra/validator/builtin"
+	"github.com/xdrm-io/aicra/validator"
 )
 
-func TestInt_AvailableTypes(t *testing.T) {
+func TestFloat64_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	dt := builtin.IntDataType{}
+	dt := validator.FloatType{}
 
 	tests := []struct {
 		Type    string
 		Handled bool
 	}{
-		{"int", true},
-		{"Int", false},
-		{"INT", false},
-		{" int", false},
-		{"int ", false},
-		{" int ", false},
+		{"float", true},
+		{"float64", true},
+		{"Float", false},
+		{"Float64", false},
+		{"FLOAT", false},
+		{"FLOAT64", false},
+		{" float", false},
+		{"float ", false},
+		{" float ", false},
+		{" float64", false},
+		{"float64 ", false},
+		{" float64 ", false},
 	}
 
 	for _, test := range tests {
@@ -45,12 +51,12 @@ func TestInt_AvailableTypes(t *testing.T) {
 
 }
 
-func TestInt_Values(t *testing.T) {
+func TestFloat64_Values(t *testing.T) {
 	t.Parallel()
 
-	const typeName = "int"
+	const typeName = "float"
 
-	validator := builtin.IntDataType{}.Validator(typeName)
+	validator := validator.FloatType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
@@ -60,38 +66,32 @@ func TestInt_Values(t *testing.T) {
 		Value interface{}
 		Valid bool
 	}{
-		{-math.MaxInt64, true},
-		{-1, true},
-		{0, true},
-		{1, true},
-		{math.MaxInt64, true},
-
-		// overflows from type conversion
+		{uint(0), true},
 		{uint(math.MaxInt64), true},
-		{uint(math.MaxInt64 + 1), false},
+		{uint(math.MaxUint64), true},
+		{-1, true},
+		{-math.MaxInt64, true},
 
 		{float64(math.MinInt64), true},
-		// we cannot just substract 1 because of how precision works
-		{float64(math.MinInt64 - 1024 - 1), false},
-
-		// WARNING : this is due to how floats are compared
-		{float64(math.MaxInt64), false},
-		// we cannot just add 1 because of how precision works
-		{float64(math.MaxInt64 + 1024 + 2), false},
+		{float64(0), true},
+		{float64(math.MaxInt64), true},
+		// we cannot just compare because of how precision works
+		{float64(math.MaxUint64 - 1024), true},
+		{float64(math.MaxUint64 + 1), true},
 
 		// json number
-		{fmt.Sprintf("%f", float64(math.MinInt64-1024-1)), false},
-		{fmt.Sprintf("%d", math.MinInt64), true},
+		{fmt.Sprintf("%f", -math.MaxFloat64), true},
 		{"-1", true},
 		{"0", true},
 		{"1", true},
 		{fmt.Sprintf("%d", math.MaxInt64), true},
-		{fmt.Sprintf("%f", float64(math.MaxInt64+1024+2)), false},
+		{fmt.Sprintf("%d", uint(math.MaxUint64)), true},
+		{fmt.Sprintf("%f", float64(math.MaxFloat64)), true},
 
 		{"string", false},
 		{[]byte("bytes"), false},
-		{-0.1, false},
-		{0.1, false},
+		{-0.1, true},
+		{0.1, true},
 		{nil, false},
 	}
 
