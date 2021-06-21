@@ -89,16 +89,16 @@ import (
 
     "github.com/xdrm-io/aicra"
     "github.com/xdrm-io/aicra/api"
-    "github.com/xdrm-io/aicra/datatype/builtin"
+    "github.com/xdrm-io/aicra/validator/builtin"
 )
 
 func main() {
     builder := &aicra.Builder{}
 
-    // register data validators
-    builder.AddType(builtin.BoolDataType{})
-    builder.AddType(builtin.UintDataType{})
-    builder.AddType(builtin.StringDataType{})
+    // add custom type validators
+    builder.Validate(validator.BoolDataType{})
+    builder.Validate(validator.UintDataType{})
+    builder.Validate(validator.StringDataType{})
 
     // load your configuration
     config, err := os.Open("api.json")

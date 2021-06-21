@@ -1,16 +1,16 @@
-package builtin_test
+package validator_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 func TestString_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	dt := builtin.StringDataType{}
+	dt := validator.StringType{}
 
 	tests := []struct {
 		Type    string
@@ -53,7 +53,7 @@ func TestString_AvailableTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Type, func(t *testing.T) {
-			validator := dt.Build(test.Type)
+			validator := dt.Validator(test.Type)
 
 			if validator == nil {
 				if test.Handled {
@@ -75,7 +75,7 @@ func TestString_AnyLength(t *testing.T) {
 
 	const typeName = "string"
 
-	validator := builtin.StringDataType{}.Build(typeName)
+	validator := validator.StringType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()
@@ -133,7 +133,7 @@ func TestString_FixedLength(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			validator := builtin.StringDataType{}.Build(test.Type)
+			validator := validator.StringType{}.Validator(test.Type)
 			if validator == nil {
 				t.Errorf("expect %q to be handled", test.Type)
 				t.Fail()
@@ -194,7 +194,7 @@ func TestString_VariableLength(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			validator := builtin.StringDataType{}.Build(test.Type)
+			validator := validator.StringType{}.Validator(test.Type)
 			if validator == nil {
 				t.Errorf("expect %q to be handled", test.Type)
 				t.Fail()

@@ -8,26 +8,26 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra/api"
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 func addBuiltinTypes(b *Builder) error {
-	if err := b.AddType(builtin.AnyDataType{}); err != nil {
+	if err := b.Validate(validator.AnyType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.BoolDataType{}); err != nil {
+	if err := b.Validate(validator.BoolType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.FloatDataType{}); err != nil {
+	if err := b.Validate(validator.FloatType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.IntDataType{}); err != nil {
+	if err := b.Validate(validator.IntType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.StringDataType{}); err != nil {
+	if err := b.Validate(validator.StringType{}); err != nil {
 		return err
 	}
-	if err := b.AddType(builtin.UintDataType{}); err != nil {
+	if err := b.Validate(validator.UintType{}); err != nil {
 		return err
 	}
 	return nil
@@ -35,7 +35,7 @@ func addBuiltinTypes(b *Builder) error {
 
 func TestAddType(t *testing.T) {
 	builder := &Builder{}
-	err := builder.AddType(builtin.BoolDataType{})
+	err := builder.Validate(validator.BoolType{})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -43,7 +43,7 @@ func TestAddType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	err = builder.AddType(builtin.FloatDataType{})
+	err = builder.Validate(validator.FloatType{})
 	if err != errLateType {
 		t.Fatalf("expected <%v> got <%v>", errLateType, err)
 	}

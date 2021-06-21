@@ -1,25 +1,28 @@
-package builtin
+package validator
 
 import (
 	"encoding/json"
 	"math"
 	"reflect"
-
-	"github.com/xdrm-io/aicra/datatype"
 )
 
-// UintDataType is what its name tells
-type UintDataType struct{}
+// UintType makes the "uint" type available in the aicra configuration
+// It considers valid:
+// - uint
+// - int (since it does not overflow)
+// - float64 (since it does not overflow)
+// - strings containing json-compatible integers
+// - []byte containing json-compatible integers
+type UintType struct{}
 
-// Type returns the type of data
-func (UintDataType) Type() reflect.Type {
+// GoType returns the `uint` type
+func (UintType) GoType() reflect.Type {
 	return reflect.TypeOf(uint(0))
 }
 
-// Build returns the validator
-func (UintDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
-	// nothing if type not handled
-	if typeName != "uint" {
+// Validator for uint values
+func (UintType) Validator(other string, avail ...Type) ValidateFunc {
+	if other != "uint" {
 		return nil
 	}
 

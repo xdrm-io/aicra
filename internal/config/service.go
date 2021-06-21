@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)
@@ -97,7 +97,7 @@ func (svc *Service) matchPattern(uri string) bool {
 }
 
 // Validate implements the validator interface
-func (svc *Service) validate(datatypes ...datatype.T) error {
+func (svc *Service) validate(datatypes ...validator.Type) error {
 	// check method
 	err := svc.isMethodAvailable()
 	if err != nil {
@@ -195,7 +195,7 @@ func (svc *Service) isPatternValid() error {
 	return nil
 }
 
-func (svc *Service) validateInput(types []datatype.T) error {
+func (svc *Service) validateInput(types []validator.Type) error {
 
 	// ignore no parameter
 	if svc.Input == nil || len(svc.Input) < 1 {
@@ -285,7 +285,7 @@ func (svc *Service) validateInput(types []datatype.T) error {
 	return nil
 }
 
-func (svc *Service) validateOutput(types []datatype.T) error {
+func (svc *Service) validateOutput(types []validator.Type) error {
 
 	// ignore no parameter
 	if svc.Output == nil || len(svc.Output) < 1 {

@@ -1,16 +1,16 @@
-package builtin_test
+package validator_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/xdrm-io/aicra/datatype/builtin"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 func TestBool_AvailableTypes(t *testing.T) {
 	t.Parallel()
 
-	dt := builtin.BoolDataType{}
+	dt := validator.BoolType{}
 
 	tests := []struct {
 		Type    string
@@ -26,7 +26,7 @@ func TestBool_AvailableTypes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Type, func(t *testing.T) {
-			validator := dt.Build(test.Type)
+			validator := dt.Validator(test.Type)
 			if validator == nil {
 				if test.Handled {
 					t.Errorf("expect %q to be handled", test.Type)
@@ -49,7 +49,7 @@ func TestBool_Values(t *testing.T) {
 
 	const typeName = "bool"
 
-	validator := builtin.BoolDataType{}.Build(typeName)
+	validator := validator.BoolType{}.Validator(typeName)
 	if validator == nil {
 		t.Errorf("expect %q to be handled", typeName)
 		t.Fail()

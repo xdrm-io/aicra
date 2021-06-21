@@ -31,17 +31,17 @@ func BuildSignature(service config.Service) *Signature {
 		}
 		// make a pointer if optional
 		if param.Optional {
-			s.Input[param.Rename] = reflect.PtrTo(param.ExtractType)
+			s.Input[param.Rename] = reflect.PtrTo(param.GoType)
 			continue
 		}
-		s.Input[param.Rename] = param.ExtractType
+		s.Input[param.Rename] = param.GoType
 	}
 
 	for _, param := range service.Output {
 		if len(param.Rename) < 1 {
 			continue
 		}
-		s.Output[param.Rename] = param.ExtractType
+		s.Output[param.Rename] = param.GoType
 	}
 
 	return s

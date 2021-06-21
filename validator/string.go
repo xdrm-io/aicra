@@ -1,32 +1,37 @@
-package builtin
+package validator
 
 import (
 	"reflect"
 	"regexp"
 	"strconv"
-
-	"github.com/xdrm-io/aicra/datatype"
 )
 
-var fixedLengthRegex = regexp.MustCompile(`^string\((\d+)\)$`)
-var variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
+var (
+	fixedLengthRegex    = regexp.MustCompile(`^string\((\d+)\)$`)
+	variableLengthRegex = regexp.MustCompile(`^string\((\d+), ?(\d+)\)$`)
+)
 
-// StringDataType is what its name tells
-type StringDataType struct{}
+// StringType makes the types beloz available in the aicra configuration:
+// - "string" considers any string valid
+// - "string(n)" considers any string with an exact size of `n` valid
+// - "string(a,b)" considers any string with a size between `a` and `b` valid
+// > for the last one, `a` and `b` are included in the valid sizes
+type StringType struct{}
 
-// Type returns the type of data
-func (StringDataType) Type() reflect.Type {
+// GoType returns the `string` type
+func (StringType) GoType() reflect.Type {
 	return reflect.TypeOf(string(""))
 }
 
-// Build returns the validator.
-// availables type names are : `string`, `string(length)` and `string(minLength, maxLength)`.
-func (s StringDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
-	simple := typeName == "string"
-	fixedLengthMatches := fixedLengthRegex.FindStringSubmatch(typeName)
-	variableLengthMatches := variableLengthRegex.FindStringSubmatch(typeName)
+// Validator for strings with any/fixed/bound sizes
+func (s StringType) Validator(typename string, avail ...Type) ValidateFunc {
+	var (
+		simple                = (typename == "string")
+		fixedLengthMatches    = fixedLengthRegex.FindStringSubmatch(typename)
+		variableLengthMatches = variableLengthRegex.FindStringSubmatch(typename)
+	)
 
-	// nothing if type not handled
+	// ignore unknown typename
 	if !simple && fixedLengthMatches == nil && variableLengthMatches == nil {
 		return nil
 	}
@@ -40,7 +45,7 @@ func (s StringDataType) Build(typeName string, registry ...datatype.T) datatype.
 	if fixedLengthMatches != nil {
 		exLen, ok := s.getFixedLength(fixedLengthMatches)
 		if !ok {
-			mustFail = true
+			return nil
 		}
 		min = exLen
 		max = exLen
@@ -49,7 +54,7 @@ func (s StringDataType) Build(typeName string, registry ...datatype.T) datatype.
 	} else if variableLengthMatches != nil {
 		exMin, exMax, ok := s.getVariableLength(variableLengthMatches)
 		if !ok {
-			mustFail = true
+			return nil
 		}
 		min = exMin
 		max = exMax
@@ -84,7 +89,7 @@ func (s StringDataType) Build(typeName string, registry ...datatype.T) datatype.
 }
 
 // getFixedLength returns the fixed length from regex matches and a success state.
-func (StringDataType) getFixedLength(regexMatches []string) (int, bool) {
+func (StringType) getFixedLength(regexMatches []string) (int, bool) {
 	// incoherence error
 	if regexMatches == nil || len(regexMatches) < 2 {
 		return 0, false
@@ -100,7 +105,7 @@ func (StringDataType) getFixedLength(regexMatches []string) (int, bool) {
 }
 
 // getVariableLength returns the length min and max from regex matches and a success state.
-func (StringDataType) getVariableLength(regexMatches []string) (int, int, bool) {
+func (StringType) getVariableLength(regexMatches []string) (int, int, bool) {
 	// incoherence error
 	if regexMatches == nil || len(regexMatches) < 3 {
 		return 0, 0, false

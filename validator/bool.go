@@ -1,23 +1,24 @@
-package builtin
+package validator
 
 import (
 	"reflect"
-
-	"github.com/xdrm-io/aicra/datatype"
 )
 
-// BoolDataType is what its name tells
-type BoolDataType struct{}
+// BoolType makes the "bool" type available in the aicra configuration
+// It considers valid:
+// - booleans
+// - strings containing "true" or "false"
+// - []byte containing "true" or "false"
+type BoolType struct{}
 
-// Type returns the type of data
-func (BoolDataType) Type() reflect.Type {
+// GoType returns the `bool` type
+func (BoolType) GoType() reflect.Type {
 	return reflect.TypeOf(true)
 }
 
-// Build returns the validator
-func (BoolDataType) Build(typeName string, registry ...datatype.T) datatype.Validator {
-	// nothing if type not handled
-	if typeName != "bool" {
+// Validator for bool values
+func (BoolType) Validator(typename string, avail ...Type) ValidateFunc {
+	if typename != "bool" {
 		return nil
 	}
 

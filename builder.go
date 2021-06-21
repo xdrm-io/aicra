@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/xdrm-io/aicra/datatype"
 	"github.com/xdrm-io/aicra/internal/config"
 	"github.com/xdrm-io/aicra/internal/dynfunc"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // Builder for an aicra server
@@ -31,18 +31,18 @@ type apiHandler struct {
 	dyn    *dynfunc.Handler
 }
 
-// AddType adds an available datatype to the api definition
-func (b *Builder) AddType(t datatype.T) error {
+// Validate adds an available Type to validate in the api definition
+func (b *Builder) Validate(t validator.Type) error {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
 		return errLateType
 	}
-	if b.conf.Types == nil {
-		b.conf.Types = make([]datatype.T, 0)
+	if b.conf.Validators == nil {
+		b.conf.Validators = make([]validator.Type, 0)
 	}
-	b.conf.Types = append(b.conf.Types, t)
+	b.conf.Validators = append(b.conf.Validators, t)
 	return nil
 }
 

@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/xdrm-io/aicra/datatype"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // Server definition
 type Server struct {
-	Types    []datatype.T
-	Services []*Service
+	Validators []validator.Type
+	Services   []*Service
 }
 
 // Parse a configuration into a server. Server.Types must be set beforehand to
@@ -32,9 +32,9 @@ func (srv *Server) Parse(r io.Reader) error {
 }
 
 // validate implements the validator interface
-func (server Server) validate(datatypes ...datatype.T) error {
+func (server Server) validate(datatypes ...validator.Type) error {
 	for _, service := range server.Services {
-		err := service.validate(server.Types...)
+		err := service.validate(server.Validators...)
 		if err != nil {
 			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
 		}
