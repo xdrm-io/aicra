@@ -2,6 +2,7 @@ package aicra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -37,7 +38,11 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// extract request data
 	var input, err = extractInput(service, *r)
 	if err != nil {
-		newResponse().WithError(api.ErrMissingParam).ServeHTTP(w, r)
+		if errors.Is(err, reqdata.ErrInvalidType) {
+			newResponse().WithError(api.ErrInvalidParam).ServeHTTP(w, r)
+		} else {
+			newResponse().WithError(api.ErrMissingParam).ServeHTTP(w, r)
+		}
 		return
 	}
 
