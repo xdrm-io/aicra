@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"reflect"
 
 	"github.com/xdrm-io/aicra/internal/config"
@@ -106,24 +107,32 @@ func (i *T) GetForm(req http.Request) error {
 	ct := req.Header.Get("Content-Type")
 	switch {
 	case strings.HasPrefix(ct, "application/json"):
-		return i.parseJSON(req)
+		err := i.parseJSON(req)
+		if err != nil {
+			return err
+		}
 
 	case strings.HasPrefix(ct, "application/x-www-form-urlencoded"):
-		return i.parseUrlencoded(req)
+		err := i.parseUrlencoded(req)
+		if err != nil {
+			return err
+		}
 
 	case strings.HasPrefix(ct, "multipart/form-data; boundary="):
-		return i.parseMultipart(req)
-
-	default:
-
-		// fail on at least 1 mandatory form param when there is no body
-		for name, param := range i.service.Form {
-			if !param.Optional {
-				return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-			}
+		err := i.parseMultipart(req)
+		if err != nil {
+			return err
 		}
-		return nil
 	}
+
+	// fail on at least 1 mandatory form param when there is no body
+	for name, param := range i.service.Form {
+		_, exists := i.Data[param.Rename]
+		if !exists && !param.Optional {
+			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
+		}
+	}
+	return nil
 }
 
 // parseJSON parses JSON from the request body inside 'Form'
@@ -133,19 +142,17 @@ func (i *T) parseJSON(req http.Request) error {
 
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&parsed)
-	if err != io.EOF {
-		if err != nil {
-			return fmt.Errorf("%s: %w", err, ErrInvalidJSON)
-		}
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("%s: %w", err, ErrInvalidJSON)
 	}
 
 	for name, param := range i.service.Form {
 		value, exist := parsed[name]
 
 		if !exist {
-			if !param.Optional {
-				return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-			}
 			continue
 		}
 
@@ -170,9 +177,6 @@ func (i *T) parseUrlencoded(req http.Request) error {
 		values, exist := req.PostForm[name]
 
 		if !exist {
-			if !param.Optional {
-				return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-			}
 			continue
 		}
 
@@ -204,7 +208,7 @@ func (i *T) parseMultipart(req http.Request) error {
 		return nil
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", err, ErrInvalidMultipart)
 	}
 
 	err = mpr.Parse()
@@ -216,11 +220,10 @@ func (i *T) parseMultipart(req http.Request) error {
 		component, exist := mpr.Data[name]
 
 		if !exist {
-			if !param.Optional {
-				return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-			}
 			continue
 		}
+
+		log.Printf("********************** <%v>", string(component.Data))
 
 		parsed := parseParameter(string(component.Data))
 		cast, valid := param.Validator(parsed)
