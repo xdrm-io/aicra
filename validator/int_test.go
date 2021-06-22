@@ -84,7 +84,7 @@ func TestInt_Values(t *testing.T) {
 		{uint(math.MaxInt64 + 1), false},
 
 		{float64(math.MinInt64), true},
-		// we cannot just substract 1 because of how precision works
+		// we cannot just subtract 1 because of how precision works
 		{float64(math.MinInt64 - 1024 - 1), false},
 
 		// WARNING : this is due to how floats are compared

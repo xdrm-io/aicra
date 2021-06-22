@@ -20,7 +20,7 @@ type Builder struct {
 	middlewares []func(http.Handler) http.Handler
 	// custom middlewares only wrapping the service handler of a request
 	// they will benefit from the request's context that contains service-specific
-	// information (e.g. required permisisons from the configuration)
+	// information (e.g. required permissions from the configuration)
 	ctxMiddlewares []func(http.Handler) http.Handler
 }
 
