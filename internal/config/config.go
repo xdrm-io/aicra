@@ -18,13 +18,13 @@ type Server struct {
 
 // Parse a configuration into a server. Server.Types must be set beforehand to
 // make datatypes available when checking and formatting the read configuration.
-func (srv *Server) Parse(r io.Reader) error {
-	err := json.NewDecoder(r).Decode(&srv.Services)
+func (s *Server) Parse(r io.Reader) error {
+	err := json.NewDecoder(r).Decode(&s.Services)
 	if err != nil {
 		return fmt.Errorf("%s: %w", ErrRead, err)
 	}
 
-	err = srv.validate()
+	err = s.validate()
 	if err != nil {
 		return fmt.Errorf("%s: %w", ErrFormat, err)
 	}
@@ -32,23 +32,23 @@ func (srv *Server) Parse(r io.Reader) error {
 }
 
 // validate implements the validator interface
-func (server Server) validate(datatypes ...validator.Type) error {
-	for _, service := range server.Services {
-		err := service.validate(server.Validators...)
+func (s Server) validate(datatypes ...validator.Type) error {
+	for _, service := range s.Services {
+		err := service.validate(s.Validators...)
 		if err != nil {
 			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
 		}
 	}
 
-	if err := server.collide(); err != nil {
+	if err := s.collide(); err != nil {
 		return fmt.Errorf("%s: %w", ErrFormat, err)
 	}
 	return nil
 }
 
 // Find a service matching an incoming HTTP request
-func (server Server) Find(r *http.Request) *Service {
-	for _, service := range server.Services {
+func (s Server) Find(r *http.Request) *Service {
+	for _, service := range s.Services {
 		if matches := service.Match(r); matches {
 			return service
 		}
@@ -62,14 +62,14 @@ func (server Server) Find(r *http.Request) *Service {
 //  - example 1: `/user/{id}` and `/user/articles` will not collide as {id} is an int and "articles" is not
 //  - example 2: `/user/{name}` and `/user/articles` will collide as {name} is a string so as "articles"
 //  - example 3: `/user/{name}` and `/user/{id}` will collide as {name} and {id} cannot be checked against their potential values
-func (server *Server) collide() error {
-	length := len(server.Services)
+func (s *Server) collide() error {
+	length := len(s.Services)
 
 	// for each service combination
 	for a := 0; a < length; a++ {
 		for b := a + 1; b < length; b++ {
-			aService := server.Services[a]
-			bService := server.Services[b]
+			aService := s.Services[a]
+			bService := s.Services[b]
 
 			if aService.Method != bService.Method {
 				continue
