@@ -51,13 +51,11 @@ func TestWith(t *testing.T) {
 
 	middleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			newr := r
-
 			// first time -> store 1
 			value := r.Context().Value(key)
 			if value == nil {
-				newr = r.WithContext(context.WithValue(r.Context(), key, int(1)))
-				next.ServeHTTP(w, newr)
+				r = r.WithContext(context.WithValue(r.Context(), key, int(1)))
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -67,8 +65,8 @@ func TestWith(t *testing.T) {
 				t.Fatalf("value is not an int")
 			}
 			cast++
-			newr = r.WithContext(context.WithValue(r.Context(), key, cast))
-			next.ServeHTTP(w, newr)
+			r = r.WithContext(context.WithValue(r.Context(), key, cast))
+			next.ServeHTTP(w, r)
 		})
 	}
 
