@@ -66,17 +66,24 @@ func (i *T) GetQuery(req http.Request) error {
 	query := req.URL.Query()
 
 	for name, param := range i.service.Query {
-		value, exist := query[name]
-
-		if !exist && !param.Optional {
-			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-		}
+		values, exist := query[name]
 
 		if !exist {
+			if !param.Optional {
+				return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
+			}
 			continue
 		}
 
-		parsed := parseParameter(value)
+		var parsed interface{}
+
+		// consider element instead of slice or elements when only 1
+		if len(values) == 1 {
+			parsed = parseParameter(values[0])
+		} else { // consider slice
+			parsed = parseParameter(values)
+		}
+
 		cast, valid := param.Validator(parsed)
 		if !valid {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
@@ -99,17 +106,32 @@ func (i *T) GetForm(req http.Request) error {
 	ct := req.Header.Get("Content-Type")
 	switch {
 	case strings.HasPrefix(ct, "application/json"):
-		return i.parseJSON(req)
+		err := i.parseJSON(req)
+		if err != nil {
+			return err
+		}
 
 	case strings.HasPrefix(ct, "application/x-www-form-urlencoded"):
-		return i.parseUrlencoded(req)
+		err := i.parseUrlencoded(req)
+		if err != nil {
+			return err
+		}
 
 	case strings.HasPrefix(ct, "multipart/form-data; boundary="):
-		return i.parseMultipart(req)
-
-	default:
-		return nil
+		err := i.parseMultipart(req)
+		if err != nil {
+			return err
+		}
 	}
+
+	// fail on at least 1 mandatory form param when there is no body
+	for name, param := range i.service.Form {
+		_, exists := i.Data[param.Rename]
+		if !exists && !param.Optional {
+			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
+		}
+	}
+	return nil
 }
 
 // parseJSON parses JSON from the request body inside 'Form'
@@ -128,10 +150,6 @@ func (i *T) parseJSON(req http.Request) error {
 
 	for name, param := range i.service.Form {
 		value, exist := parsed[name]
-
-		if !exist && !param.Optional {
-			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-		}
 
 		if !exist {
 			continue
@@ -155,17 +173,21 @@ func (i *T) parseUrlencoded(req http.Request) error {
 	}
 
 	for name, param := range i.service.Form {
-		value, exist := req.PostForm[name]
-
-		if !exist && !param.Optional {
-			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-		}
+		values, exist := req.PostForm[name]
 
 		if !exist {
 			continue
 		}
 
-		parsed := parseParameter(value)
+		var parsed interface{}
+
+		// consider element instead of slice or elements when only 1
+		if len(values) == 1 {
+			parsed = parseParameter(values[0])
+		} else { // consider slice
+			parsed = parseParameter(values)
+		}
+
 		cast, valid := param.Validator(parsed)
 		if !valid {
 			return fmt.Errorf("%s: %w", name, ErrInvalidType)
@@ -185,7 +207,7 @@ func (i *T) parseMultipart(req http.Request) error {
 		return nil
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", err, ErrInvalidMultipart)
 	}
 
 	err = mpr.Parse()
@@ -195,10 +217,6 @@ func (i *T) parseMultipart(req http.Request) error {
 
 	for name, param := range i.service.Form {
 		component, exist := mpr.Data[name]
-
-		if !exist && !param.Optional {
-			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
-		}
 
 		if !exist {
 			continue

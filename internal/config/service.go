@@ -9,9 +9,11 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
-var braceRegex = regexp.MustCompile(`^{([a-z_-]+)}$`)
-var queryRegex = regexp.MustCompile(`^GET@([a-z_-]+)$`)
-var availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+var (
+	captureRegex         = regexp.MustCompile(`^{([a-z_-]+)}$`)
+	queryRegex           = regexp.MustCompile(`^GET@([a-z_-]+)$`)
+	availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+)
 
 // Service definition
 type Service struct {
@@ -43,19 +45,25 @@ type BraceCapture struct {
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
-	if req.Method != svc.Method {
-		return false
+	var (
+		uri        = req.RequestURI
+		queryIndex = strings.IndexByte(uri, '?')
+	)
+
+	// remove query part for matching the pattern
+	if queryIndex > -1 {
+		uri = uri[:queryIndex]
 	}
-	if !svc.matchPattern(req.RequestURI) {
-		return false
-	}
-	return true
+
+	return req.Method == svc.Method && svc.matchPattern(uri)
 }
 
 // checks if an uri matches the service's pattern
 func (svc *Service) matchPattern(uri string) bool {
-	uriparts := SplitURL(uri)
-	parts := SplitURL(svc.Pattern)
+	var (
+		uriparts = SplitURL(uri)
+		parts    = SplitURL(svc.Pattern)
+	)
 
 	if len(uriparts) != len(parts) {
 		return false
@@ -98,39 +106,34 @@ func (svc *Service) matchPattern(uri string) bool {
 
 // Validate implements the validator interface
 func (svc *Service) validate(datatypes ...validator.Type) error {
-	// check method
-	err := svc.isMethodAvailable()
+	err := svc.checkMethod()
 	if err != nil {
 		return fmt.Errorf("field 'method': %w", err)
 	}
 
-	// check pattern
 	svc.Pattern = strings.Trim(svc.Pattern, " \t\r\n")
-	err = svc.isPatternValid()
+	err = svc.checkPattern()
 	if err != nil {
 		return fmt.Errorf("field 'path': %w", err)
 	}
 
-	// check description
 	if len(strings.Trim(svc.Description, " \t\r\n")) < 1 {
-		return fmt.Errorf("field 'description': %w", errMissingDescription)
+		return fmt.Errorf("field 'description': %w", ErrMissingDescription)
 	}
 
-	// check input parameters
-	err = svc.validateInput(datatypes)
+	err = svc.checkInput(datatypes)
 	if err != nil {
 		return fmt.Errorf("field 'in': %w", err)
 	}
 
-	// fail if a brace capture remains undefined
+	// fail when a brace capture remains undefined
 	for _, capture := range svc.Captures {
 		if capture.Ref == nil {
-			return fmt.Errorf("field 'in': %s: %w", capture.Name, errUndefinedBraceCapture)
+			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrUndefinedBraceCapture)
 		}
 	}
 
-	// check output
-	err = svc.validateOutput(datatypes)
+	err = svc.checkOutput(datatypes)
 	if err != nil {
 		return fmt.Errorf("field 'out': %w", err)
 	}
@@ -138,27 +141,34 @@ func (svc *Service) validate(datatypes ...validator.Type) error {
 	return nil
 }
 
-func (svc *Service) isMethodAvailable() error {
+func (svc *Service) checkMethod() error {
 	for _, available := range availableHTTPMethods {
 		if svc.Method == available {
 			return nil
 		}
 	}
-	return errUnknownMethod
+	return ErrUnknownMethod
 }
 
-func (svc *Service) isPatternValid() error {
+// checkPattern checks for the validity of the pattern definition (i.e. the uri)
+//
+// Note that the uri can contain capture params e.g. `/a/{b}/c/{d}`, in this
+// example, input parameters with names `{b}` and `{d}` are expected.
+//
+// This methods sets up the service state with adding capture params that are
+// expected; checkInputs() will be able to check params agains pattern captures.
+func (svc *Service) checkPattern() error {
 	length := len(svc.Pattern)
 
 	// empty pattern
 	if length < 1 {
-		return errInvalidPattern
+		return ErrInvalidPattern
 	}
 
 	if length > 1 {
 		// pattern not starting with '/' or ending with '/'
 		if svc.Pattern[0] != '/' || svc.Pattern[length-1] == '/' {
-			return errInvalidPattern
+			return ErrInvalidPattern
 		}
 	}
 
@@ -166,11 +176,11 @@ func (svc *Service) isPatternValid() error {
 	parts := SplitURL(svc.Pattern)
 	for i, part := range parts {
 		if len(part) < 1 {
-			return errInvalidPattern
+			return ErrInvalidPattern
 		}
 
 		// if brace capture
-		if matches := braceRegex.FindAllStringSubmatch(part, -1); len(matches) > 0 && len(matches[0]) > 1 {
+		if matches := captureRegex.FindAllStringSubmatch(part, -1); len(matches) > 0 && len(matches[0]) > 1 {
 			braceName := matches[0][1]
 
 			// append
@@ -187,149 +197,185 @@ func (svc *Service) isPatternValid() error {
 
 		// fail on invalid format
 		if strings.ContainsAny(part, "{}") {
-			return errInvalidPatternBraceCapture
+			return ErrInvalidPatternBraceCapture
 		}
-
 	}
 
 	return nil
 }
 
-func (svc *Service) validateInput(types []validator.Type) error {
-
-	// ignore no parameter
+func (svc *Service) checkInput(types []validator.Type) error {
+	// no parameter
 	if svc.Input == nil || len(svc.Input) < 1 {
-		svc.Input = make(map[string]*Parameter, 0)
+		svc.Input = map[string]*Parameter{}
 		return nil
 	}
 
 	// for each parameter
-	for paramName, param := range svc.Input {
-		if len(paramName) < 1 {
-			return fmt.Errorf("%s: %w", paramName, errIllegalParamName)
+	for name, p := range svc.Input {
+		if len(name) < 1 {
+			return fmt.Errorf("%s: %w", name, ErrIllegalParamName)
 		}
 
-		// fail if brace capture does not exists in pattern
-		var iscapture, isquery bool
-		if matches := braceRegex.FindAllStringSubmatch(paramName, -1); len(matches) > 0 && len(matches[0]) > 1 {
-			braceName := matches[0][1]
-
-			found := false
-			for _, capture := range svc.Captures {
-				if capture.Name == braceName {
-					capture.Ref = param
-					found = true
-					break
-				}
-			}
-			if !found {
-				return fmt.Errorf("%s: %w", paramName, errUnspecifiedBraceCapture)
-			}
-			iscapture = true
-
-		} else if matches := queryRegex.FindAllStringSubmatch(paramName, -1); len(matches) > 0 && len(matches[0]) > 1 {
-
-			queryName := matches[0][1]
-
-			// init map
-			if svc.Query == nil {
-				svc.Query = make(map[string]*Parameter)
-			}
-			svc.Query[queryName] = param
-			isquery = true
-		} else {
-			if svc.Form == nil {
-				svc.Form = make(map[string]*Parameter)
-			}
-			svc.Form[paramName] = param
-		}
-
-		// fail if capture or query without rename
-		if len(param.Rename) < 1 && (iscapture || isquery) {
-			return fmt.Errorf("%s: %w", paramName, errMandatoryRename)
-		}
-
-		// use param name if no rename
-		if len(param.Rename) < 1 {
-			param.Rename = paramName
-		}
-
-		err := param.validate(types...)
+		// parse parameters: capture (uri), query or form and update the service
+		// attributes accordingly
+		ptype, err := svc.parseParam(name, p)
 		if err != nil {
-			return fmt.Errorf("%s: %w", paramName, err)
+			return err
+		}
+
+		// Rename mandatory for capture and query
+		if len(p.Rename) < 1 && (ptype == captureParam || ptype == queryParam) {
+			return fmt.Errorf("%s: %w", name, ErrMandatoryRename)
+		}
+
+		// fallback to name when Rename is not provided
+		if len(p.Rename) < 1 {
+			p.Rename = name
+		}
+
+		err = p.validate(types...)
+		if err != nil {
+			return fmt.Errorf("%s: %w", name, err)
 		}
 
 		// capture parameter cannot be optional
-		if iscapture && param.Optional {
-			return fmt.Errorf("%s: %w", paramName, errIllegalOptionalURIParam)
+		if p.Optional && ptype == captureParam {
+			return fmt.Errorf("%s: %w", name, ErrIllegalOptionalURIParam)
 		}
 
-		// fail on name/rename conflict
-		for paramName2, param2 := range svc.Input {
-			// ignore self
-			if paramName == paramName2 {
-				continue
-			}
-
-			// 3.2.1. Same rename field
-			// 3.2.2. Not-renamed field matches a renamed field
-			// 3.2.3. Renamed field matches name
-			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
-				return fmt.Errorf("%s: %w", paramName, errParamNameConflict)
-			}
-
+		err = nameConflicts(name, p, svc.Input)
+		if err != nil {
+			return err
 		}
-
 	}
-
 	return nil
 }
 
-func (svc *Service) validateOutput(types []validator.Type) error {
-
-	// ignore no parameter
+func (svc *Service) checkOutput(types []validator.Type) error {
+	// no parameter
 	if svc.Output == nil || len(svc.Output) < 1 {
 		svc.Output = make(map[string]*Parameter, 0)
 		return nil
 	}
 
-	// for each parameter
-	for paramName, param := range svc.Output {
-		if len(paramName) < 1 {
-			return fmt.Errorf("%s: %w", paramName, errIllegalParamName)
+	for name, p := range svc.Output {
+		if len(name) < 1 {
+			return fmt.Errorf("%s: %w", name, ErrIllegalParamName)
 		}
 
-		// use param name if no rename
-		if len(param.Rename) < 1 {
-			param.Rename = paramName
+		// fallback to name when Rename is not provided
+		if len(p.Rename) < 1 {
+			p.Rename = name
 		}
 
-		err := param.validate(types...)
+		err := p.validate(types...)
 		if err != nil {
-			return fmt.Errorf("%s: %w", paramName, err)
+			return fmt.Errorf("%s: %w", name, err)
 		}
 
-		if param.Optional {
-			return fmt.Errorf("%s: %w", paramName, errOptionalOption)
+		if p.Optional {
+			return fmt.Errorf("%s: %w", name, ErrOptionalOption)
 		}
 
-		// fail on name/rename conflict
-		for paramName2, param2 := range svc.Output {
-			// ignore self
-			if paramName == paramName2 {
-				continue
+		err = nameConflicts(name, p, svc.Output)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type paramType int
+
+const (
+	captureParam paramType = iota
+	queryParam
+	formParam
+)
+
+// parseParam determines which param type it is from its name:
+// - `{paramName}` is an capture; it captures a segment of the uri defined in
+//    the pattern definition, e.g. `/some/path/with/{paramName}/somewhere`
+// - `GET@paramName` is an uri query that is received from the http query format
+//    in the uri, e.g. `http://domain.com/uri?paramName=paramValue&param2=value2`
+// - any other name that contains valid characters is considered a Form
+//   parameter; it is extracted from the http request's body as: json, multipart
+//   or using the x-www-form-urlencoded format.
+//
+// Special notes:
+// - capture params MUST be found in the pattern definition.
+// - capture params MUST NOT be optional as they are in the pattern anyways.
+// - capture and query params MUST be renamed because the `{param}` or
+//   `GET@param` name formats cannot be translated to a valid go exported name.
+//    c.f. the `dynfunc` package that creates a handler func() signature from
+//    the service definitions (i.e. input and output parameters).
+func (svc *Service) parseParam(name string, p *Parameter) (paramType, error) {
+	var (
+		captureMatches = captureRegex.FindAllStringSubmatch(name, -1)
+		isCapture      = len(captureMatches) > 0 && len(captureMatches[0]) > 1
+	)
+
+	// Parameter is a capture (uri/{param})
+	if isCapture {
+		captureName := captureMatches[0][1]
+
+		// fail if brace capture does not exists in pattern
+		found := false
+		for _, capture := range svc.Captures {
+			if capture.Name == captureName {
+				capture.Ref = p
+				found = true
+				break
 			}
-
-			// 3.2.1. Same rename field
-			// 3.2.2. Not-renamed field matches a renamed field
-			// 3.2.3. Renamed field matches name
-			if param.Rename == param2.Rename || paramName == param2.Rename || paramName2 == param.Rename {
-				return fmt.Errorf("%s: %w", paramName, errParamNameConflict)
-			}
-
 		}
-
+		if !found {
+			return captureParam, fmt.Errorf("%s: %w", name, ErrUnspecifiedBraceCapture)
+		}
+		return captureParam, nil
 	}
 
+	var (
+		queryMatches = queryRegex.FindAllStringSubmatch(name, -1)
+		isQuery      = len(queryMatches) > 0 && len(queryMatches[0]) > 1
+	)
+
+	// Parameter is a query (uri?param)
+	if isQuery {
+		queryName := queryMatches[0][1]
+
+		// init map
+		if svc.Query == nil {
+			svc.Query = make(map[string]*Parameter)
+		}
+		svc.Query[queryName] = p
+
+		return queryParam, nil
+	}
+
+	// Parameter is a form param
+	if svc.Form == nil {
+		svc.Form = make(map[string]*Parameter)
+	}
+	svc.Form[name] = p
+	return formParam, nil
+}
+
+// nameConflicts returns whether ar given parameter has its name or Rename field
+// in conflict with an existing parameter
+func nameConflicts(name string, param *Parameter, others map[string]*Parameter) error {
+	for otherName, other := range others {
+		// ignore self
+		if otherName == name {
+			continue
+		}
+
+		// 1. same rename field
+		// 2. original name matches a renamed field
+		// 3. renamed field matches an original name
+		if param.Rename == other.Rename || name == other.Rename || otherName == param.Rename {
+			return fmt.Errorf("%s: %w", otherName, ErrParamNameConflict)
+		}
+	}
 	return nil
 }

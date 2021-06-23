@@ -53,47 +53,47 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 
 	// missing or invalid first arg: context.Context
 	if handlerType.NumIn() < 1 {
-		return errMissingHandlerContextArgument
+		return ErrMissingHandlerContextArgument
 	}
 	firstArgType := handlerType.In(0)
 
 	if !firstArgType.Implements(ctxType) {
-		return fmt.Errorf("fock")
+		return ErrInvalidHandlerContextArgument
 	}
 
 	// no input required
 	if len(s.Input) == 0 {
 		// input struct provided
 		if handlerType.NumIn() > 1 {
-			return errUnexpectedInput
+			return ErrUnexpectedInput
 		}
 		return nil
 	}
 
 	// too much arguments
-	if handlerType.NumIn() > 2 {
-		return errMissingHandlerInputArgument
+	if handlerType.NumIn() != 2 {
+		return ErrMissingHandlerInputArgument
 	}
 
 	// arg must be a struct
 	inStruct := handlerType.In(1)
 	if inStruct.Kind() != reflect.Struct {
-		return errMissingParamArgument
+		return ErrMissingParamArgument
 	}
 
 	// check for invalid param
 	for name, ptype := range s.Input {
 		if name[0] == strings.ToLower(name)[0] {
-			return fmt.Errorf("%s: %w", name, errUnexportedName)
+			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
 		}
 
 		field, exists := inStruct.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, errMissingConfigArgument)
+			return fmt.Errorf("%s: %w", name, ErrMissingConfigArgument)
 		}
 
 		if !ptype.AssignableTo(field.Type) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, errWrongParamTypeFromConfig, field.Type, ptype)
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
 
@@ -105,44 +105,44 @@ func (s Signature) ValidateOutput(handlerType reflect.Type) error {
 	errType := reflect.TypeOf(api.ErrUnknown)
 
 	if handlerType.NumOut() < 1 {
-		return errMissingHandlerErrorArgument
+		return ErrMissingHandlerErrorArgument
 	}
 
 	// last output must be api.Err
 	lastArgType := handlerType.Out(handlerType.NumOut() - 1)
 	if !lastArgType.AssignableTo(errType) {
-		return errMissingHandlerErrorArgument
+		return ErrInvalidHandlerErrorArgument
 	}
 
-	// no output -> ok
+	// no output required -> ok
 	if len(s.Output) == 0 {
 		return nil
 	}
 
 	if handlerType.NumOut() < 2 {
-		return errMissingHandlerOutputArgument
+		return ErrMissingHandlerOutputArgument
 	}
 
 	// fail if first output is not a pointer to struct
 	outStructPtr := handlerType.Out(0)
 	if outStructPtr.Kind() != reflect.Ptr {
-		return errWrongOutputArgumentType
+		return ErrWrongOutputArgumentType
 	}
 
 	outStruct := outStructPtr.Elem()
 	if outStruct.Kind() != reflect.Struct {
-		return errWrongOutputArgumentType
+		return ErrWrongOutputArgumentType
 	}
 
 	// fail on invalid output
 	for name, ptype := range s.Output {
 		if name[0] == strings.ToLower(name)[0] {
-			return fmt.Errorf("%s: %w", name, errUnexportedName)
+			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
 		}
 
 		field, exists := outStruct.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, errMissingConfigArgument)
+			return fmt.Errorf("%s: %w", name, ErrMissingConfigArgument)
 		}
 
 		// ignore types evalutating to nil
@@ -151,7 +151,7 @@ func (s Signature) ValidateOutput(handlerType reflect.Type) error {
 		}
 
 		if !field.Type.ConvertibleTo(ptype) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, errWrongParamTypeFromConfig, field.Type, ptype)
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
 

@@ -15,7 +15,13 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
-func addBuiltinTypes(b *aicra.Builder) error {
+func printEscaped(raw string) string {
+	raw = strings.ReplaceAll(raw, "\n", "\\n")
+	raw = strings.ReplaceAll(raw, "\r", "\\r")
+	return raw
+}
+
+func addDefaultTypes(b *aicra.Builder) error {
 	if err := b.Validate(validator.AnyType{}); err != nil {
 		return err
 	}
@@ -37,9 +43,9 @@ func addBuiltinTypes(b *aicra.Builder) error {
 	return nil
 }
 
-func TestWith(t *testing.T) {
+func TestHandler_With(t *testing.T) {
 	builder := &aicra.Builder{}
-	if err := addBuiltinTypes(builder); err != nil {
+	if err := addDefaultTypes(builder); err != nil {
 		t.Fatalf("unexpected error <%v>", err)
 	}
 
@@ -51,13 +57,11 @@ func TestWith(t *testing.T) {
 
 	middleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			newr := r
-
 			// first time -> store 1
 			value := r.Context().Value(key)
 			if value == nil {
-				newr = r.WithContext(context.WithValue(r.Context(), key, int(1)))
-				next.ServeHTTP(w, newr)
+				r = r.WithContext(context.WithValue(r.Context(), key, int(1)))
+				next.ServeHTTP(w, r)
 				return
 			}
 
@@ -67,8 +71,8 @@ func TestWith(t *testing.T) {
 				t.Fatalf("value is not an int")
 			}
 			cast++
-			newr = r.WithContext(context.WithValue(r.Context(), key, cast))
-			next.ServeHTTP(w, newr)
+			r = r.WithContext(context.WithValue(r.Context(), key, cast))
+			next.ServeHTTP(w, r)
 		})
 	}
 
@@ -123,7 +127,7 @@ func TestWith(t *testing.T) {
 
 }
 
-func TestWithAuth(t *testing.T) {
+func TestHandler_WithAuth(t *testing.T) {
 
 	tt := []struct {
 		name        string
@@ -208,7 +212,7 @@ func TestWithAuth(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			builder := &aicra.Builder{}
-			if err := addBuiltinTypes(builder); err != nil {
+			if err := addDefaultTypes(builder); err != nil {
 				t.Fatalf("unexpected error <%v>", err)
 			}
 
@@ -276,7 +280,7 @@ func TestWithAuth(t *testing.T) {
 
 }
 
-func TestPermissionError(t *testing.T) {
+func TestHandler_PermissionError(t *testing.T) {
 
 	tt := []struct {
 		name        string
@@ -301,7 +305,7 @@ func TestPermissionError(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			builder := &aicra.Builder{}
-			if err := addBuiltinTypes(builder); err != nil {
+			if err := addDefaultTypes(builder); err != nil {
 				t.Fatalf("unexpected error <%v>", err)
 			}
 
@@ -367,7 +371,7 @@ func TestPermissionError(t *testing.T) {
 
 }
 
-func TestDynamicScope(t *testing.T) {
+func TestHandler_DynamicScope(t *testing.T) {
 	tt := []struct {
 		name        string
 		manifest    string
@@ -558,7 +562,7 @@ func TestDynamicScope(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			builder := &aicra.Builder{}
-			if err := addBuiltinTypes(builder); err != nil {
+			if err := addDefaultTypes(builder); err != nil {
 				t.Fatalf("unexpected error <%v>", err)
 			}
 
@@ -620,4 +624,515 @@ func TestDynamicScope(t *testing.T) {
 		})
 	}
 
+}
+
+func TestHandler_ServiceErrors(t *testing.T) {
+	tt := []struct {
+		name     string
+		manifest string
+		// handler
+		hmethod, huri string
+		hfn           interface{}
+		// request
+		method, url string
+		contentType string
+		body        string
+		permissions []string
+		err         api.Err
+	}{
+		// service match
+		{
+			name: "unknown service method",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodPost,
+			url:         "/",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrUnknownService,
+		},
+		{
+			name: "unknown service path",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/invalid",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrUnknownService,
+		},
+		{
+			name: "valid empty service",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrSuccess,
+		},
+
+		// invalid uri param -> unknown service
+		{
+			name: "invalid uri param",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/a/{id}/b",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"{id}": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/a/{id}/b",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/a/invalid/b",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrUnknownService,
+		},
+
+		// query param
+		{
+			name: "missing query param",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"GET@id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrMissingParam,
+		},
+		{
+			name: "invalid query param",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"GET@id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/a",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/a?id=abc",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrInvalidParam,
+		},
+		{
+			name: "invalid query multi param",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"GET@id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/a",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/a?id=123&id=456",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrInvalidParam,
+		},
+		{
+			name: "valid query param",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"GET@id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/a",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			method:      http.MethodGet,
+			url:         "/a?id=123",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrSuccess,
+		},
+
+		// json param
+		{
+			name: "missing json param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "application/json",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrMissingParam,
+		},
+		{
+			name: "invalid json param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "application/json",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        `{ "id": "invalid type" }`,
+			permissions: []string{},
+			err:         api.ErrInvalidParam,
+		},
+		{
+			name: "valid json param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "application/json",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        `{ "id": 123 }`,
+			permissions: []string{},
+			err:         api.ErrSuccess,
+		},
+
+		// urlencoded param
+		{
+			name: "missing urlencoded param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "application/x-www-form-urlencoded",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrMissingParam,
+		},
+		{
+			name: "invalid urlencoded param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "application/x-www-form-urlencoded",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        `id=abc`,
+			permissions: []string{},
+			err:         api.ErrInvalidParam,
+		},
+		{
+			name: "valid urlencoded param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "application/x-www-form-urlencoded",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        `id=123`,
+			permissions: []string{},
+			err:         api.ErrSuccess,
+		},
+
+		// formdata param
+		{
+			name: "missing multipart param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "multipart/form-data; boundary=xxx",
+			method:      http.MethodPost,
+			url:         "/",
+			body:        ``,
+			permissions: []string{},
+			err:         api.ErrMissingParam,
+		},
+		{
+			name: "invalid multipart param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "multipart/form-data; boundary=xxx",
+			method:      http.MethodPost,
+			url:         "/",
+			body: `--xxx
+Content-Disposition: form-data; name="id"
+
+abc
+--xxx--`,
+			permissions: []string{},
+			err:         api.ErrInvalidParam,
+		},
+		{
+			name: "valid multipart param",
+			manifest: `[
+				{
+					"method": "POST",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {
+						"id": { "info": "info", "type": "int", "name": "ID" }
+					},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodPost,
+			huri:    "/",
+			hfn: func(context.Context, struct{ ID int }) api.Err {
+				return api.ErrSuccess
+			},
+			contentType: "multipart/form-data; boundary=xxx",
+			method:      http.MethodPost,
+			url:         "/",
+			body: `--xxx
+Content-Disposition: form-data; name="id"
+
+123
+--xxx--`,
+			permissions: []string{},
+			err:         api.ErrSuccess,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := &aicra.Builder{}
+			if err := addDefaultTypes(builder); err != nil {
+				t.Fatalf("unexpected error <%v>", err)
+			}
+
+			err := builder.Setup(strings.NewReader(tc.manifest))
+			if err != nil {
+				t.Fatalf("setup: unexpected error <%v>", err)
+			}
+
+			if err := builder.Bind(tc.hmethod, tc.huri, tc.hfn); err != nil {
+				t.Fatalf("bind: unexpected error <%v>", err)
+			}
+
+			handler, err := builder.Build()
+			if err != nil {
+				t.Fatalf("build: unexpected error <%v>", err)
+			}
+
+			var (
+				response = httptest.NewRecorder()
+				body     = strings.NewReader(tc.body)
+				request  = httptest.NewRequest(tc.method, tc.url, body)
+			)
+			if len(tc.contentType) > 0 {
+				request.Header.Add("Content-Type", tc.contentType)
+			}
+
+			// test request
+			handler.ServeHTTP(response, request)
+			if response.Body == nil {
+				t.Fatalf("response has no body")
+			}
+
+			jsonErr, err := json.Marshal(tc.err)
+			if err != nil {
+				t.Fatalf("cannot marshal expected error: %v", err)
+			}
+			jsonExpected := fmt.Sprintf(`{"error":%s}`, jsonErr)
+			if response.Body.String() != jsonExpected {
+				t.Fatalf("invalid response:\n- actual: %s\n- expect: %s\n", printEscaped(response.Body.String()), printEscaped(jsonExpected))
+			}
+		})
+	}
 }

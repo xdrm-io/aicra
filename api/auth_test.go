@@ -18,6 +18,12 @@ func TestCombination(t *testing.T) {
 			Granted:  true,
 		},
 		{
+			Name:     "empty requirements none given",
+			Required: [][]string{{}},
+			Active:   []string{},
+			Granted:  true,
+		},
+		{
 			Name:     "no requirement 1 given",
 			Required: [][]string{},
 			Active:   []string{"a"},

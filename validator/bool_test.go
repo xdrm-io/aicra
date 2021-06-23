@@ -2,10 +2,23 @@ package validator_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
+
+func TestBool_ReflectType(t *testing.T) {
+	t.Parallel()
+
+	var (
+		dt       = validator.BoolType{}
+		expected = reflect.TypeOf(true)
+	)
+	if dt.GoType() != expected {
+		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
+	}
+}
 
 func TestBool_AvailableTypes(t *testing.T) {
 	t.Parallel()

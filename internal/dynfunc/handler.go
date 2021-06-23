@@ -20,14 +20,14 @@ type Handler struct {
 
 // Build a handler from a dynamic function and checks its signature against a
 // service configuration
-//e
-// `fn` must have as a signature : `func(*api.Context, in) (*out, api.Err)`
+//
+// `fn` must have as a signature : `func(context.Context, in) (*out, api.Err)`
 //  - `in` is a struct{} containing a field for each service input (with valid reflect.Type)
 //  - `out` is a struct{} containing a field for each service output (with valid reflect.Type)
 //
 // Special cases:
-//  - it there is no input, `in` MUST be omitted
-//  - it there is no output, `out` MUST be omitted
+//  - it there is no input,  `in` MUST be omitted
+//  - it there is no output, `out` CAN be omitted
 func Build(fn interface{}, service config.Service) (*Handler, error) {
 	var (
 		h = &Handler{
@@ -38,7 +38,7 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 	)
 
 	if fnType.Kind() != reflect.Func {
-		return nil, errHandlerNotFunc
+		return nil, ErrHandlerNotFunc
 	}
 	if err := h.signature.ValidateInput(fnType); err != nil {
 		return nil, fmt.Errorf("input: %w", err)

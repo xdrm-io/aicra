@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/dynfunc"
 	"github.com/xdrm-io/aicra/validator"
 )
 
@@ -34,6 +35,8 @@ func addBuiltinTypes(b *Builder) error {
 }
 
 func TestAddType(t *testing.T) {
+	t.Parallel()
+
 	builder := &Builder{}
 	err := builder.Validate(validator.BoolType{})
 	if err != nil {
@@ -49,7 +52,180 @@ func TestAddType(t *testing.T) {
 	}
 }
 
+func TestSetupNoType(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader("[]"))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+}
+func TestSetupTwice(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader("[]"))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	// double Setup() must fail
+	err = builder.Setup(strings.NewReader("[]"))
+	if err != errAlreadySetup {
+		t.Fatalf("expected error %v, got %v", errAlreadySetup, err)
+	}
+}
+
+func TestBindBeforeSetup(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	// binding before Setup() must fail
+	err := builder.Bind(http.MethodGet, "/path", func() {})
+	if err != errNotSetup {
+		t.Fatalf("expected error %v, got %v", errNotSetup, err)
+	}
+}
+
+func TestBindUnknownService(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader("[]"))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	err = builder.Bind(http.MethodGet, "/path", func() {})
+	if !errors.Is(err, errUnknownService) {
+		t.Fatalf("expected error %v, got %v", errUnknownService, err)
+	}
+}
+func TestBindInvalidHandler(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader(`[
+		{
+			"method": "GET",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		}
+	]`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	err = builder.Bind(http.MethodGet, "/path", func() {})
+
+	if err == nil {
+		t.Fatalf("expected an error")
+	}
+
+	if !errors.Is(err, dynfunc.ErrMissingHandlerContextArgument) {
+		t.Fatalf("expected a dynfunc.Err got %v", err)
+	}
+}
+func TestBindGet(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader(`[
+		{
+			"method": "GET",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		},
+		{
+			"method": "POST",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		},
+		{
+			"method": "PUT",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		},
+		{
+			"method": "DELETE",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		}
+	]`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	err = builder.Get("/path", func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess })
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	err = builder.Post("/path", func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess })
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	err = builder.Put("/path", func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess })
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	err = builder.Delete("/path", func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess })
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+}
+
+func TestUnhandledService(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader(`[
+		{
+			"method": "GET",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		},
+		{
+			"method": "POST",
+			"path": "/path",
+			"scope": [[]],
+			"info": "info",
+			"in": {},
+			"out": {}
+		}
+	]`))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	err = builder.Get("/path", func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess })
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	_, err = builder.Build()
+	if !errors.Is(err, errMissingHandler) {
+		t.Fatalf("expected a %v error, got %v", errMissingHandler, err)
+	}
+}
 func TestBind(t *testing.T) {
+	t.Parallel()
+
 	tcases := []struct {
 		Name          string
 		Config        string

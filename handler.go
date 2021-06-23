@@ -2,6 +2,7 @@ package aicra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -27,21 +28,25 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
-	// 1ind a matching service from config
+	// match service from config
 	var service = s.conf.Find(r)
 	if service == nil {
-		handleError(api.ErrUnknownService, w, r)
+		newResponse().WithError(api.ErrUnknownService).ServeHTTP(w, r)
 		return
 	}
 
 	// extract request data
 	var input, err = extractInput(service, *r)
 	if err != nil {
-		handleError(api.ErrMissingParam, w, r)
+		if errors.Is(err, reqdata.ErrInvalidType) {
+			newResponse().WithError(api.ErrInvalidParam).ServeHTTP(w, r)
+		} else {
+			newResponse().WithError(api.ErrMissingParam).ServeHTTP(w, r)
+		}
 		return
 	}
 
-	// find a matching handler
+	// match handler
 	var handler *apiHandler
 	for _, h := range s.handlers {
 		if h.Method == service.Method && h.Path == service.Pattern {
@@ -49,13 +54,13 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// fail on no matching handler
+	// no handler found
 	if handler == nil {
-		handleError(api.ErrUncallableService, w, r)
+		newResponse().WithError(api.ErrUncallableService).ServeHTTP(w, r)
 		return
 	}
 
-	// build context with builtin data
+	// add info into context
 	c := r.Context()
 	c = context.WithValue(c, ctx.Request, r)
 	c = context.WithValue(c, ctx.Response, w)
@@ -63,61 +68,53 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 	// create http handler
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// should not happen
 		auth := api.GetAuth(r.Context())
 		if auth == nil {
-			handleError(api.ErrPermission, w, r)
+			newResponse().WithError(api.ErrPermission).ServeHTTP(w, r)
 			return
 		}
 
 		// reject non granted requests
 		if !auth.Granted() {
-			handleError(api.ErrPermission, w, r)
+			newResponse().WithError(api.ErrPermission).ServeHTTP(w, r)
 			return
 		}
 
-		// use context defined in the request
+		// execute the service handler
 		s.handle(r.Context(), input, handler, service, w, r)
 	})
 
-	// run middlewares the handler
+	// run contextual middlewares
 	for _, mw := range s.ctxMiddlewares {
 		h = mw(h)
 	}
 
-	// serve using the context with values
+	// serve using the pre-filled context
 	h.ServeHTTP(w, r.WithContext(c))
 }
 
+// handle the service request with the associated handler func and respond using
+// the handler func output
 func (s *Handler) handle(c context.Context, input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
-	// pass execution to the handler
+	// pass execution to the handler function
 	var outData, outErr = handler.dyn.Handle(c, input.Data)
 
-	// build response from returned arguments
-	var res = api.EmptyResponse().WithError(outErr)
+	// build response from output arguments
+	var res = newResponse().WithError(outErr)
 	for key, value := range outData {
 
 		// find original name from 'rename' field
 		for name, param := range service.Output {
 			if param.Rename == key {
-				res.SetData(name, value)
+				res.WithValue(name, value)
 			}
 		}
 	}
 
-	// 7. apply headers
+	// write response and close request
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	for key, values := range res.Headers {
-		for _, value := range values {
-			w.Header().Add(key, value)
-		}
-	}
-
 	res.ServeHTTP(w, r)
-}
-
-func handleError(err api.Err, w http.ResponseWriter, r *http.Request) {
-	var response = api.EmptyResponse().WithError(err)
-	response.ServeHTTP(w, r)
 }
 
 func extractInput(service *config.Service, req http.Request) (*reqdata.T, error) {

@@ -3,10 +3,23 @@ package validator_test
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
+
+func TestInt_ReflectType(t *testing.T) {
+	t.Parallel()
+
+	var (
+		dt       = validator.IntType{}
+		expected = reflect.TypeOf(int(0))
+	)
+	if dt.GoType() != expected {
+		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
+	}
+}
 
 func TestInt_AvailableTypes(t *testing.T) {
 	t.Parallel()
@@ -71,7 +84,7 @@ func TestInt_Values(t *testing.T) {
 		{uint(math.MaxInt64 + 1), false},
 
 		{float64(math.MinInt64), true},
-		// we cannot just substract 1 because of how precision works
+		// we cannot just subtract 1 because of how precision works
 		{float64(math.MinInt64 - 1024 - 1), false},
 
 		// WARNING : this is due to how floats are compared

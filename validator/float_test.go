@@ -3,10 +3,23 @@ package validator_test
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
+
+func TestFloat64_ReflectType(t *testing.T) {
+	t.Parallel()
+
+	var (
+		dt       = validator.FloatType{}
+		expected = reflect.TypeOf(float64(0.0))
+	)
+	if dt.GoType() != expected {
+		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
+	}
+}
 
 func TestFloat64_AvailableTypes(t *testing.T) {
 	t.Parallel()

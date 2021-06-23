@@ -3,10 +3,23 @@ package validator_test
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
+
+func TestUint_ReflectType(t *testing.T) {
+	t.Parallel()
+
+	var (
+		dt       = validator.UintType{}
+		expected = reflect.TypeOf(uint(0))
+	)
+	if dt.GoType() != expected {
+		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
+	}
+}
 
 func TestUint_AvailableTypes(t *testing.T) {
 	t.Parallel()

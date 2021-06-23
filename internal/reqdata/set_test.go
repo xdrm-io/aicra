@@ -135,13 +135,11 @@ func TestStoreWithUri(t *testing.T) {
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
-						t.Errorf("expected error <%s>, got <%s>", test.Err, err)
-						t.FailNow()
+						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
 					}
 					return
 				}
-				t.Errorf("unexpected error <%s>", err)
-				t.FailNow()
+				t.Fatalf("unexpected error <%s>", err)
 			}
 
 			if len(store.Data) != len(service.Input) {
@@ -183,14 +181,14 @@ func TestExtractQuery(t *testing.T) {
 			Query:        "a",
 			Err:          nil,
 			ParamNames:   []string{"a"},
-			ParamValues:  [][]string{[]string{""}},
+			ParamValues:  [][]string{{""}},
 		},
 		{
 			ServiceParam: []string{"a"},
 			Query:        "a&b",
 			Err:          nil,
 			ParamNames:   []string{"a"},
-			ParamValues:  [][]string{[]string{""}},
+			ParamValues:  [][]string{{""}},
 		},
 		{
 			ServiceParam: []string{"a", "missing"},
@@ -204,40 +202,40 @@ func TestExtractQuery(t *testing.T) {
 			Query:        "a&b",
 			Err:          nil,
 			ParamNames:   []string{"a", "b"},
-			ParamValues:  [][]string{[]string{""}, []string{""}},
+			ParamValues:  [][]string{{""}, {""}},
 		},
 		{
 			ServiceParam: []string{"a"},
 			Err:          nil,
 			Query:        "a=",
 			ParamNames:   []string{"a"},
-			ParamValues:  [][]string{[]string{""}},
+			ParamValues:  [][]string{{""}},
 		},
 		{
 			ServiceParam: []string{"a", "b"},
 			Err:          nil,
 			Query:        "a=&b=x",
 			ParamNames:   []string{"a", "b"},
-			ParamValues:  [][]string{[]string{""}, []string{"x"}},
+			ParamValues:  [][]string{{""}, {"x"}},
 		},
 		{
 			ServiceParam: []string{"a", "c"},
 			Err:          nil,
 			Query:        "a=b&c=d",
 			ParamNames:   []string{"a", "c"},
-			ParamValues:  [][]string{[]string{"b"}, []string{"d"}},
+			ParamValues:  [][]string{{"b"}, {"d"}},
 		},
 		{
 			ServiceParam: []string{"a", "c"},
 			Err:          nil,
 			Query:        "a=b&c=d&a=x",
 			ParamNames:   []string{"a", "c"},
-			ParamValues:  [][]string{[]string{"b", "x"}, []string{"d"}},
+			ParamValues:  [][]string{{"b", "x"}, {"d"}},
 		},
 	}
 
 	for i, test := range tests {
-		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("request[%d]", i), func(t *testing.T) {
 
 			store := New(getServiceWithQuery(test.ServiceParam...))
 
@@ -246,19 +244,16 @@ func TestExtractQuery(t *testing.T) {
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
-						t.Errorf("expected error <%s>, got <%s>", test.Err, err)
-						t.FailNow()
+						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
 					}
 					return
 				}
-				t.Errorf("unexpected error <%s>", err)
-				t.FailNow()
+				t.Fatalf("unexpected error <%s>", err)
 			}
 
 			if test.ParamNames == nil || test.ParamValues == nil {
 				if len(store.Data) != 0 {
-					t.Errorf("expected no GET parameters and got %d", len(store.Data))
-					t.FailNow()
+					t.Fatalf("expected no GET parameters and got %d", len(store.Data))
 				}
 
 				// no param to check
@@ -266,8 +261,7 @@ func TestExtractQuery(t *testing.T) {
 			}
 
 			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Errorf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
-				t.FailNow()
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
 			}
 
 			for pi, pName := range test.ParamNames {
@@ -276,29 +270,35 @@ func TestExtractQuery(t *testing.T) {
 				t.Run(pName, func(t *testing.T) {
 					param, isset := store.Data[pName]
 					if !isset {
-						t.Errorf("param does not exist")
-						t.FailNow()
+						t.Fatalf("param does not exist")
 					}
 
+					// single value, should return a single element
+					if len(values) == 1 {
+						cast, canCast := param.(string)
+						if !canCast {
+							t.Fatalf("should return a string (got '%v')", cast)
+						}
+						if values[0] != cast {
+							t.Fatalf("should return '%s' (got '%s')", values[0], cast)
+						}
+						return
+					}
+
+					// multiple values, should return a slice
 					cast, canCast := param.([]interface{})
 					if !canCast {
-						t.Errorf("should return a []string (got '%v')", cast)
-						t.FailNow()
+						t.Fatalf("should return a []string (got '%v')", cast)
 					}
 
 					if len(cast) != len(values) {
-						t.Errorf("should return %d string(s) (got '%d')", len(values), len(cast))
-						t.FailNow()
+						t.Fatalf("should return %d string(s) (got '%d')", len(values), len(cast))
 					}
 
 					for vi, value := range values {
-
-						t.Run(fmt.Sprintf("value.%d", vi), func(t *testing.T) {
-							if value != cast[vi] {
-								t.Errorf("should return '%s' (got '%s')", value, cast[vi])
-								t.FailNow()
-							}
-						})
+						if value != cast[vi] {
+							t.Fatalf("should return '%s' (got '%s')", value, cast[vi])
+						}
 					}
 				})
 
@@ -326,9 +326,7 @@ func TestStoreWithUrlEncodedFormParseError(t *testing.T) {
 	store := New(nil)
 	err := store.GetForm(*req)
 	if err == nil {
-		t.Errorf("expected malformed urlencoded to have FailNow being parsed (got %d elements)", len(store.Data))
-		t.FailNow()
-
+		t.Fatalf("expected malformed urlencoded to have FailNow being parsed (got %d elements)", len(store.Data))
 	}
 }
 func TestExtractFormUrlEncoded(t *testing.T) {
@@ -359,14 +357,14 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			URLEncoded:    "a",
 			Err:           nil,
 			ParamNames:    []string{"a"},
-			ParamValues:   [][]string{[]string{""}},
+			ParamValues:   [][]string{{""}},
 		},
 		{
 			ServiceParams: []string{"a"},
 			URLEncoded:    "a&b",
 			Err:           nil,
 			ParamNames:    []string{"a"},
-			ParamValues:   [][]string{[]string{""}},
+			ParamValues:   [][]string{{""}},
 		},
 		{
 			ServiceParams: []string{"a", "missing"},
@@ -380,35 +378,35 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			URLEncoded:    "a&b",
 			Err:           nil,
 			ParamNames:    []string{"a", "b"},
-			ParamValues:   [][]string{[]string{""}, []string{""}},
+			ParamValues:   [][]string{{""}, {""}},
 		},
 		{
 			ServiceParams: []string{"a"},
 			Err:           nil,
 			URLEncoded:    "a=",
 			ParamNames:    []string{"a"},
-			ParamValues:   [][]string{[]string{""}},
+			ParamValues:   [][]string{{""}},
 		},
 		{
 			ServiceParams: []string{"a", "b"},
 			Err:           nil,
 			URLEncoded:    "a=&b=x",
 			ParamNames:    []string{"a", "b"},
-			ParamValues:   [][]string{[]string{""}, []string{"x"}},
+			ParamValues:   [][]string{{""}, {"x"}},
 		},
 		{
 			ServiceParams: []string{"a", "c"},
 			Err:           nil,
 			URLEncoded:    "a=b&c=d",
 			ParamNames:    []string{"a", "c"},
-			ParamValues:   [][]string{[]string{"b"}, []string{"d"}},
+			ParamValues:   [][]string{{"b"}, {"d"}},
 		},
 		{
 			ServiceParams: []string{"a", "c"},
 			Err:           nil,
 			URLEncoded:    "a=b&c=d&a=x",
 			ParamNames:    []string{"a", "c"},
-			ParamValues:   [][]string{[]string{"b", "x"}, []string{"d"}},
+			ParamValues:   [][]string{{"b", "x"}, {"d"}},
 		},
 	}
 
@@ -424,19 +422,16 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
-						t.Errorf("expected error <%s>, got <%s>", test.Err, err)
-						t.FailNow()
+						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
 					}
 					return
 				}
-				t.Errorf("unexpected error <%s>", err)
-				t.FailNow()
+				t.Fatalf("unexpected error <%s>", err)
 			}
 
 			if test.ParamNames == nil || test.ParamValues == nil {
 				if len(store.Data) != 0 {
-					t.Errorf("expected no GET parameters and got %d", len(store.Data))
-					t.FailNow()
+					t.Fatalf("expected no GET parameters and got %d", len(store.Data))
 				}
 
 				// no param to check
@@ -444,8 +439,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			}
 
 			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Errorf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
-				t.FailNow()
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
 			}
 
 			for pi, key := range test.ParamNames {
@@ -454,29 +448,35 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 				t.Run(key, func(t *testing.T) {
 					param, isset := store.Data[key]
 					if !isset {
-						t.Errorf("param does not exist")
-						t.FailNow()
+						t.Fatalf("param does not exist")
 					}
 
+					// single value, should return a single element
+					if len(values) == 1 {
+						cast, canCast := param.(string)
+						if !canCast {
+							t.Fatalf("should return a string (got '%v')", cast)
+						}
+						if values[0] != cast {
+							t.Fatalf("should return '%s' (got '%s')", values[0], cast)
+						}
+						return
+					}
+
+					// multiple values, should return a slice
 					cast, canCast := param.([]interface{})
 					if !canCast {
-						t.Errorf("should return a []interface{} (got '%v')", cast)
-						t.FailNow()
+						t.Fatalf("should return a []string (got '%v')", cast)
 					}
 
 					if len(cast) != len(values) {
-						t.Errorf("should return %d string(s) (got '%d')", len(values), len(cast))
-						t.FailNow()
+						t.Fatalf("should return %d string(s) (got '%d')", len(values), len(cast))
 					}
 
 					for vi, value := range values {
-
-						t.Run(fmt.Sprintf("value.%d", vi), func(t *testing.T) {
-							if value != cast[vi] {
-								t.Errorf("should return '%s' (got '%s')", value, cast[vi])
-								t.FailNow()
-							}
-						})
+						if value != cast[vi] {
+							t.Fatalf("should return '%s' (got '%s')", value, cast[vi])
+						}
 					}
 				})
 
@@ -567,19 +567,16 @@ func TestJsonParameters(t *testing.T) {
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
-						t.Errorf("expected error <%s>, got <%s>", test.Err, err)
-						t.FailNow()
+						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
 					}
 					return
 				}
-				t.Errorf("unexpected error <%s>", err)
-				t.FailNow()
+				t.Fatalf("unexpected error <%s>", err)
 			}
 
 			if test.ParamNames == nil || test.ParamValues == nil {
 				if len(store.Data) != 0 {
-					t.Errorf("expected no JSON parameters and got %d", len(store.Data))
-					t.FailNow()
+					t.Fatalf("expected no JSON parameters and got %d", len(store.Data))
 				}
 
 				// no param to check
@@ -587,8 +584,7 @@ func TestJsonParameters(t *testing.T) {
 			}
 
 			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Errorf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
-				t.FailNow()
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
 			}
 
 			for pi, pName := range test.ParamNames {
@@ -599,8 +595,7 @@ func TestJsonParameters(t *testing.T) {
 
 					param, isset := store.Data[key]
 					if !isset {
-						t.Errorf("store should contain element with key '%s'", key)
-						t.FailNow()
+						t.Fatalf("store should contain element with key '%s'", key)
 						return
 					}
 
@@ -610,13 +605,11 @@ func TestJsonParameters(t *testing.T) {
 					paramValueType := reflect.TypeOf(param)
 
 					if valueType != paramValueType {
-						t.Errorf("should be of type %v (got '%v')", valueType, paramValueType)
-						t.FailNow()
+						t.Fatalf("should be of type %v (got '%v')", valueType, paramValueType)
 					}
 
 					if paramValue != value {
-						t.Errorf("should return %v (got '%v')", value, paramValue)
-						t.FailNow()
+						t.Fatalf("should return %v (got '%v')", value, paramValue)
 					}
 
 				})
@@ -724,19 +717,16 @@ x
 			if err != nil {
 				if test.Err != nil {
 					if !errors.Is(err, test.Err) {
-						t.Errorf("expected error <%s>, got <%s>", test.Err, err)
-						t.FailNow()
+						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
 					}
 					return
 				}
-				t.Errorf("unexpected error <%s>", err)
-				t.FailNow()
+				t.Fatalf("unexpected error <%s>", err)
 			}
 
 			if test.ParamNames == nil || test.ParamValues == nil {
 				if len(store.Data) != 0 {
-					t.Errorf("expected no JSON parameters and got %d", len(store.Data))
-					t.FailNow()
+					t.Fatalf("expected no JSON parameters and got %d", len(store.Data))
 				}
 
 				// no param to check
@@ -744,8 +734,7 @@ x
 			}
 
 			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Errorf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
-				t.FailNow()
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
 			}
 
 			for pi, key := range test.ParamNames {
@@ -755,8 +744,7 @@ x
 
 					param, isset := store.Data[key]
 					if !isset {
-						t.Errorf("store should contain element with key '%s'", key)
-						t.FailNow()
+						t.Fatalf("store should contain element with key '%s'", key)
 						return
 					}
 
@@ -766,13 +754,11 @@ x
 					paramValueType := reflect.TypeOf(param)
 
 					if valueType != paramValueType {
-						t.Errorf("should be of type %v (got '%v')", valueType, paramValueType)
-						t.FailNow()
+						t.Fatalf("should be of type %v (got '%v')", valueType, paramValueType)
 					}
 
 					if paramValue != value {
-						t.Errorf("should return %v (got '%v')", value, paramValue)
-						t.FailNow()
+						t.Fatalf("should return %v (got '%v')", value, paramValue)
 					}
 
 				})

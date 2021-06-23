@@ -1,59 +1,61 @@
 package config
 
-// cerr allows you to create constant "const" error with type boxing.
-type cerr string
+// Err allows you to create constant "const" error with type boxing.
+type Err string
 
-func (err cerr) Error() string {
+func (err Err) Error() string {
 	return string(err)
 }
 
-// errRead - read error
-const errRead = cerr("cannot read config")
+const (
+	// ErrRead - read error
+	ErrRead = Err("cannot read config")
 
-// errUnknownMethod - unknown http method
-const errUnknownMethod = cerr("unknown HTTP method")
+	// ErrUnknownMethod - unknown http method
+	ErrUnknownMethod = Err("unknown HTTP method")
 
-// errFormat - invalid format
-const errFormat = cerr("invalid config format")
+	// ErrFormat - invalid format
+	ErrFormat = Err("invalid config format")
 
-// errPatternCollision - collision between 2 services' patterns
-const errPatternCollision = cerr("pattern collision")
+	// ErrPatternCollision - collision between 2 services' patterns
+	ErrPatternCollision = Err("pattern collision")
 
-// errInvalidPattern - malformed service pattern
-const errInvalidPattern = cerr("malformed service path: must begin with a '/' and not end with")
+	// ErrInvalidPattern - malformed service pattern
+	ErrInvalidPattern = Err("malformed service path: must begin with a '/' and not end with")
 
-// errInvalidPatternBraceCapture - invalid brace capture
-const errInvalidPatternBraceCapture = cerr("invalid uri parameter")
+	// ErrInvalidPatternBraceCapture - invalid brace capture
+	ErrInvalidPatternBraceCapture = Err("invalid uri parameter")
 
-// errUnspecifiedBraceCapture - missing path brace capture
-const errUnspecifiedBraceCapture = cerr("missing uri parameter")
+	// ErrUnspecifiedBraceCapture - missing path brace capture
+	ErrUnspecifiedBraceCapture = Err("missing uri parameter")
 
-// errUndefinedBraceCapture - missing capturing brace definition
-const errUndefinedBraceCapture = cerr("missing uri parameter definition")
+	// ErrUndefinedBraceCapture - missing capturing brace definition
+	ErrUndefinedBraceCapture = Err("missing uri parameter definition")
 
-// errMandatoryRename - capture/query parameters must be renamed
-const errMandatoryRename = cerr("uri and query parameters must be renamed")
+	// ErrMandatoryRename - capture/query parameters must be renamed
+	ErrMandatoryRename = Err("uri and query parameters must be renamed")
 
-// errMissingDescription - a service is missing its description
-const errMissingDescription = cerr("missing description")
+	// ErrMissingDescription - a service is missing its description
+	ErrMissingDescription = Err("missing description")
 
-// errIllegalOptionalURIParam - uri parameter cannot optional
-const errIllegalOptionalURIParam = cerr("uri parameter cannot be optional")
+	// ErrIllegalOptionalURIParam - uri parameter cannot optional
+	ErrIllegalOptionalURIParam = Err("uri parameter cannot be optional")
 
-// errOptionalOption - cannot have optional output
-const errOptionalOption = cerr("output cannot be optional")
+	// ErrOptionalOption - cannot have optional output
+	ErrOptionalOption = Err("output cannot be optional")
 
-// errMissingParamDesc - missing parameter description
-const errMissingParamDesc = cerr("missing parameter description")
+	// ErrMissingParamDesc - missing parameter description
+	ErrMissingParamDesc = Err("missing parameter description")
 
-// errUnknownDataType - unknown parameter datatype
-const errUnknownDataType = cerr("unknown parameter datatype")
+	// ErrUnknownParamType - unknown parameter type
+	ErrUnknownParamType = Err("unknown parameter datatype")
 
-// errIllegalParamName - illegal parameter name
-const errIllegalParamName = cerr("illegal parameter name")
+	// ErrIllegalParamName - illegal parameter name
+	ErrIllegalParamName = Err("illegal parameter name")
 
-// errMissingParamType - missing parameter type
-const errMissingParamType = cerr("missing parameter type")
+	// ErrMissingParamType - missing parameter type
+	ErrMissingParamType = Err("missing parameter type")
 
-// errParamNameConflict - name/rename conflict
-const errParamNameConflict = cerr("parameter name conflict")
+	// ErrParamNameConflict - name/rename conflict
+	ErrParamNameConflict = Err("parameter name conflict")
+)

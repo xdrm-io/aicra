@@ -20,7 +20,7 @@ type Builder struct {
 	middlewares []func(http.Handler) http.Handler
 	// custom middlewares only wrapping the service handler of a request
 	// they will benefit from the request's context that contains service-specific
-	// information (e.g. required permisisons from the configuration)
+	// information (e.g. required permissions from the configuration)
 	ctxMiddlewares []func(http.Handler) http.Handler
 }
 
@@ -52,9 +52,6 @@ func (b *Builder) Validate(t validator.Type) error {
 // the service associated with the request has not been found at this stage.
 // This stage is perfect for logging or generic request management.
 func (b *Builder) With(mw func(http.Handler) http.Handler) {
-	if b.conf == nil {
-		b.conf = &config.Server{}
-	}
 	if b.middlewares == nil {
 		b.middlewares = make([]func(http.Handler) http.Handler, 0)
 	}
@@ -69,9 +66,6 @@ func (b *Builder) With(mw func(http.Handler) http.Handler) {
 // data that can be access with api.GetRequest(), api.GetResponseWriter(),
 // api.GetAuth(), etc methods.
 func (b *Builder) WithContext(mw func(http.Handler) http.Handler) {
-	if b.conf == nil {
-		b.conf = &config.Server{}
-	}
 	if b.ctxMiddlewares == nil {
 		b.ctxMiddlewares = make([]func(http.Handler) http.Handler, 0)
 	}
@@ -85,14 +79,14 @@ func (b *Builder) Setup(r io.Reader) error {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
-		panic(errAlreadySetup)
+		return errAlreadySetup
 	}
 	return b.conf.Parse(r)
 }
 
 // Bind a dynamic handler to a REST service (method and pattern)
 func (b *Builder) Bind(method, path string, fn interface{}) error {
-	if b.conf.Services == nil {
+	if b.conf == nil || b.conf.Services == nil {
 		return errNotSetup
 	}
 

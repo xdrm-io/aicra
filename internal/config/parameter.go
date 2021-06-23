@@ -20,11 +20,11 @@ type Parameter struct {
 
 func (param *Parameter) validate(datatypes ...validator.Type) error {
 	if len(param.Description) < 1 {
-		return errMissingParamDesc
+		return ErrMissingParamDesc
 	}
 
 	if len(param.Type) < 1 || param.Type == "?" {
-		return errMissingParamType
+		return ErrMissingParamType
 	}
 
 	// optional type
@@ -42,7 +42,7 @@ func (param *Parameter) validate(datatypes ...validator.Type) error {
 		}
 	}
 	if param.Validator == nil {
-		return errUnknownDataType
+		return ErrUnknownParamType
 	}
 	return nil
 }
