@@ -17,7 +17,7 @@ func (e Err) Error() string {
 // Status returns the associated http status code
 func (e Err) Status() int {
 	str := strings.SplitN(string(e), ":", 2)[0]
-	status, err := strconv.ParseInt(str, 10, 16)
+	status, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
 		return http.StatusInternalServerError
 	}
@@ -56,7 +56,7 @@ const (
 	ErrUncallableService = Err("503:uncallable service")
 
 	// ErrNotImplemented is thrown when a handler is not implemented yet
-	ErrNotImplemented = Err("512:not implemented")
+	ErrNotImplemented = Err("501:not implemented")
 
 	// ErrUnauthorized is thrown (usually in authentication middleware) to tell
 	// the user that an authentication is required
