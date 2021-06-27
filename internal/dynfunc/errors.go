@@ -30,10 +30,10 @@ const (
 	ErrMissingHandlerOutputArgument = Err("missing handler first output argument: output struct")
 
 	// ErrMissingHandlerErrorArgument - missing error output for handler
-	ErrMissingHandlerErrorArgument = Err("missing handler last output argument of type api.Err")
+	ErrMissingHandlerErrorArgument = Err("missing handler last output argument of type error")
 
 	// ErrInvalidHandlerErrorArgument - missing handler output error
-	ErrInvalidHandlerErrorArgument = Err("last output must be of type api.Err")
+	ErrInvalidHandlerErrorArgument = Err("last output must be of type error")
 
 	// ErrMissingParamArgument - missing parameters argument for handler
 	ErrMissingParamArgument = Err("handler second argument must be a struct")

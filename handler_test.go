@@ -3,7 +3,6 @@ package aicra_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -14,12 +13,6 @@ import (
 	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/validator"
 )
-
-func printEscaped(raw string) string {
-	raw = strings.ReplaceAll(raw, "\n", "\\n")
-	raw = strings.ReplaceAll(raw, "\r", "\\r")
-	return raw
-}
 
 func addDefaultTypes(b *aicra.Builder) error {
 	if err := b.Validate(validator.AnyType{}); err != nil {
@@ -87,7 +80,7 @@ func TestHandler_With(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
+	pathHandler := func(ctx context.Context) (*struct{}, error) {
 		// write value from middlewares into response
 		value := ctx.Value(key)
 		if value == nil {
@@ -100,7 +93,7 @@ func TestHandler_With(t *testing.T) {
 		// write to response
 		api.GetResponseWriter(ctx).Write([]byte(fmt.Sprintf("#%d#", cast)))
 
-		return nil, api.ErrSuccess
+		return nil, nil
 	}
 
 	if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
@@ -253,7 +246,7 @@ func TestHandler_WithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
+			pathHandler := func(ctx context.Context) (*struct{}, error) {
 				return nil, api.ErrNotImplemented
 			}
 
@@ -281,7 +274,6 @@ func TestHandler_WithAuth(t *testing.T) {
 }
 
 func TestHandler_PermissionError(t *testing.T) {
-
 	tt := []struct {
 		name        string
 		manifest    string
@@ -327,7 +319,7 @@ func TestHandler_PermissionError(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx context.Context) (*struct{}, api.Err) {
+			pathHandler := func(ctx context.Context) (*struct{}, error) {
 				return nil, api.ErrNotImplemented
 			}
 
@@ -348,22 +340,14 @@ func TestHandler_PermissionError(t *testing.T) {
 			if response.Body == nil {
 				t.Fatalf("response has no body")
 			}
-			type jsonResponse struct {
-				Err api.Err `json:"error"`
-			}
-			var res jsonResponse
-			err = json.Unmarshal(response.Body.Bytes(), &res)
-			if err != nil {
-				t.Fatalf("cannot unmarshal response: %s", err)
-			}
 
-			expectedError := api.ErrNotImplemented
+			expectedStatus := api.GetErrorStatus(api.ErrNotImplemented)
 			if !tc.granted {
-				expectedError = api.ErrPermission
+				expectedStatus = api.GetErrorStatus(api.ErrForbidden)
 			}
 
-			if res.Err.Code != expectedError.Code {
-				t.Fatalf("expected error code %d got %d", expectedError.Code, res.Err.Code)
+			if response.Result().StatusCode != expectedStatus {
+				t.Fatalf("expected status %d got %d", expectedStatus, response.Result().StatusCode)
 			}
 
 		})
@@ -397,7 +381,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, error) { return nil, nil },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -418,7 +402,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, error) { return nil, nil },
 			url:         "/path/666",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -439,7 +423,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ User uint }) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			handler:     func(context.Context, struct{ User uint }) (*struct{}, error) { return nil, nil },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"prefix.user[123].suffix"},
@@ -464,8 +448,8 @@ func TestHandler_DynamicScope(t *testing.T) {
 			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
-			}) (*struct{}, api.Err) {
-				return nil, api.ErrSuccess
+			}) (*struct{}, error) {
+				return nil, nil
 			},
 			url:         "/prefix/123/user/456",
 			body:        ``,
@@ -491,8 +475,8 @@ func TestHandler_DynamicScope(t *testing.T) {
 			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
-			}) (*struct{}, api.Err) {
-				return nil, api.ErrSuccess
+			}) (*struct{}, error) {
+				return nil, nil
 			},
 			url:         "/prefix/123/user/666",
 			body:        ``,
@@ -520,8 +504,8 @@ func TestHandler_DynamicScope(t *testing.T) {
 				Prefix uint
 				User   uint
 				Suffix uint
-			}) (*struct{}, api.Err) {
-				return nil, api.ErrSuccess
+			}) (*struct{}, error) {
+				return nil, nil
 			},
 			url:         "/prefix/123/user/456/suffix/789",
 			body:        ``,
@@ -549,8 +533,8 @@ func TestHandler_DynamicScope(t *testing.T) {
 				Prefix uint
 				User   uint
 				Suffix uint
-			}) (*struct{}, api.Err) {
-				return nil, api.ErrSuccess
+			}) (*struct{}, error) {
+				return nil, nil
 			},
 			url:         "/prefix/123/user/666/suffix/789",
 			body:        ``,
@@ -638,7 +622,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		contentType string
 		body        string
 		permissions []string
-		err         api.Err
+		err         error
 	}{
 		// service match
 		{
@@ -655,8 +639,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/",
-			hfn: func(context.Context) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context) error {
+				return nil
 			},
 			method:      http.MethodPost,
 			url:         "/",
@@ -678,8 +662,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/",
-			hfn: func(context.Context) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/invalid",
@@ -701,14 +685,14 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/",
-			hfn: func(context.Context) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/",
 			body:        ``,
 			permissions: []string{},
-			err:         api.ErrSuccess,
+			err:         nil,
 		},
 
 		// invalid uri param -> unknown service
@@ -728,8 +712,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/a/{id}/b",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/a/invalid/b",
@@ -755,8 +739,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/",
@@ -780,8 +764,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/a",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/a?id=abc",
@@ -805,8 +789,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/a",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/a?id=123&id=456",
@@ -830,14 +814,14 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodGet,
 			huri:    "/a",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			method:      http.MethodGet,
 			url:         "/a?id=123",
 			body:        ``,
 			permissions: []string{},
-			err:         api.ErrSuccess,
+			err:         nil,
 		},
 
 		// json param
@@ -857,8 +841,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "application/json",
 			method:      http.MethodPost,
@@ -883,8 +867,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "application/json",
 			method:      http.MethodPost,
@@ -909,15 +893,15 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "application/json",
 			method:      http.MethodPost,
 			url:         "/",
 			body:        `{ "id": 123 }`,
 			permissions: []string{},
-			err:         api.ErrSuccess,
+			err:         nil,
 		},
 
 		// urlencoded param
@@ -937,8 +921,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "application/x-www-form-urlencoded",
 			method:      http.MethodPost,
@@ -963,8 +947,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "application/x-www-form-urlencoded",
 			method:      http.MethodPost,
@@ -989,15 +973,15 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "application/x-www-form-urlencoded",
 			method:      http.MethodPost,
 			url:         "/",
 			body:        `id=123`,
 			permissions: []string{},
-			err:         api.ErrSuccess,
+			err:         nil,
 		},
 
 		// formdata param
@@ -1017,8 +1001,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "multipart/form-data; boundary=xxx",
 			method:      http.MethodPost,
@@ -1043,8 +1027,8 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "multipart/form-data; boundary=xxx",
 			method:      http.MethodPost,
@@ -1073,8 +1057,8 @@ abc
 			]`,
 			hmethod: http.MethodPost,
 			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) api.Err {
-				return api.ErrSuccess
+			hfn: func(context.Context, struct{ ID int }) error {
+				return nil
 			},
 			contentType: "multipart/form-data; boundary=xxx",
 			method:      http.MethodPost,
@@ -1085,7 +1069,7 @@ Content-Disposition: form-data; name="id"
 123
 --xxx--`,
 			permissions: []string{},
-			err:         api.ErrSuccess,
+			err:         nil,
 		},
 	}
 
@@ -1125,13 +1109,10 @@ Content-Disposition: form-data; name="id"
 				t.Fatalf("response has no body")
 			}
 
-			jsonErr, err := json.Marshal(tc.err)
-			if err != nil {
-				t.Fatalf("cannot marshal expected error: %v", err)
-			}
-			jsonExpected := fmt.Sprintf(`{"error":%s}`, jsonErr)
-			if response.Body.String() != jsonExpected {
-				t.Fatalf("invalid response:\n- actual: %s\n- expect: %s\n", printEscaped(response.Body.String()), printEscaped(jsonExpected))
+			expectedStatus := api.GetErrorStatus(tc.err)
+
+			if response.Result().StatusCode != expectedStatus {
+				t.Fatalf("invalid response status %d, expected %d", response.Result().StatusCode, expectedStatus)
 			}
 		})
 	}

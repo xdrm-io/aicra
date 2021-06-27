@@ -24,15 +24,17 @@ type Service struct {
 	Input       map[string]*Parameter `json:"in"`
 	Output      map[string]*Parameter `json:"out"`
 
-	// Captures contains references to URI parameters from the `Input` map. The format
-	// of these parameter names is "{paramName}"
+	// Captures contains references to URI parameters from the `Input` map.
+	// The format for those parameter names is "{paramName}"
 	Captures []*BraceCapture
 
 	// Query contains references to HTTP Query parameters from the `Input` map.
-	// Query parameters names are "GET@paramName", this map contains escaped names (e.g. "paramName")
+	// Query parameters names are "GET@paramName", this map contains escaped
+	// names, e.g. "paramName"
 	Query map[string]*Parameter
 
-	// Form references form parameters from the `Input` map (all but Captures and Query).
+	// Form references form parameters from the `Input` map (all but Captures
+	// and Query).
 	Form map[string]*Parameter
 }
 
@@ -104,7 +106,7 @@ func (svc *Service) matchPattern(uri string) bool {
 	return true
 }
 
-// Validate implements the validator interface
+// validate the service configuration
 func (svc *Service) validate(datatypes ...validator.Type) error {
 	err := svc.checkMethod()
 	if err != nil {

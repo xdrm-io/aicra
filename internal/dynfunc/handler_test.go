@@ -48,71 +48,91 @@ func TestInput(t *testing.T) {
 		Fn             interface{}
 		Input          []interface{}
 		ExpectedOutput []interface{}
-		ExpectedErr    api.Err
+		ExpectedErr    error
 	}{
 		{
 			Name:           "none required none provided",
 			Spec:           (&testsignature{}).withArgs(),
-			Fn:             func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			Fn:             func(context.Context) (*struct{}, error) { return nil, nil },
 			HasContext:     false,
 			Input:          []interface{}{},
 			ExpectedOutput: []interface{}{},
-			ExpectedErr:    api.ErrSuccess,
+			ExpectedErr:    nil,
+		},
+		{
+			Name:           "no input with error",
+			Spec:           (&testsignature{}).withArgs(),
+			Fn:             func(context.Context) (*struct{}, error) { return nil, api.ErrForbidden },
+			HasContext:     false,
+			Input:          []interface{}{},
+			ExpectedOutput: []interface{}{},
+			ExpectedErr:    api.ErrForbidden,
 		},
 		{
 			Name: "int proxy (0)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx context.Context, in intstruct) (*intstruct, api.Err) {
-				return &intstruct{P1: in.P1}, api.ErrSuccess
+			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+				return &intstruct{P1: in.P1}, nil
 			},
 			HasContext:     false,
 			Input:          []interface{}{int(0)},
 			ExpectedOutput: []interface{}{int(0)},
-			ExpectedErr:    api.ErrSuccess,
+			ExpectedErr:    nil,
+		},
+		{
+			Name: "int proxy with error",
+			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
+			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+				return &intstruct{P1: in.P1}, api.ErrNotImplemented
+			},
+			HasContext:     false,
+			Input:          []interface{}{int(0)},
+			ExpectedOutput: []interface{}{int(0)},
+			ExpectedErr:    api.ErrNotImplemented,
 		},
 		{
 			Name: "int proxy (11)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx context.Context, in intstruct) (*intstruct, api.Err) {
-				return &intstruct{P1: in.P1}, api.ErrSuccess
+			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+				return &intstruct{P1: in.P1}, nil
 			},
 			HasContext:     false,
 			Input:          []interface{}{int(11)},
 			ExpectedOutput: []interface{}{int(11)},
-			ExpectedErr:    api.ErrSuccess,
+			ExpectedErr:    nil,
 		},
 		{
 			Name: "*int proxy (nil)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx context.Context, in intptrstruct) (*intptrstruct, api.Err) {
-				return &intptrstruct{P1: in.P1}, api.ErrSuccess
+			Fn: func(ctx context.Context, in intptrstruct) (*intptrstruct, error) {
+				return &intptrstruct{P1: in.P1}, nil
 			},
 			HasContext:     false,
 			Input:          []interface{}{},
 			ExpectedOutput: []interface{}{nil},
-			ExpectedErr:    api.ErrSuccess,
+			ExpectedErr:    nil,
 		},
 		{
 			Name: "*int proxy (28)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, api.Err) {
-				return &intstruct{P1: *in.P1}, api.ErrSuccess
+			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
+				return &intstruct{P1: *in.P1}, nil
 			},
 			HasContext:     false,
 			Input:          []interface{}{28},
 			ExpectedOutput: []interface{}{28},
-			ExpectedErr:    api.ErrSuccess,
+			ExpectedErr:    nil,
 		},
 		{
 			Name: "*int proxy (13)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, api.Err) {
-				return &intstruct{P1: *in.P1}, api.ErrSuccess
+			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
+				return &intstruct{P1: *in.P1}, nil
 			},
 			HasContext:     false,
 			Input:          []interface{}{13},
 			ExpectedOutput: []interface{}{13},
-			ExpectedErr:    api.ErrSuccess,
+			ExpectedErr:    nil,
 		},
 	}
 
