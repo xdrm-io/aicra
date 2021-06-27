@@ -77,11 +77,17 @@ func (i *T) GetQuery(req http.Request) error {
 
 		var parsed interface{}
 
-		// consider element instead of slice or elements when only 1
-		if len(values) == 1 {
-			parsed = parseParameter(values[0])
-		} else { // consider slice
+		// consider slice only if we expect a slice, otherwise, only take the first parameter
+		if param.GoType.Kind() == reflect.Slice {
 			parsed = parseParameter(values)
+		} else {
+			// should expect at most 1 value
+			if len(values) > 1 {
+				return fmt.Errorf("%s: %w", name, ErrInvalidType)
+			}
+			if len(values) > 0 {
+				parsed = parseParameter(values[0])
+			}
 		}
 
 		cast, valid := param.Validator(parsed)
@@ -181,11 +187,17 @@ func (i *T) parseUrlencoded(req http.Request) error {
 
 		var parsed interface{}
 
-		// consider element instead of slice or elements when only 1
-		if len(values) == 1 {
-			parsed = parseParameter(values[0])
-		} else { // consider slice
+		// consider slice only if we expect a slice, otherwise, only take the first parameter
+		if param.GoType.Kind() == reflect.Slice {
 			parsed = parseParameter(values)
+		} else if len(values) > 0 {
+			// should expect at most 1 value
+			if len(values) > 1 {
+				return fmt.Errorf("%s: %w", name, ErrInvalidType)
+			}
+			if len(values) > 0 {
+				parsed = parseParameter(values[0])
+			}
 		}
 
 		cast, valid := param.Validator(parsed)

@@ -930,6 +930,16 @@ func TestMatchSimple(t *testing.T) {
 		{
 			`[ {
 					"method": "GET",
+					"path": "/a",
+					"info": "info",
+					"in": {}
+			} ]`,
+			"/a?param=value",
+			true,
+		},
+		{
+			`[ {
+					"method": "GET",
 					"path": "/a/{id}",
 					"info": "info",
 					"in": {

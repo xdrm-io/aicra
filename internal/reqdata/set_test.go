@@ -46,7 +46,7 @@ func getServiceWithURI(capturingBraces ...string) *config.Service {
 
 	return service
 }
-func getServiceWithQuery(params ...string) *config.Service {
+func getServiceWithQuery(t reflect.Type, params ...string) *config.Service {
 	service := &config.Service{
 		Input: make(map[string]*config.Parameter),
 		Query: make(map[string]*config.Parameter),
@@ -56,6 +56,7 @@ func getServiceWithQuery(params ...string) *config.Service {
 		id := fmt.Sprintf("GET@%s", name)
 		service.Input[id] = &config.Parameter{
 			Rename:    name,
+			GoType:    t,
 			Validator: func(value interface{}) (interface{}, bool) { return value, true },
 		}
 
@@ -64,7 +65,7 @@ func getServiceWithQuery(params ...string) *config.Service {
 
 	return service
 }
-func getServiceWithForm(params ...string) *config.Service {
+func getServiceWithForm(t reflect.Type, params ...string) *config.Service {
 	service := &config.Service{
 		Input: make(map[string]*config.Parameter),
 		Form:  make(map[string]*config.Parameter),
@@ -73,6 +74,7 @@ func getServiceWithForm(params ...string) *config.Service {
 	for _, name := range params {
 		service.Input[name] = &config.Parameter{
 			Rename:    name,
+			GoType:    t,
 			Validator: func(value interface{}) (interface{}, bool) { return value, true },
 		}
 
@@ -83,63 +85,68 @@ func getServiceWithForm(params ...string) *config.Service {
 }
 
 func TestStoreWithUri(t *testing.T) {
-	tests := []struct {
-		ServiceParams []string
-		URI           string
-		Err           error
+	tt := []struct {
+		name          string
+		serviceParams []string
+		uri           string
+		err           error
 	}{
 		{
-			[]string{},
-			"/non-captured/uri",
-			nil,
+			name:          "non captured uri",
+			serviceParams: []string{},
+			uri:           "/non-captured/uri",
+			err:           nil,
 		},
 		{
-			[]string{"missing"},
-			"/",
-			ErrMissingURIParameter,
+			name:          "missing uri param",
+			serviceParams: []string{"missing"},
+			uri:           "/",
+			err:           ErrMissingURIParameter,
 		},
 		{
-			[]string{"gotit", "missing"},
-			"/gotme",
-			ErrMissingURIParameter,
+			name:          "missing uri params",
+			serviceParams: []string{"gotit", "missing"},
+			uri:           "/gotme",
+			err:           ErrMissingURIParameter,
 		},
 		{
-			[]string{"gotit", "gotittoo"},
-			"/gotme/andme",
-			nil,
+			name:          "2 uri params",
+			serviceParams: []string{"gotit", "gotittoo"},
+			uri:           "/gotme/andme",
+			err:           nil,
 		},
 		{
-			[]string{"gotit", "gotittoo"},
-			"/gotme/andme/ignored",
-			nil,
+			name:          "2 uri params end ignored",
+			serviceParams: []string{"gotit", "gotittoo"},
+			uri:           "/gotme/andme/ignored",
+			err:           nil,
 		},
 		{
-			[]string{"first", "", "second"},
-			"/gotme/ignored/gotmetoo",
-			nil,
+			name:          "2 uri params middle ignored",
+			serviceParams: []string{"first", "", "second"},
+			uri:           "/gotme/ignored/gotmetoo",
+			err:           nil,
 		},
 		{
-			[]string{"first", "", "second"},
-			"/gotme/ignored",
-			ErrMissingURIParameter,
+			name:          "3 uri params last missing",
+			serviceParams: []string{"first", "", "second"},
+			uri:           "/gotme/ignored",
+			err:           ErrMissingURIParameter,
 		},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("test.%d", i), func(t *testing.T) {
-			service := getServiceWithURI(test.ServiceParams...)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			service := getServiceWithURI(tc.serviceParams...)
 			store := New(service)
 
-			req := httptest.NewRequest(http.MethodGet, "http://host.com"+test.URI, nil)
+			req := httptest.NewRequest(http.MethodGet, "http://host.com"+tc.uri, nil)
 			err := store.GetURI(*req)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
+			}
 			if err != nil {
-				if test.Err != nil {
-					if !errors.Is(err, test.Err) {
-						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
-					}
-					return
-				}
-				t.Fatalf("unexpected error <%s>", err)
+				return
 			}
 
 			if len(store.Data) != len(service.Input) {
@@ -154,104 +161,181 @@ func TestStoreWithUri(t *testing.T) {
 
 func TestExtractQuery(t *testing.T) {
 
-	tests := []struct {
-		ServiceParam []string
-		Query        string
-		Err          error
+	tt := []struct {
+		name          string
+		serviceParams []string
+		query         string
+		err           error
 
-		ParamNames  []string
-		ParamValues [][]string
+		paramTypes  reflect.Type
+		paramNames  []string
+		paramValues [][]string
 	}{
 		{
-			ServiceParam: []string{},
-			Query:        "",
-			Err:          nil,
-			ParamNames:   nil,
-			ParamValues:  nil,
+			name:          "none required",
+			serviceParams: []string{},
+			query:         "",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 		{
-			ServiceParam: []string{"missing"},
-			Query:        "",
-			Err:          ErrMissingRequiredParam,
-			ParamNames:   nil,
-			ParamValues:  nil,
+			name:          "1 required missing",
+			serviceParams: []string{"missing"},
+			query:         "",
+			err:           ErrMissingRequiredParam,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 		{
-			ServiceParam: []string{"a"},
-			Query:        "a",
-			Err:          nil,
-			ParamNames:   []string{"a"},
-			ParamValues:  [][]string{{""}},
+			name:          "1 required ok",
+			serviceParams: []string{"a"},
+			query:         "a",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   [][]string{{""}},
 		},
 		{
-			ServiceParam: []string{"a"},
-			Query:        "a&b",
-			Err:          nil,
-			ParamNames:   []string{"a"},
-			ParamValues:  [][]string{{""}},
+			name:          "1 required 1 empty",
+			serviceParams: []string{"a"},
+			query:         "a&b",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   [][]string{{""}},
 		},
 		{
-			ServiceParam: []string{"a", "missing"},
-			Query:        "a&b",
-			Err:          ErrMissingRequiredParam,
-			ParamNames:   nil,
-			ParamValues:  nil,
+			name:          "2 required 1 missing",
+			serviceParams: []string{"a", "missing"},
+			query:         "a&b",
+			err:           ErrMissingRequiredParam,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 		{
-			ServiceParam: []string{"a", "b"},
-			Query:        "a&b",
-			Err:          nil,
-			ParamNames:   []string{"a", "b"},
-			ParamValues:  [][]string{{""}, {""}},
+			name:          "2 required 2 empty",
+			serviceParams: []string{"a", "b"},
+			query:         "a&b",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "b"},
+			paramValues:   [][]string{{""}, {""}},
 		},
 		{
-			ServiceParam: []string{"a"},
-			Err:          nil,
-			Query:        "a=",
-			ParamNames:   []string{"a"},
-			ParamValues:  [][]string{{""}},
+			name:          "1 required empty",
+			serviceParams: []string{"a"},
+			err:           nil,
+			query:         "a=",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   [][]string{{""}},
 		},
 		{
-			ServiceParam: []string{"a", "b"},
-			Err:          nil,
-			Query:        "a=&b=x",
-			ParamNames:   []string{"a", "b"},
-			ParamValues:  [][]string{{""}, {"x"}},
+			name:          "2 required 1 empty",
+			serviceParams: []string{"a", "b"},
+			err:           nil,
+			query:         "a=&b=x",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "b"},
+			paramValues:   [][]string{{""}, {"x"}},
 		},
 		{
-			ServiceParam: []string{"a", "c"},
-			Err:          nil,
-			Query:        "a=b&c=d",
-			ParamNames:   []string{"a", "c"},
-			ParamValues:  [][]string{{"b"}, {"d"}},
+			name:          "2 required 2 ok",
+			serviceParams: []string{"a", "c"},
+			err:           nil,
+			query:         "a=b&c=d",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "c"},
+			paramValues:   [][]string{{"b"}, {"d"}},
 		},
 		{
-			ServiceParam: []string{"a", "c"},
-			Err:          nil,
-			Query:        "a=b&c=d&a=x",
-			ParamNames:   []string{"a", "c"},
-			ParamValues:  [][]string{{"b", "x"}, {"d"}},
+			name:          "2 required 1 is slice",
+			serviceParams: []string{"a", "c"},
+			err:           ErrInvalidType,
+			query:         "a=b&c=d&a=x",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "c"},
+			paramValues:   [][]string{{"b", "x"}, {"d"}},
+		},
+
+		// expect a slice
+		{
+			name:          "expect slice got empty",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=",
+			paramTypes:    reflect.TypeOf([]string{}),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{""}},
+		},
+		{
+			name:          "expect slice got value",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=value",
+			paramTypes:    reflect.TypeOf([]string{}),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{"value"}},
+		},
+		{
+			name:          "expect slice got values",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=value1&name=value2",
+			paramTypes:    reflect.TypeOf([]string{}),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{"value1", "value2"}},
+		},
+
+		// expect string
+		{
+			name:          "expect string got empty",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{""}},
+		},
+		{
+			name:          "expect string got value",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=value",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{"value"}},
+		},
+		{
+			name:          "expect string got values",
+			serviceParams: []string{"name"},
+			err:           ErrInvalidType,
+			query:         "name=value1&name=value2",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("request[%d]", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 
-			store := New(getServiceWithQuery(test.ServiceParam...))
+			store := New(getServiceWithQuery(tc.paramTypes, tc.serviceParams...))
 
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", test.Query), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", tc.query), nil)
 			err := store.GetQuery(*req)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
+			}
 			if err != nil {
-				if test.Err != nil {
-					if !errors.Is(err, test.Err) {
-						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
-					}
-					return
-				}
-				t.Fatalf("unexpected error <%s>", err)
+				return
 			}
 
-			if test.ParamNames == nil || test.ParamValues == nil {
+			if tc.paramNames == nil || tc.paramValues == nil {
 				if len(store.Data) != 0 {
 					t.Fatalf("expected no GET parameters and got %d", len(store.Data))
 				}
@@ -260,12 +344,12 @@ func TestExtractQuery(t *testing.T) {
 				return
 			}
 
-			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
+			if len(tc.paramNames) != len(tc.paramValues) {
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, pName := range test.ParamNames {
-				values := test.ParamValues[pi]
+			for pi, pName := range tc.paramNames {
+				values := tc.paramValues[pi]
 
 				t.Run(pName, func(t *testing.T) {
 					param, isset := store.Data[pName]
@@ -273,8 +357,8 @@ func TestExtractQuery(t *testing.T) {
 						t.Fatalf("param does not exist")
 					}
 
-					// single value, should return a single element
-					if len(values) == 1 {
+					// single value
+					if tc.paramTypes.Kind() != reflect.Slice {
 						cast, canCast := param.(string)
 						if !canCast {
 							t.Fatalf("should return a string (got '%v')", cast)
@@ -285,7 +369,7 @@ func TestExtractQuery(t *testing.T) {
 						return
 					}
 
-					// multiple values, should return a slice
+					// multiple values, should be a slice
 					cast, canCast := param.([]interface{})
 					if !canCast {
 						t.Fatalf("should return a []string (got '%v')", cast)
@@ -330,106 +414,183 @@ func TestStoreWithUrlEncodedFormParseError(t *testing.T) {
 	}
 }
 func TestExtractFormUrlEncoded(t *testing.T) {
-	tests := []struct {
-		ServiceParams []string
-		URLEncoded    string
-		Err           error
+	tt := []struct {
+		name          string
+		serviceParams []string
+		query         string
+		err           error
 
-		ParamNames  []string
-		ParamValues [][]string
+		paramTypes  reflect.Type
+		paramNames  []string
+		paramValues [][]string
 	}{
 		{
-			ServiceParams: []string{},
-			URLEncoded:    "",
-			Err:           nil,
-			ParamNames:    nil,
-			ParamValues:   nil,
+			name:          "none required",
+			serviceParams: []string{},
+			query:         "",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 		{
-			ServiceParams: []string{"missing"},
-			URLEncoded:    "",
-			Err:           ErrMissingRequiredParam,
-			ParamNames:    nil,
-			ParamValues:   nil,
+			name:          "1 required missing",
+			serviceParams: []string{"missing"},
+			query:         "",
+			err:           ErrMissingRequiredParam,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 		{
-			ServiceParams: []string{"a"},
-			URLEncoded:    "a",
-			Err:           nil,
-			ParamNames:    []string{"a"},
-			ParamValues:   [][]string{{""}},
+			name:          "1 required ok",
+			serviceParams: []string{"a"},
+			query:         "a",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   [][]string{{""}},
 		},
 		{
-			ServiceParams: []string{"a"},
-			URLEncoded:    "a&b",
-			Err:           nil,
-			ParamNames:    []string{"a"},
-			ParamValues:   [][]string{{""}},
+			name:          "1 required 1 empty",
+			serviceParams: []string{"a"},
+			query:         "a&b",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   [][]string{{""}},
 		},
 		{
-			ServiceParams: []string{"a", "missing"},
-			URLEncoded:    "a&b",
-			Err:           ErrMissingRequiredParam,
-			ParamNames:    nil,
-			ParamValues:   nil,
+			name:          "2 required 1 missing",
+			serviceParams: []string{"a", "missing"},
+			query:         "a&b",
+			err:           ErrMissingRequiredParam,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 		{
-			ServiceParams: []string{"a", "b"},
-			URLEncoded:    "a&b",
-			Err:           nil,
-			ParamNames:    []string{"a", "b"},
-			ParamValues:   [][]string{{""}, {""}},
+			name:          "2 required 2 empty",
+			serviceParams: []string{"a", "b"},
+			query:         "a&b",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "b"},
+			paramValues:   [][]string{{""}, {""}},
 		},
 		{
-			ServiceParams: []string{"a"},
-			Err:           nil,
-			URLEncoded:    "a=",
-			ParamNames:    []string{"a"},
-			ParamValues:   [][]string{{""}},
+			name:          "1 required empty",
+			serviceParams: []string{"a"},
+			err:           nil,
+			query:         "a=",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   [][]string{{""}},
 		},
 		{
-			ServiceParams: []string{"a", "b"},
-			Err:           nil,
-			URLEncoded:    "a=&b=x",
-			ParamNames:    []string{"a", "b"},
-			ParamValues:   [][]string{{""}, {"x"}},
+			name:          "2 required 1 empty",
+			serviceParams: []string{"a", "b"},
+			err:           nil,
+			query:         "a=&b=x",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "b"},
+			paramValues:   [][]string{{""}, {"x"}},
 		},
 		{
-			ServiceParams: []string{"a", "c"},
-			Err:           nil,
-			URLEncoded:    "a=b&c=d",
-			ParamNames:    []string{"a", "c"},
-			ParamValues:   [][]string{{"b"}, {"d"}},
+			name:          "2 required 2 ok",
+			serviceParams: []string{"a", "c"},
+			err:           nil,
+			query:         "a=b&c=d",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "c"},
+			paramValues:   [][]string{{"b"}, {"d"}},
 		},
 		{
-			ServiceParams: []string{"a", "c"},
-			Err:           nil,
-			URLEncoded:    "a=b&c=d&a=x",
-			ParamNames:    []string{"a", "c"},
-			ParamValues:   [][]string{{"b", "x"}, {"d"}},
+			name:          "2 required 1 is slice",
+			serviceParams: []string{"a", "c"},
+			err:           ErrInvalidType,
+			query:         "a=b&c=d&a=x",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "c"},
+			paramValues:   [][]string{{"b", "x"}, {"d"}},
+		},
+
+		// expect a slice
+		{
+			name:          "expect slice got empty",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=",
+			paramTypes:    reflect.TypeOf([]string{}),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{""}},
+		},
+		{
+			name:          "expect slice got value",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=value",
+			paramTypes:    reflect.TypeOf([]string{}),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{"value"}},
+		},
+		{
+			name:          "expect slice got values",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=value1&name=value2",
+			paramTypes:    reflect.TypeOf([]string{}),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{"value1", "value2"}},
+		},
+
+		// expect string
+		{
+			name:          "expect string got empty",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{""}},
+		},
+		{
+			name:          "expect string got value",
+			serviceParams: []string{"name"},
+			err:           nil,
+			query:         "name=value",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"name"},
+			paramValues:   [][]string{{"value"}},
+		},
+		{
+			name:          "expect string got values",
+			serviceParams: []string{"name"},
+			err:           ErrInvalidType,
+			query:         "name=value1&name=value2",
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    nil,
+			paramValues:   nil,
 		},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
-			body := strings.NewReader(test.URLEncoded)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			body := strings.NewReader(tc.query)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 			defer req.Body.Close()
 
-			store := New(getServiceWithForm(test.ServiceParams...))
+			store := New(getServiceWithForm(tc.paramTypes, tc.serviceParams...))
 			err := store.GetForm(*req)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
+			}
 			if err != nil {
-				if test.Err != nil {
-					if !errors.Is(err, test.Err) {
-						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
-					}
-					return
-				}
-				t.Fatalf("unexpected error <%s>", err)
+				return
 			}
 
-			if test.ParamNames == nil || test.ParamValues == nil {
+			if tc.paramNames == nil || tc.paramValues == nil {
 				if len(store.Data) != 0 {
 					t.Fatalf("expected no GET parameters and got %d", len(store.Data))
 				}
@@ -438,12 +599,12 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 				return
 			}
 
-			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
+			if len(tc.paramNames) != len(tc.paramValues) {
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, key := range test.ParamNames {
-				values := test.ParamValues[pi]
+			for pi, key := range tc.paramNames {
+				values := tc.paramValues[pi]
 
 				t.Run(key, func(t *testing.T) {
 					param, isset := store.Data[key]
@@ -451,8 +612,8 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 						t.Fatalf("param does not exist")
 					}
 
-					// single value, should return a single element
-					if len(values) == 1 {
+					// single value
+					if tc.paramTypes.Kind() != reflect.Slice {
 						cast, canCast := param.(string)
 						if !canCast {
 							t.Fatalf("should return a string (got '%v')", cast)
@@ -463,7 +624,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 						return
 					}
 
-					// multiple values, should return a slice
+					// multiple values, should be a slice
 					cast, canCast := param.([]interface{})
 					if !canCast {
 						t.Fatalf("should return a []string (got '%v')", cast)
@@ -487,94 +648,109 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 }
 
 func TestJsonParameters(t *testing.T) {
-	tests := []struct {
-		ServiceParams []string
-		Raw           string
-		Err           error
+	tt := []struct {
+		name          string
+		serviceParams []string
+		raw           string
+		err           error
 
-		ParamNames  []string
-		ParamValues []interface{}
+		paramTypes  reflect.Type
+		paramNames  []string
+		paramValues []interface{}
 	}{
 		// no need to fully check json because it is parsed with the standard library
 		{
-			ServiceParams: []string{},
-			Raw:           "",
-			Err:           nil,
-			ParamNames:    []string{},
-			ParamValues:   []interface{}{},
+			name:          "empty body",
+			serviceParams: []string{},
+			raw:           "",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{},
+			paramValues:   []interface{}{},
 		},
 		{
-			ServiceParams: []string{},
-			Raw:           "{}",
-			Err:           nil,
-			ParamNames:    []string{},
-			ParamValues:   []interface{}{},
+			name:          "empty json",
+			serviceParams: []string{},
+			raw:           "{}",
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{},
+			paramValues:   []interface{}{},
 		},
 		{
-			ServiceParams: []string{},
-			Raw:           `{ "a": "b" }`,
-			Err:           nil,
-			ParamNames:    []string{},
-			ParamValues:   []interface{}{},
+			name:          "1 provided none expected",
+			serviceParams: []string{},
+			raw:           `{ "a": "b" }`,
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{},
+			paramValues:   []interface{}{},
 		},
 		{
-			ServiceParams: []string{"a"},
-			Raw:           `{ "a": "b" }`,
-			Err:           nil,
-			ParamNames:    []string{"a"},
-			ParamValues:   []interface{}{"b"},
+			name:          "1 required ok",
+			serviceParams: []string{"a"},
+			raw:           `{ "a": "b" }`,
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   []interface{}{"b"},
 		},
 		{
-			ServiceParams: []string{"a"},
-			Raw:           `{ "a": "b", "ignored": "d" }`,
-			Err:           nil,
-			ParamNames:    []string{"a"},
-			ParamValues:   []interface{}{"b"},
+			name:          "1 required 1 ignored",
+			serviceParams: []string{"a"},
+			raw:           `{ "a": "b", "ignored": "d" }`,
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   []interface{}{"b"},
 		},
 		{
-			ServiceParams: []string{"a", "c"},
-			Raw:           `{ "a": "b", "c": "d" }`,
-			Err:           nil,
-			ParamNames:    []string{"a", "c"},
-			ParamValues:   []interface{}{"b", "d"},
+			name:          "2 required 2 ok",
+			serviceParams: []string{"a", "c"},
+			raw:           `{ "a": "b", "c": "d" }`,
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a", "c"},
+			paramValues:   []interface{}{"b", "d"},
 		},
 		{
-			ServiceParams: []string{"a"},
-			Raw:           `{ "a": null }`,
-			Err:           nil,
-			ParamNames:    []string{"a"},
-			ParamValues:   []interface{}{nil},
+			name:          "1 required null",
+			serviceParams: []string{"a"},
+			raw:           `{ "a": null }`,
+			err:           nil,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{"a"},
+			paramValues:   []interface{}{nil},
 		},
 		// json parse error
 		{
-			ServiceParams: []string{},
-			Raw:           `{ "a": "b", }`,
-			Err:           ErrInvalidJSON,
-			ParamNames:    []string{},
-			ParamValues:   []interface{}{},
+			name:          "invalid json",
+			serviceParams: []string{},
+			raw:           `{ "a": "b", }`,
+			err:           ErrInvalidJSON,
+			paramTypes:    reflect.TypeOf(""),
+			paramNames:    []string{},
+			paramValues:   []interface{}{},
 		},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
-			body := strings.NewReader(test.Raw)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			body := strings.NewReader(tc.raw)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/json")
 			defer req.Body.Close()
-			store := New(getServiceWithForm(test.ServiceParams...))
+			store := New(getServiceWithForm(tc.paramTypes, tc.serviceParams...))
 
 			err := store.GetForm(*req)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
+			}
 			if err != nil {
-				if test.Err != nil {
-					if !errors.Is(err, test.Err) {
-						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
-					}
-					return
-				}
-				t.Fatalf("unexpected error <%s>", err)
+				return
 			}
 
-			if test.ParamNames == nil || test.ParamValues == nil {
+			if tc.paramNames == nil || tc.paramValues == nil {
 				if len(store.Data) != 0 {
 					t.Fatalf("expected no JSON parameters and got %d", len(store.Data))
 				}
@@ -583,13 +759,13 @@ func TestJsonParameters(t *testing.T) {
 				return
 			}
 
-			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
+			if len(tc.paramNames) != len(tc.paramValues) {
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, pName := range test.ParamNames {
+			for pi, pName := range tc.paramNames {
 				key := pName
-				value := test.ParamValues[pi]
+				value := tc.paramValues[pi]
 
 				t.Run(key, func(t *testing.T) {
 
@@ -621,61 +797,60 @@ func TestJsonParameters(t *testing.T) {
 }
 
 func TestMultipartParameters(t *testing.T) {
-	tests := []struct {
-		ServiceParams []string
-		RawMultipart  string
-		Err           error
+	tt := []struct {
+		serviceParams []string
+		rawMultipart  string
+		err           error
 
-		ParamNames  []string
-		ParamValues []interface{}
+		paramNames  []string
+		paramValues []interface{}
 	}{
-		// no need to fully check json because it is parsed with the standard library
 		{
-			ServiceParams: []string{},
-			RawMultipart:  ``,
-			Err:           nil,
-			ParamNames:    []string{},
-			ParamValues:   []interface{}{},
+			serviceParams: []string{},
+			rawMultipart:  ``,
+			err:           nil,
+			paramNames:    []string{},
+			paramValues:   []interface{}{},
 		},
 		{
-			ServiceParams: []string{},
-			RawMultipart: `--xxx
+			serviceParams: []string{},
+			rawMultipart: `--xxx
 			`,
-			Err:         ErrInvalidMultipart,
-			ParamNames:  []string{},
-			ParamValues: []interface{}{},
+			err:         ErrInvalidMultipart,
+			paramNames:  []string{},
+			paramValues: []interface{}{},
 		},
 		{
-			ServiceParams: []string{},
-			RawMultipart: `--xxx
+			serviceParams: []string{},
+			rawMultipart: `--xxx
 --xxx--`,
-			Err:         ErrInvalidMultipart,
-			ParamNames:  []string{},
-			ParamValues: []interface{}{},
+			err:         ErrInvalidMultipart,
+			paramNames:  []string{},
+			paramValues: []interface{}{},
 		},
 		{
-			ServiceParams: []string{},
-			RawMultipart: `--xxx
+			serviceParams: []string{},
+			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
 
 b
 --xxx--`,
-			ParamNames:  []string{},
-			ParamValues: []interface{}{},
+			paramNames:  []string{},
+			paramValues: []interface{}{},
 		},
 		{
-			ServiceParams: []string{"a"},
-			RawMultipart: `--xxx
+			serviceParams: []string{"a"},
+			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
 
 b
 --xxx--`,
-			ParamNames:  []string{"a"},
-			ParamValues: []interface{}{"b"},
+			paramNames:  []string{"a"},
+			paramValues: []interface{}{"b"},
 		},
 		{
-			ServiceParams: []string{"a", "c"},
-			RawMultipart: `--xxx
+			serviceParams: []string{"a", "c"},
+			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
 
 b
@@ -684,13 +859,13 @@ Content-Disposition: form-data; name="c"
 
 d
 --xxx--`,
-			Err:         nil,
-			ParamNames:  []string{"a", "c"},
-			ParamValues: []interface{}{"b", "d"},
+			err:         nil,
+			paramNames:  []string{"a", "c"},
+			paramValues: []interface{}{"b", "d"},
 		},
 		{
-			ServiceParams: []string{"a"},
-			RawMultipart: `--xxx
+			serviceParams: []string{"a"},
+			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
 
 b
@@ -699,32 +874,29 @@ Content-Disposition: form-data; name="ignored"
 
 x
 --xxx--`,
-			Err:         nil,
-			ParamNames:  []string{"a"},
-			ParamValues: []interface{}{"b"},
+			err:         nil,
+			paramNames:  []string{"a"},
+			paramValues: []interface{}{"b"},
 		},
 	}
 
-	for i, test := range tests {
+	for i, tc := range tt {
 		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
-			body := strings.NewReader(test.RawMultipart)
+			body := strings.NewReader(tc.rawMultipart)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "multipart/form-data; boundary=xxx")
 			defer req.Body.Close()
-			store := New(getServiceWithForm(test.ServiceParams...))
+			store := New(getServiceWithForm(reflect.TypeOf(""), tc.serviceParams...))
 
 			err := store.GetForm(*req)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
+			}
 			if err != nil {
-				if test.Err != nil {
-					if !errors.Is(err, test.Err) {
-						t.Fatalf("expected error <%s>, got <%s>", test.Err, err)
-					}
-					return
-				}
-				t.Fatalf("unexpected error <%s>", err)
+				return
 			}
 
-			if test.ParamNames == nil || test.ParamValues == nil {
+			if tc.paramNames == nil || tc.paramValues == nil {
 				if len(store.Data) != 0 {
 					t.Fatalf("expected no JSON parameters and got %d", len(store.Data))
 				}
@@ -733,12 +905,12 @@ x
 				return
 			}
 
-			if len(test.ParamNames) != len(test.ParamValues) {
-				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(test.ParamNames), len(test.ParamValues))
+			if len(tc.paramNames) != len(tc.paramValues) {
+				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, key := range test.ParamNames {
-				value := test.ParamValues[pi]
+			for pi, key := range tc.paramNames {
+				value := tc.paramValues[pi]
 
 				t.Run(key, func(t *testing.T) {
 
