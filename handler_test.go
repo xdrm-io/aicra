@@ -774,7 +774,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			err:         api.ErrInvalidParam,
 		},
 		{
-			name: "invalid query multi param",
+			name: "query unexpected slice param",
 			manifest: `[
 				{
 					"method": "GET",
