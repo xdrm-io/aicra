@@ -1,7 +1,7 @@
 package aicra
 
 import (
-	"encoding/json"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -75,18 +75,11 @@ func TestResponseJSON(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			res := newResponse().WithError(tc.err)
-			for k, v := range tc.data {
-				res.WithValue(k, v)
-			}
+			rec := httptest.NewRecorder()
+			DefaultResponder(rec, tc.data, tc.err)
 
-			raw, err := json.Marshal(res)
-			if err != nil {
-				t.Fatalf("cannot marshal to json: %s", err)
-			}
-
-			if string(raw) != tc.json {
-				t.Fatalf("mismatching json:\nexpect: %v\nactual: %v", printEscaped(tc.json), printEscaped(string(raw)))
+			if string(rec.Body.Bytes()) != tc.json {
+				t.Fatalf("mismatching json:\nexpect: %v\nactual: %v", printEscaped(tc.json), printEscaped(string(rec.Body.Bytes())))
 			}
 
 		})

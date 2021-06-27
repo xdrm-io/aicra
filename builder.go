@@ -14,8 +14,11 @@ import (
 type Builder struct {
 	// the server configuration defining available services
 	conf *config.Server
+	// respond func defines how to write data and error into an http response,
+	// defaults to `DefaultResponder`.
+	respond Responder
 	// user-defined handlers bound to services from the configuration
-	handlers []*apiHandler
+	handlers []*serviceHandler
 	// http middlewares wrapping the entire http connection (e.g. logger)
 	middlewares []func(http.Handler) http.Handler
 	// custom middlewares only wrapping the service handler of a request
@@ -24,8 +27,8 @@ type Builder struct {
 	ctxMiddlewares []func(http.Handler) http.Handler
 }
 
-// represents an api handler (method-pattern combination)
-type apiHandler struct {
+// serviceHandler links a handler func to a service (method-path combination)
+type serviceHandler struct {
 	Method string
 	Path   string
 	dyn    *dynfunc.Handler
@@ -44,6 +47,15 @@ func (b *Builder) Validate(t validator.Type) error {
 	}
 	b.conf.Validators = append(b.conf.Validators, t)
 	return nil
+}
+
+// RespondWith defines the server responder, i.e. how to write data and error
+// into the http response.
+func (b *Builder) RespondWith(responder Responder) {
+	if responder == nil {
+		return
+	}
+	b.respond = responder
 }
 
 // With adds an http middleware on top of the http connection
@@ -108,7 +120,7 @@ func (b *Builder) Bind(method, path string, fn interface{}) error {
 		return fmt.Errorf("%s '%s' handler: %w", method, path, err)
 	}
 
-	b.handlers = append(b.handlers, &apiHandler{
+	b.handlers = append(b.handlers, &serviceHandler{
 		Path:   path,
 		Method: method,
 		dyn:    dyn,
@@ -139,6 +151,9 @@ func (b *Builder) Delete(path string, fn interface{}) error {
 
 // Build a fully-featured HTTP server
 func (b Builder) Build() (http.Handler, error) {
+	if b.respond == nil {
+		b.respond = DefaultResponder
+	}
 
 	for _, service := range b.conf.Services {
 		var isHandled bool

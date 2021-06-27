@@ -18,7 +18,7 @@ type Parameter struct {
 	Validator validator.ValidateFunc
 }
 
-func (param *Parameter) validate(datatypes ...validator.Type) error {
+func (param *Parameter) validate(validators ...validator.Type) error {
 	if len(param.Description) < 1 {
 		return ErrMissingParamDesc
 	}
@@ -34,9 +34,9 @@ func (param *Parameter) validate(datatypes ...validator.Type) error {
 	}
 
 	// find validator
-	for _, dtype := range datatypes {
-		param.Validator = dtype.Validator(param.Type, datatypes...)
-		param.GoType = dtype.GoType()
+	for _, validator := range validators {
+		param.Validator = validator.Validator(param.Type, validators...)
+		param.GoType = validator.GoType()
 		if param.Validator != nil {
 			break
 		}

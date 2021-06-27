@@ -16,8 +16,8 @@ type Server struct {
 	Services   []*Service
 }
 
-// Parse a configuration into a server. Server.Types must be set beforehand to
-// make datatypes available when checking and formatting the read configuration.
+// Parse a configuration into a server. Server.Validators must be set beforehand
+// to make datatypes available when checking and formatting the configuration.
 func (s *Server) Parse(r io.Reader) error {
 	err := json.NewDecoder(r).Decode(&s.Services)
 	if err != nil {
@@ -31,7 +31,7 @@ func (s *Server) Parse(r io.Reader) error {
 	return nil
 }
 
-// validate implements the validator interface
+// validate all services
 func (s Server) validate(datatypes ...validator.Type) error {
 	for _, service := range s.Services {
 		err := service.validate(s.Validators...)
@@ -53,15 +53,18 @@ func (s Server) Find(r *http.Request) *Service {
 			return service
 		}
 	}
-
 	return nil
 }
 
-// collide returns if there is collision between any service for the same method and colliding paths.
-// Note that service path collision detection relies on datatypes:
-//  - example 1: `/user/{id}` and `/user/articles` will not collide as {id} is an int and "articles" is not
-//  - example 2: `/user/{name}` and `/user/articles` will collide as {name} is a string so as "articles"
-//  - example 3: `/user/{name}` and `/user/{id}` will collide as {name} and {id} cannot be checked against their potential values
+// collide returns if there is collision between any service for the same method
+// and colliding paths. Note that service path collision detection relies on
+// validators:
+//  - example 1: `/user/{id}` and `/user/articles` will not collide as {id} is
+//    an int and "articles" is not
+//  - example 2: `/user/{name}` and `/user/articles` will collide as {name} is
+//    a string so as "articles"
+//  - example 3: `/user/{name}` and `/user/{id}` will collide as {name} and {id}
+//    cannot be checked against their potential values
 func (s *Server) collide() error {
 	length := len(s.Services)
 

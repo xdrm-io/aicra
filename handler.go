@@ -31,7 +31,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// match service from config
 	var service = s.conf.Find(r)
 	if service == nil {
-		newResponse().WithError(api.ErrUnknownService).ServeHTTP(w, r)
+		s.respond(w, nil, api.ErrUnknownService)
 		return
 	}
 
@@ -39,15 +39,15 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	var input, err = extractInput(service, *r)
 	if err != nil {
 		if errors.Is(err, reqdata.ErrInvalidType) {
-			newResponse().WithError(api.ErrInvalidParam).ServeHTTP(w, r)
-		} else {
-			newResponse().WithError(api.ErrMissingParam).ServeHTTP(w, r)
+			s.respond(w, nil, api.ErrInvalidParam)
+			return
 		}
+		s.respond(w, nil, api.ErrMissingParam)
 		return
 	}
 
 	// match handler
-	var handler *apiHandler
+	var handler *serviceHandler
 	for _, h := range s.handlers {
 		if h.Method == service.Method && h.Path == service.Pattern {
 			handler = h
@@ -56,7 +56,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 	// no handler found
 	if handler == nil {
-		newResponse().WithError(api.ErrUncallableService).ServeHTTP(w, r)
+		s.respond(w, nil, api.ErrUncallableService)
 		return
 	}
 
@@ -71,13 +71,13 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		// should not happen
 		auth := api.GetAuth(r.Context())
 		if auth == nil {
-			newResponse().WithError(api.ErrPermission).ServeHTTP(w, r)
+			s.respond(w, nil, api.ErrPermission)
 			return
 		}
 
 		// reject non granted requests
 		if !auth.Granted() {
-			newResponse().WithError(api.ErrPermission).ServeHTTP(w, r)
+			s.respond(w, nil, api.ErrPermission)
 			return
 		}
 
@@ -96,25 +96,12 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 // handle the service request with the associated handler func and respond using
 // the handler func output
-func (s *Handler) handle(c context.Context, input *reqdata.T, handler *apiHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
+func (s *Handler) handle(c context.Context, input *reqdata.T, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
 	// pass execution to the handler function
-	var outData, outErr = handler.dyn.Handle(c, input.Data)
+	data, err := handler.dyn.Handle(c, input.Data)
 
-	// build response from output arguments
-	var res = newResponse().WithError(outErr)
-	for key, value := range outData {
-
-		// find original name from 'rename' field
-		for name, param := range service.Output {
-			if param.Rename == key {
-				res.WithValue(name, value)
-			}
-		}
-	}
-
-	// write response and close request
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	res.ServeHTTP(w, r)
+	// write the http response
+	s.respond(w, data, err)
 }
 
 func extractInput(service *config.Service, req http.Request) (*reqdata.T, error) {
