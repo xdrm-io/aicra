@@ -8,18 +8,21 @@ import (
 )
 
 // Responder defines how to write data and error  into the http response
-type Responder func(http.ResponseWriter, map[string]interface{}, api.Err)
+type Responder func(http.ResponseWriter, map[string]interface{}, error)
 
 // DefaultResponder used for writing data and error into http responses
-func DefaultResponder(w http.ResponseWriter, data map[string]interface{}, apiErr api.Err) {
-	w.WriteHeader(apiErr.Status)
+func DefaultResponder(w http.ResponseWriter, data map[string]interface{}, e error) {
+	w.WriteHeader(api.GetErrorStatus(e))
 	w.Header().Add("Content-Type", "application/json; charset=utf-8")
 
 	if data == nil {
 		data = map[string]interface{}{}
 	}
 
-	data["error"] = apiErr
+	data["status"] = "all right"
+	if e != nil {
+		data["status"] = e.Error()
+	}
 
 	encoded, err := json.Marshal(data)
 	if err == nil {

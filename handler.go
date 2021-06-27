@@ -71,13 +71,13 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		// should not happen
 		auth := api.GetAuth(r.Context())
 		if auth == nil {
-			s.respond(w, nil, api.ErrPermission)
+			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 
 		// reject non granted requests
 		if !auth.Granted() {
-			s.respond(w, nil, api.ErrPermission)
+			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 

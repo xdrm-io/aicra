@@ -51,9 +51,8 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 }
 
 // Handle binds input `data` into the dynamic function and returns an output map
-func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[string]interface{}, api.Err) {
+func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error) {
 	var (
-		ert      = reflect.TypeOf(api.Err{})
 		fnv      = reflect.ValueOf(h.fn)
 		callArgs = make([]reflect.Value, 0)
 	)
@@ -115,15 +114,15 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 	// call the handler
 	output := fnv.Call(callArgs)
 
+	var err error
+	if !output[len(output)-1].IsNil() {
+		err = output[len(output)-1].Interface().(error)
+	}
+
 	// no output OR pointer to output struct is nil
 	outdata := make(map[string]interface{})
 	if len(h.signature.Output) < 1 || output[0].IsNil() {
-		var structerr = output[len(output)-1].Convert(ert)
-		return outdata, api.Err{
-			Code:   int(structerr.FieldByName("Code").Int()),
-			Reason: structerr.FieldByName("Reason").String(),
-			Status: int(structerr.FieldByName("Status").Int()),
-		}
+		return outdata, err
 	}
 
 	// extract struct from pointer
@@ -134,11 +133,6 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 		outdata[name] = field.Interface()
 	}
 
-	// extract api.Err
-	var structerr = output[len(output)-1].Convert(ert)
-	return outdata, api.Err{
-		Code:   int(structerr.FieldByName("Code").Int()),
-		Reason: structerr.FieldByName("Reason").String(),
-		Status: int(structerr.FieldByName("Status").Int()),
-	}
+	// extract error
+	return outdata, err
 }

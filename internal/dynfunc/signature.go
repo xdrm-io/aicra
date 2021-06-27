@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
@@ -102,13 +101,13 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 
 // ValidateOutput validates a handler's output arguments against the service signature
 func (s Signature) ValidateOutput(handlerType reflect.Type) error {
-	errType := reflect.TypeOf(api.ErrUnknown)
+	errType := reflect.TypeOf((*error)(nil)).Elem()
 
 	if handlerType.NumOut() < 1 {
 		return ErrMissingHandlerErrorArgument
 	}
 
-	// last output must be api.Err
+	// last output must be error
 	lastArgType := handlerType.Out(handlerType.NumOut() - 1)
 	if !lastArgType.AssignableTo(errType) {
 		return ErrInvalidHandlerErrorArgument

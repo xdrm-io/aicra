@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
@@ -257,7 +256,7 @@ func TestOutputValidation(t *testing.T) {
 		{
 			name:   "1 output none required",
 			output: map[string]reflect.Type{},
-			fn:     func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			fn:     func(context.Context) (*struct{}, error) { return nil, nil },
 			err:    nil,
 		},
 		{
@@ -265,7 +264,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() api.Err { return api.ErrSuccess },
+			fn:  func() error { return nil },
 			err: ErrMissingHandlerOutputArgument,
 		},
 		{
@@ -273,7 +272,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (int, api.Err) { return 0, api.ErrSuccess },
+			fn:  func() (int, error) { return 0, nil },
 			err: ErrWrongOutputArgumentType,
 		},
 		{
@@ -281,7 +280,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (*int, api.Err) { return nil, api.ErrSuccess },
+			fn:  func() (*int, error) { return nil, nil },
 			err: ErrWrongOutputArgumentType,
 		},
 		{
@@ -289,7 +288,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (struct{ Test1 int }, api.Err) { return struct{ Test1 int }{Test1: 1}, api.ErrSuccess },
+			fn:  func() (struct{ Test1 int }, error) { return struct{ Test1 int }{Test1: 1}, nil },
 			err: ErrWrongOutputArgumentType,
 		},
 		{
@@ -297,7 +296,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			fn:  func() (*struct{}, error) { return nil, nil },
 			err: ErrUnexportedName,
 		},
 		{
@@ -305,7 +304,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			fn:  func() (*struct{}, error) { return nil, nil },
 			err: ErrMissingConfigArgument,
 		},
 		{
@@ -313,7 +312,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (*struct{ Test1 string }, api.Err) { return nil, api.ErrSuccess },
+			fn:  func() (*struct{ Test1 string }, error) { return nil, nil },
 			err: ErrWrongParamTypeFromConfig,
 		},
 		{
@@ -321,7 +320,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": reflect.TypeOf(int(0)),
 			},
-			fn:  func() (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
+			fn:  func() (*struct{ Test1 int }, error) { return nil, nil },
 			err: nil,
 		},
 		{
@@ -333,8 +332,8 @@ func TestOutputValidation(t *testing.T) {
 			fn: func() (*struct {
 				Test1 int
 				Test2 string
-			}, api.Err) {
-				return nil, api.ErrSuccess
+			}, error) {
+				return nil, nil
 			},
 			err: nil,
 		},
@@ -343,7 +342,7 @@ func TestOutputValidation(t *testing.T) {
 			output: map[string]reflect.Type{
 				"Test1": nil,
 			},
-			fn:  func() (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
+			fn:  func() (*struct{ Test1 int }, error) { return nil, nil },
 			err: nil,
 		},
 	}
@@ -395,7 +394,7 @@ func TestServiceValidation(t *testing.T) {
 		},
 		{
 			name: "no in no out",
-			fn:   func(context.Context) api.Err { return api.ErrSuccess },
+			fn:   func(context.Context) error { return nil },
 			err:  nil,
 		},
 		{
@@ -406,7 +405,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context) error { return nil },
 			err: nil,
 		},
 		{
@@ -417,7 +416,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context) error { return nil },
 			err: ErrMissingHandlerInputArgument,
 		},
 		{
@@ -428,7 +427,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context, struct{ Test1 int }) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context, struct{ Test1 int }) error { return nil },
 			err: nil,
 		},
 		{
@@ -440,7 +439,7 @@ func TestServiceValidation(t *testing.T) {
 					Optional: true,
 				},
 			},
-			fn:  func(context.Context, struct{ Test1 int }) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context, struct{ Test1 int }) error { return nil },
 			err: ErrWrongParamTypeFromConfig,
 		},
 		{
@@ -452,7 +451,7 @@ func TestServiceValidation(t *testing.T) {
 					Optional: true,
 				},
 			},
-			fn:  func(context.Context, struct{ Test1 *int }) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context, struct{ Test1 *int }) error { return nil },
 			err: nil,
 		},
 
@@ -464,7 +463,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context) error { return nil },
 			err: nil,
 		},
 		{
@@ -475,7 +474,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) api.Err { return api.ErrSuccess },
+			fn:  func(context.Context) error { return nil },
 			err: ErrMissingHandlerOutputArgument,
 		},
 		{
@@ -486,7 +485,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) (int, api.Err) { return 0, api.ErrSuccess },
+			fn:  func(context.Context) (int, error) { return 0, nil },
 			err: ErrWrongOutputArgumentType,
 		},
 		{
@@ -497,7 +496,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) (*struct{}, api.Err) { return nil, api.ErrSuccess },
+			fn:  func(context.Context) (*struct{}, error) { return nil, nil },
 			err: ErrMissingConfigArgument,
 		},
 		{
@@ -508,7 +507,7 @@ func TestServiceValidation(t *testing.T) {
 					GoType: reflect.TypeOf(int(0)),
 				},
 			},
-			fn:  func(context.Context) (*struct{ Test1 int }, api.Err) { return nil, api.ErrSuccess },
+			fn:  func(context.Context) (*struct{ Test1 int }, error) { return nil, nil },
 			err: nil,
 		},
 		{
@@ -520,7 +519,7 @@ func TestServiceValidation(t *testing.T) {
 					Optional: true,
 				},
 			},
-			fn:  func(context.Context) (*struct{ Test1 *int }, api.Err) { return nil, api.ErrSuccess },
+			fn:  func(context.Context) (*struct{ Test1 *int }, error) { return nil, nil },
 			err: ErrWrongParamTypeFromConfig,
 		},
 	}
