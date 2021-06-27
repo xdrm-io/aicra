@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/xdrm-io/aicra/api"
 )
 
 type testsignature Signature
@@ -58,6 +60,15 @@ func TestInput(t *testing.T) {
 			ExpectedErr:    nil,
 		},
 		{
+			Name:           "no input with error",
+			Spec:           (&testsignature{}).withArgs(),
+			Fn:             func(context.Context) (*struct{}, error) { return nil, api.ErrForbidden },
+			HasContext:     false,
+			Input:          []interface{}{},
+			ExpectedOutput: []interface{}{},
+			ExpectedErr:    api.ErrForbidden,
+		},
+		{
 			Name: "int proxy (0)",
 			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
 			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
@@ -67,6 +78,17 @@ func TestInput(t *testing.T) {
 			Input:          []interface{}{int(0)},
 			ExpectedOutput: []interface{}{int(0)},
 			ExpectedErr:    nil,
+		},
+		{
+			Name: "int proxy with error",
+			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
+			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+				return &intstruct{P1: in.P1}, api.ErrNotImplemented
+			},
+			HasContext:     false,
+			Input:          []interface{}{int(0)},
+			ExpectedOutput: []interface{}{int(0)},
+			ExpectedErr:    api.ErrNotImplemented,
 		},
 		{
 			Name: "int proxy (11)",
