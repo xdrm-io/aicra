@@ -270,24 +270,23 @@ type res struct{
     Output2 bool
 }
 
-func myHandler(ctx context.Context, r req) (*res, api.Err) {
+func myHandler(ctx context.Context, r req) (*res, error) {
     err := doSomething()
     if err != nil {
         return nil, api.ErrFailure
     }
-    return &res{"out1", true}, api.ErrSuccess
+    return &res{"out1", true}, nil
 }
 ```
 
 If your handler signature does not match the configuration exactly, the server will print out the error and won't start.
 
-The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json; clients have to manage the same format for every response.
+The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json; clients have to manage the same format for every response:
 ```json
+HTTP/1.1 500 OK
+Content-Type: application/json
 {
-    "error": {
-        "code": 0,
-        "reason": "all right"
-    }
+    "status": "it failed"
 }
 ```
 
@@ -323,8 +322,9 @@ The `api.Err` type automatically maps to HTTP status codes and error description
     - [ ] `[]a` - array containing **only** elements matching `a` type
     - [ ] `a[b]` - map containing **only** keys of type `a` and values of type `b` (*a or b can be ommited*)
 - [x] generic handler implementation
-- [x] response interface
+- [x] responder interface
 - [x] generic errors that automatically formats into response
+    - [x] only use the `error` interface, with an optional `interface{ Status() int }` to associate http status codes
     - [x] builtin errors
     - [x] possibility to add custom errors
 - [x] check for missing handlers when building the handler
