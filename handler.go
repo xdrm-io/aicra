@@ -100,8 +100,19 @@ func (s *Handler) handle(c context.Context, input *reqdata.T, handler *serviceHa
 	// pass execution to the handler function
 	data, err := handler.dyn.Handle(c, input.Data)
 
+	// rename data
+	renamed := map[string]interface{}{}
+	for key, value := range data {
+		// find original name from 'rename' field
+		for name, param := range service.Output {
+			if param.Rename == key {
+				renamed[name] = value
+			}
+		}
+	}
+
 	// write the http response
-	s.respond(w, data, err)
+	s.respond(w, renamed, err)
 }
 
 func extractInput(service *config.Service, req http.Request) (*reqdata.T, error) {
