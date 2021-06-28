@@ -14,6 +14,12 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
+func printEscaped(raw string) string {
+	raw = strings.ReplaceAll(raw, "\n", "\\n")
+	raw = strings.ReplaceAll(raw, "\r", "\\r")
+	return raw
+}
+
 func addDefaultTypes(b *aicra.Builder) error {
 	if err := b.Validate(validator.AnyType{}); err != nil {
 		return err
@@ -1113,6 +1119,208 @@ Content-Disposition: form-data; name="id"
 
 			if response.Result().StatusCode != expectedStatus {
 				t.Fatalf("invalid response status %d, expected %d", response.Result().StatusCode, expectedStatus)
+			}
+		})
+	}
+}
+
+func TestHandler_Response(t *testing.T) {
+	tt := []struct {
+		name     string
+		manifest string
+
+		// handler
+		hmethod, huri string
+		hfn           interface{}
+		// request
+		method, uri, body string
+
+		response string
+	}{
+		{
+			name: "nil error",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) error {
+				return nil
+			},
+			method:   http.MethodGet,
+			uri:      "/",
+			response: `{"status":"all right"}`,
+		},
+		{
+			name: "non-nil error",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) error {
+				return api.ErrNotImplemented
+			},
+			method:   http.MethodGet,
+			uri:      "/",
+			response: `{"status":"not implemented"}`,
+		},
+
+		{
+			name: "nil int output",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {
+						"id": { "name": "ID", "info": "info", "type": "uint" }
+					}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) (*struct{ ID uint }, error) {
+				return nil, nil
+			},
+			method:   http.MethodGet,
+			uri:      "/",
+			response: `{"status":"all right"}`,
+		},
+		{
+			name: "non-nil int output",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {
+						"id": { "name": "ID", "info": "info", "type": "uint" }
+					}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) (*struct{ ID uint }, error) {
+				return &struct{ ID uint }{ID: 123}, nil
+			},
+			method:   http.MethodGet,
+			uri:      "/",
+			response: `{"id":123,"status":"all right"}`,
+		},
+		{
+			name: "nil int outputs",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {
+						"a": { "name": "A", "info": "info", "type": "uint" },
+						"z": { "name": "Z", "info": "info", "type": "uint" }
+					}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) (*struct {
+				A uint
+				Z uint
+			}, error) {
+				return nil, api.ErrForbidden
+			},
+			method:   http.MethodGet,
+			uri:      "/",
+			response: `{"status":"forbidden"}`,
+		},
+		{
+			name: "int outputs surrounding error",
+			manifest: `[
+				{
+					"method": "GET",
+					"path": "/",
+					"info": "info",
+					"scope": [],
+					"in":  {},
+					"out": {
+						"a": { "name": "A", "info": "info", "type": "uint" },
+						"z": { "name": "Z", "info": "info", "type": "uint" }
+					}
+				}
+			]`,
+			hmethod: http.MethodGet,
+			huri:    "/",
+			hfn: func(context.Context) (*struct {
+				A uint
+				Z uint
+			}, error) {
+				return &struct {
+					A uint
+					Z uint
+				}{A: 123, Z: 456}, nil
+			},
+			method:   http.MethodGet,
+			uri:      "/",
+			response: `{"a":123,"status":"all right","z":456}`,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := &aicra.Builder{}
+			if err := addDefaultTypes(builder); err != nil {
+				t.Fatalf("unexpected error <%v>", err)
+			}
+
+			err := builder.Setup(strings.NewReader(tc.manifest))
+			if err != nil {
+				t.Fatalf("setup: unexpected error <%v>", err)
+			}
+
+			if err := builder.Bind(tc.hmethod, tc.huri, tc.hfn); err != nil {
+				t.Fatalf("bind: unexpected error <%v>", err)
+			}
+
+			handler, err := builder.Build()
+			if err != nil {
+				t.Fatalf("build: unexpected error <%v>", err)
+			}
+
+			var (
+				response = httptest.NewRecorder()
+				body     = strings.NewReader(tc.body)
+				request  = httptest.NewRequest(tc.method, tc.uri, body)
+			)
+			request.Header.Add("Content-Type", "application/json")
+
+			// test request
+			handler.ServeHTTP(response, request)
+			if response.Body == nil {
+				t.Fatalf("response has no body")
+			}
+
+			if response.Body.String() != tc.response {
+				t.Fatalf("invalid response\n- actual: %s\n- expect: %s", printEscaped(response.Body.String()), printEscaped(tc.response))
 			}
 		})
 	}
