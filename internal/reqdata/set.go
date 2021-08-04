@@ -41,19 +41,19 @@ func (i *T) GetURI(req http.Request) error {
 	for _, capture := range i.service.Captures {
 		// out of range
 		if capture.Index > len(uriparts)-1 {
-			return fmt.Errorf("%s: %w", capture.Name, ErrMissingURIParameter)
+			return &Err{field: capture.Ref.Rename, err: ErrMissingURIParameter}
 		}
 		value := uriparts[capture.Index]
 
 		// should not happen
 		if capture.Ref == nil {
-			return fmt.Errorf("%s: %w", capture.Name, ErrUnknownType)
+			return &Err{field: capture.Ref.Rename, err: ErrUnknownType}
 		}
 
 		parsed := parseParameter(value)
 		cast, valid := capture.Ref.Validator(parsed)
 		if !valid {
-			return fmt.Errorf("%s: %w", capture.Name, ErrInvalidType)
+			return &Err{field: capture.Ref.Rename, err: ErrInvalidType}
 		}
 		i.Data[capture.Ref.Rename] = cast
 	}
@@ -70,7 +70,7 @@ func (i *T) GetQuery(req http.Request) error {
 
 		if !exist {
 			if !param.Optional {
-				return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
+				return &Err{field: param.Rename, err: ErrMissingRequiredParam}
 			}
 			continue
 		}
@@ -83,7 +83,7 @@ func (i *T) GetQuery(req http.Request) error {
 		} else {
 			// should expect at most 1 value
 			if len(values) > 1 {
-				return fmt.Errorf("%s: %w", name, ErrInvalidType)
+				return &Err{field: param.Rename, err: ErrInvalidType}
 			}
 			if len(values) > 0 {
 				parsed = parseParameter(values[0])
@@ -92,7 +92,7 @@ func (i *T) GetQuery(req http.Request) error {
 
 		cast, valid := param.Validator(parsed)
 		if !valid {
-			return fmt.Errorf("%s: %w", name, ErrInvalidType)
+			return &Err{field: param.Rename, err: ErrInvalidType}
 		}
 		i.Data[param.Rename] = cast
 	}
@@ -131,10 +131,10 @@ func (i *T) GetForm(req http.Request) error {
 	}
 
 	// fail on at least 1 mandatory form param when there is no body
-	for name, param := range i.service.Form {
+	for _, param := range i.service.Form {
 		_, exists := i.Data[param.Rename]
 		if !exists && !param.Optional {
-			return fmt.Errorf("%s: %w", name, ErrMissingRequiredParam)
+			return &Err{field: param.Rename, err: ErrMissingRequiredParam}
 		}
 	}
 	return nil
@@ -163,7 +163,7 @@ func (i *T) parseJSON(req http.Request) error {
 
 		cast, valid := param.Validator(value)
 		if !valid {
-			return fmt.Errorf("%s: %w", name, ErrInvalidType)
+			return &Err{field: param.Rename, err: ErrInvalidType}
 		}
 		i.Data[param.Rename] = cast
 	}
@@ -193,7 +193,7 @@ func (i *T) parseUrlencoded(req http.Request) error {
 		} else if len(values) > 0 {
 			// should expect at most 1 value
 			if len(values) > 1 {
-				return fmt.Errorf("%s: %w", name, ErrInvalidType)
+				return &Err{field: param.Rename, err: ErrInvalidType}
 			}
 			if len(values) > 0 {
 				parsed = parseParameter(values[0])
@@ -202,7 +202,7 @@ func (i *T) parseUrlencoded(req http.Request) error {
 
 		cast, valid := param.Validator(parsed)
 		if !valid {
-			return fmt.Errorf("%s: %w", name, ErrInvalidType)
+			return &Err{field: param.Rename, err: ErrInvalidType}
 		}
 		i.Data[param.Rename] = cast
 	}
@@ -237,7 +237,7 @@ func (i *T) parseMultipart(req http.Request) error {
 		parsed := parseParameter(string(component.Data))
 		cast, valid := param.Validator(parsed)
 		if !valid {
-			return fmt.Errorf("%s: %w", name, ErrInvalidType)
+			return &Err{field: param.Rename, err: ErrInvalidType}
 		}
 		i.Data[param.Rename] = cast
 	}

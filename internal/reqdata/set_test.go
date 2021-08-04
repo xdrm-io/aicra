@@ -90,6 +90,7 @@ func TestStoreWithUri(t *testing.T) {
 		serviceParams []string
 		uri           string
 		err           error
+		errField      string
 	}{
 		{
 			name:          "non captured uri",
@@ -102,12 +103,14 @@ func TestStoreWithUri(t *testing.T) {
 			serviceParams: []string{"missing"},
 			uri:           "/",
 			err:           ErrMissingURIParameter,
+			errField:      "missing",
 		},
 		{
 			name:          "missing uri params",
 			serviceParams: []string{"gotit", "missing"},
 			uri:           "/gotme",
 			err:           ErrMissingURIParameter,
+			errField:      "missing",
 		},
 		{
 			name:          "2 uri params",
@@ -132,6 +135,7 @@ func TestStoreWithUri(t *testing.T) {
 			serviceParams: []string{"first", "", "second"},
 			uri:           "/gotme/ignored",
 			err:           ErrMissingURIParameter,
+			errField:      "second",
 		},
 	}
 
@@ -146,6 +150,13 @@ func TestStoreWithUri(t *testing.T) {
 				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
 			}
 			if err != nil {
+				cast, ok := err.(*Err)
+				if !ok {
+					t.Fatalf("error should be of type *Err")
+				}
+				if cast.Field() != tc.errField {
+					t.Fatalf("error field is '%s' ; expected '%s'", cast.Field(), tc.errField)
+				}
 				return
 			}
 
@@ -166,6 +177,7 @@ func TestExtractQuery(t *testing.T) {
 		serviceParams []string
 		query         string
 		err           error
+		errField      string
 
 		paramTypes  reflect.Type
 		paramNames  []string
@@ -185,6 +197,7 @@ func TestExtractQuery(t *testing.T) {
 			serviceParams: []string{"missing"},
 			query:         "",
 			err:           ErrMissingRequiredParam,
+			errField:      "missing",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    nil,
 			paramValues:   nil,
@@ -212,6 +225,7 @@ func TestExtractQuery(t *testing.T) {
 			serviceParams: []string{"a", "missing"},
 			query:         "a&b",
 			err:           ErrMissingRequiredParam,
+			errField:      "missing",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    nil,
 			paramValues:   nil,
@@ -256,6 +270,7 @@ func TestExtractQuery(t *testing.T) {
 			name:          "2 required 1 is slice",
 			serviceParams: []string{"a", "c"},
 			err:           ErrInvalidType,
+			errField:      "a",
 			query:         "a=b&c=d&a=x",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    []string{"a", "c"},
@@ -314,6 +329,7 @@ func TestExtractQuery(t *testing.T) {
 			name:          "expect string got values",
 			serviceParams: []string{"name"},
 			err:           ErrInvalidType,
+			errField:      "name",
 			query:         "name=value1&name=value2",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    nil,
@@ -332,6 +348,13 @@ func TestExtractQuery(t *testing.T) {
 				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
 			}
 			if err != nil {
+				cast, ok := err.(*Err)
+				if !ok {
+					t.Fatalf("error should be of type *Err")
+				}
+				if cast.Field() != tc.errField {
+					t.Fatalf("error field is '%s' ; expected '%s'", cast.Field(), tc.errField)
+				}
 				return
 			}
 
@@ -419,6 +442,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 		serviceParams []string
 		query         string
 		err           error
+		errField      string
 
 		paramTypes  reflect.Type
 		paramNames  []string
@@ -438,6 +462,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			serviceParams: []string{"missing"},
 			query:         "",
 			err:           ErrMissingRequiredParam,
+			errField:      "missing",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    nil,
 			paramValues:   nil,
@@ -465,6 +490,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			serviceParams: []string{"a", "missing"},
 			query:         "a&b",
 			err:           ErrMissingRequiredParam,
+			errField:      "missing",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    nil,
 			paramValues:   nil,
@@ -509,6 +535,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			name:          "2 required 1 is slice",
 			serviceParams: []string{"a", "c"},
 			err:           ErrInvalidType,
+			errField:      "a",
 			query:         "a=b&c=d&a=x",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    []string{"a", "c"},
@@ -567,6 +594,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			name:          "expect string got values",
 			serviceParams: []string{"name"},
 			err:           ErrInvalidType,
+			errField:      "name",
 			query:         "name=value1&name=value2",
 			paramTypes:    reflect.TypeOf(""),
 			paramNames:    nil,
@@ -587,6 +615,13 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 				t.Fatalf("expected error <%v>, got <%v>", tc.err, err)
 			}
 			if err != nil {
+				cast, ok := err.(*Err)
+				if !ok {
+					t.Fatalf("error should be of type *Err")
+				}
+				if cast.Field() != tc.errField {
+					t.Fatalf("error field is '%s' ; expected '%s'", cast.Field(), tc.errField)
+				}
 				return
 			}
 

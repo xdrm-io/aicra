@@ -38,11 +38,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// extract request data
 	var input, err = extractInput(service, *r)
 	if err != nil {
-		if errors.Is(err, reqdata.ErrInvalidType) {
-			s.respond(w, nil, api.ErrInvalidParam)
-			return
-		}
-		s.respond(w, nil, api.ErrMissingParam)
+		s.respond(w, nil, enrichInputError(err))
 		return
 	}
 
@@ -137,6 +133,45 @@ func extractInput(service *config.Service, req http.Request) (*reqdata.T, error)
 	}
 
 	return dataset, nil
+}
+
+// enrichInputError parses and manages the input error to add field information
+func enrichInputError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// invalid data according to its validator
+	if errors.Is(err, reqdata.ErrInvalidType) {
+		cast, ok := err.(*reqdata.Err)
+		if !ok {
+			return api.ErrInvalidParam
+		}
+
+		// add field name to error
+		return api.Error(
+			api.ErrInvalidParam.Status(),
+			fmt.Errorf("%s: %w", cast.Field(), api.ErrInvalidParam),
+		)
+	}
+
+	var (
+		missingParam    = errors.Is(err, reqdata.ErrMissingRequiredParam)
+		missingURIParam = errors.Is(err, reqdata.ErrMissingURIParameter)
+	)
+	if missingParam || missingURIParam {
+		cast, ok := err.(*reqdata.Err)
+		if !ok {
+			return api.ErrMissingParam
+		}
+		// add field name to error
+		return api.Error(
+			api.ErrMissingParam.Status(),
+			fmt.Errorf("%s: %w", cast.Field(), api.ErrMissingParam),
+		)
+	}
+
+	return api.ErrMissingParam
 }
 
 // buildAuth builds the api.Auth struct from the service scope configuration
