@@ -2,8 +2,11 @@ package api_test
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/xdrm-io/aicra/api"
 )
@@ -110,6 +113,23 @@ func TestError_GetStatusHelper(t *testing.T) {
 				t.Fatalf("invalid status %d, expected %d", api.GetErrorStatus(tc.err), tc.status)
 			}
 		})
+	}
+
+}
+
+func TestError_CustomError(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+	var (
+		status = rand.Intn(550)
+		reason = "some error description"
+	)
+
+	err := api.Error(status, fmt.Errorf("%s", reason))
+	if err.Status() != status {
+		t.Fatalf("unexpected status %d ; expected %d", err.Status(), status)
+	}
+	if err.Error() != reason {
+		t.Fatalf("unexpected reason '%s' ; expected '%s'", err.Error(), reason)
 	}
 
 }
