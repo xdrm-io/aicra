@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,6 +9,11 @@ import (
 
 // Err defines api errors
 type Err string
+
+// Error creates a new api error from a status code and a reason error
+func Error(status int, reason error) Err {
+	return Err(fmt.Sprintf("%d:%s", status, reason))
+}
 
 // Error implements the error interface
 func (e Err) Error() string {

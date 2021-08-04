@@ -3,6 +3,7 @@ package aicra_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -629,6 +630,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		body        string
 		permissions []string
 		err         error
+		errReason   string
 	}{
 		// service match
 		{
@@ -753,6 +755,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        ``,
 			permissions: []string{},
 			err:         api.ErrMissingParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrMissingParam.Error()),
 		},
 		{
 			name: "invalid query param",
@@ -778,6 +781,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        ``,
 			permissions: []string{},
 			err:         api.ErrInvalidParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrInvalidParam.Error()),
 		},
 		{
 			name: "query unexpected slice param",
@@ -803,6 +807,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        ``,
 			permissions: []string{},
 			err:         api.ErrInvalidParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrInvalidParam.Error()),
 		},
 		{
 			name: "valid query param",
@@ -856,6 +861,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        ``,
 			permissions: []string{},
 			err:         api.ErrMissingParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrMissingParam.Error()),
 		},
 		{
 			name: "invalid json param",
@@ -882,6 +888,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        `{ "id": "invalid type" }`,
 			permissions: []string{},
 			err:         api.ErrInvalidParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrInvalidParam.Error()),
 		},
 		{
 			name: "valid json param",
@@ -936,6 +943,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        ``,
 			permissions: []string{},
 			err:         api.ErrMissingParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrMissingParam.Error()),
 		},
 		{
 			name: "invalid urlencoded param",
@@ -962,6 +970,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        `id=abc`,
 			permissions: []string{},
 			err:         api.ErrInvalidParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrInvalidParam.Error()),
 		},
 		{
 			name: "valid urlencoded param",
@@ -1016,6 +1025,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 			body:        ``,
 			permissions: []string{},
 			err:         api.ErrMissingParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrMissingParam.Error()),
 		},
 		{
 			name: "invalid multipart param",
@@ -1046,6 +1056,7 @@ abc
 --xxx--`,
 			permissions: []string{},
 			err:         api.ErrInvalidParam,
+			errReason:   fmt.Sprintf("ID: %s", api.ErrInvalidParam.Error()),
 		},
 		{
 			name: "valid multipart param",
@@ -1111,15 +1122,30 @@ Content-Disposition: form-data; name="id"
 
 			// test request
 			handler.ServeHTTP(response, request)
-			if response.Body == nil {
-				t.Fatalf("response has no body")
-			}
 
 			expectedStatus := api.GetErrorStatus(tc.err)
 
 			if response.Result().StatusCode != expectedStatus {
 				t.Fatalf("invalid response status %d, expected %d", response.Result().StatusCode, expectedStatus)
 			}
+
+			if len(tc.errReason) < 1 {
+				return
+			}
+
+			type JSONError struct {
+				Status string `json:"status"`
+			}
+			var parsedError JSONError
+			err = json.NewDecoder(response.Body).Decode(&parsedError)
+			if err != nil {
+				t.Fatalf("cannot parse body: %s", err)
+			}
+
+			if parsedError.Status != tc.errReason {
+				t.Fatalf("invalid error description '%s' ; expected '%s'", parsedError.Status, tc.errReason)
+			}
+
 		})
 	}
 }
