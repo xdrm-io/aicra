@@ -15,6 +15,7 @@
 [![Go doc](https://pkg.go.dev/badge/github.com/xdrm-io/aicra)](https://pkg.go.dev/github.com/xdrm-io/aicra)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xdrm-io/aicra)](https://goreportcard.com/report/github.com/xdrm-io/aicra)
 [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/go.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/go.yml)
+[![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
 
 ## Presentation
 
