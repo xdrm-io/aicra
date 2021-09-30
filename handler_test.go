@@ -283,21 +283,94 @@ func TestHandler_WithAuth(t *testing.T) {
 func TestHandler_PermissionError(t *testing.T) {
 	tt := []struct {
 		name        string
+		path        string
+		uri, body   string
 		manifest    string
+		handler     interface{}
 		permissions []string
-		granted     bool
+		err         api.Err
 	}{
 		{
 			name:        "permission fulfilled",
+			path:        "/path",
+			uri:         "/path",
 			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			handler:     func(ctx context.Context) (*struct{}, error) { return nil, api.ErrNotImplemented },
 			permissions: []string{"A"},
-			granted:     true,
+			err:         api.ErrNotImplemented,
 		},
 		{
 			name:        "missing permission",
+			path:        "/path",
+			uri:         "/path",
 			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			handler:     func(ctx context.Context) (*struct{}, error) { return nil, api.ErrNotImplemented },
 			permissions: []string{},
-			granted:     false,
+			err:         api.ErrForbidden,
+		},
+		// check that permission errors are raised:
+		// AFTER uri params
+		// BEFORE query and body params
+		{
+			name: "permission with wrong uri param",
+			path: "/path/{uid}",
+			uri:  "/path/abc",
+			manifest: `[ {
+				"method": "GET",
+				"path": "/path/{uid}",
+				"scope": [["missing"]],
+				"info": "info",
+				"in": {
+					"{uid}": { "info": "user id", "type": "uint", "name": "UserID" }
+				},
+				"out": {}
+			} ]`,
+			handler: func(ctx context.Context, in struct{ UserID uint }) (*struct{}, error) {
+				return nil, api.ErrNotImplemented
+			},
+			permissions: []string{},
+			err:         api.ErrUnknownService,
+		},
+		{
+			name: "permission with wrong query param",
+			path: "/path",
+			uri:  "/path?uid=invalid-type",
+			manifest: `[ {
+				"method": "GET",
+				"path": "/path",
+				"scope": [["missing"]],
+				"info": "info",
+				"in": {
+					"GET@uid": { "info": "user id", "type": "uint", "name": "UserID" }
+				},
+				"out": {}
+			} ]`,
+			handler: func(ctx context.Context, in struct{ UserID uint }) (*struct{}, error) {
+				return nil, api.ErrNotImplemented
+			},
+			permissions: []string{},
+			err:         api.ErrForbidden,
+		},
+		{
+			name: "permission with wrong body param",
+			path: "/path",
+			uri:  "/path",
+			body: "uid=invalid-type",
+			manifest: `[ {
+				"method": "GET",
+				"path": "/path",
+				"scope": [["missing"]],
+				"info": "info",
+				"in": {
+					"uid": { "info": "user id", "type": "uint", "name": "UserID" }
+				},
+				"out": {}
+			} ]`,
+			handler: func(ctx context.Context, in struct{ UserID uint }) (*struct{}, error) {
+				return nil, api.ErrNotImplemented
+			},
+			permissions: []string{},
+			err:         api.ErrForbidden,
 		},
 	}
 
@@ -326,11 +399,7 @@ func TestHandler_PermissionError(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx context.Context) (*struct{}, error) {
-				return nil, api.ErrNotImplemented
-			}
-
-			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
+			if err := builder.Bind(http.MethodGet, tc.path, tc.handler); err != nil {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
@@ -339,8 +408,11 @@ func TestHandler_PermissionError(t *testing.T) {
 				t.Fatalf("build: unexpected error <%v>", err)
 			}
 
-			response := httptest.NewRecorder()
-			request := httptest.NewRequest(http.MethodGet, "/path", &bytes.Buffer{})
+			var (
+				body     = strings.NewReader(tc.body)
+				response = httptest.NewRecorder()
+				request  = httptest.NewRequest(http.MethodGet, tc.uri, body)
+			)
 
 			// test request
 			handler.ServeHTTP(response, request)
@@ -348,11 +420,7 @@ func TestHandler_PermissionError(t *testing.T) {
 				t.Fatalf("response has no body")
 			}
 
-			expectedStatus := api.GetErrorStatus(api.ErrNotImplemented)
-			if !tc.granted {
-				expectedStatus = api.GetErrorStatus(api.ErrForbidden)
-			}
-
+			expectedStatus := api.GetErrorStatus(tc.err)
 			if response.Result().StatusCode != expectedStatus {
 				t.Fatalf("expected status %d got %d", expectedStatus, response.Result().StatusCode)
 			}
