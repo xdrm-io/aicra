@@ -35,13 +35,6 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// extract request data
-	var input, err = extractInput(service, *r)
-	if err != nil {
-		s.respond(w, nil, enrichInputError(err))
-		return
-	}
-
 	// match handler
 	var handler *serviceHandler
 	for _, h := range s.handlers {
@@ -52,7 +45,20 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 	// no handler found
 	if handler == nil {
+		// should never fail as the builder ensures all services are plugged
+		// properly
 		s.respond(w, nil, api.ErrUncallableService)
+		return
+	}
+
+	// start building the input but only URI parameters for now.
+	// They might be required to build parametric authorization c.f. buildAuth()
+	// Only URI arguments can be used
+	var input = reqdata.New(service)
+	if err := input.GetURI(*r); err != nil {
+		// should never fail as type validators are always checks in
+		// s.conf.Find -> config.Service.matchPattern
+		s.respond(w, nil, enrichInputError(err))
 		return
 	}
 
@@ -74,6 +80,16 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		// reject non granted requests
 		if !auth.Granted() {
 			s.respond(w, nil, api.ErrForbidden)
+			return
+		}
+
+		// extract remaining input parameters
+		if err := input.GetQuery(*r); err != nil {
+			s.respond(w, nil, enrichInputError(err))
+			return
+		}
+		if err := input.GetForm(*r); err != nil {
+			s.respond(w, nil, enrichInputError(err))
 			return
 		}
 
@@ -109,30 +125,6 @@ func (s *Handler) handle(c context.Context, input *reqdata.T, handler *serviceHa
 
 	// write the http response
 	s.respond(w, renamed, err)
-}
-
-func extractInput(service *config.Service, req http.Request) (*reqdata.T, error) {
-	var dataset = reqdata.New(service)
-
-	// URI data
-	var err = dataset.GetURI(req)
-	if err != nil {
-		return nil, err
-	}
-
-	// query data
-	err = dataset.GetQuery(req)
-	if err != nil {
-		return nil, err
-	}
-
-	// form/json data
-	err = dataset.GetForm(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return dataset, nil
 }
 
 // enrichInputError parses and manages the input error to add field information
@@ -177,7 +169,8 @@ func enrichInputError(err error) error {
 // buildAuth builds the api.Auth struct from the service scope configuration
 //
 // it replaces format '[a]' in scope where 'a' is an existing input argument's
-// name with its value
+// name with its value.
+// Warning notice: only uri parameters are allowed
 func buildAuth(scope [][]string, in map[string]interface{}) *api.Auth {
 	updated := make([][]string, len(scope))
 
