@@ -35,8 +35,12 @@ Repetitive tasks are automatically processed by `aicra` based on your configurat
 - [Configuration file](#configuration-file)
   * [Services](#services)
   * [Input and output parameters](#input-and-output-parameters)
-  * [Example](#example)
-- [Writing your code](#writing-your-code)
+- [Writing handlers](#writing-handlers)
+  * [Function signature](#function-signature)
+  * [Helpers](#helpers)
+    + [Errors](#errors)
+    + [Response](#response)
+    + [Pass values](#pass-values)
 - [Changelog](#changelog)
 
 <!-- tocstop -->
@@ -46,7 +50,7 @@ Repetitive tasks are automatically processed by `aicra` based on your configurat
 To install the aicra package, you need to install Go and set your Go workspace first.
 > not tested under Go 1.14
 
-1. you can use the below Go command to install aicra.
+1. you can use this command to install aicra.
 ```bash
 $ go get -u github.com/xdrm-io/aicra
 ```
@@ -57,16 +61,17 @@ import "github.com/xdrm-io/aicra"
 
 ## What's automated
 
-As the configuration file is here to make your life easier, let's take a quick look at what you do not have to do ; or in other words, what does `aicra` automates.
+As the configuration file is here to make your life easier, let's take a quick look at what you do not have to do ; or in other words, what do `aicra` automates.
 
-Http requests are only accepted when they have the permissions you have defined. If unauthorized, the request is rejected with an error response.
+Http requests are only accepted when they are granted the permissions you have defined. Unauthorized requests are automatically rejected with an error response.
 
 Request data is automatically extracted and validated before it reaches your code. If a request has missing or invalid data an automatic error response is sent.
 
-When launching the server, it ensures everything is ok and won't start until fixed. You will get errors for:
-- handler signature does not match the configuration
-- a configuration service has no handler
-- a handler does not match any service
+When launching the server, it ensures everything is valid and won't start until fixed. You will get errors for:
+- invalid configuration syntax
+- handler signature not matching the configuration
+- configuration service left with no handler
+- handler matching no service
 
 The same applies if your configuration is invalid:
 - unknown HTTP method
@@ -75,6 +80,7 @@ The same applies if your configuration is invalid:
 - missing fields
 - unknown data type
 - input name collision
+- etc.
 
 ## Getting started
 
@@ -165,7 +171,7 @@ To begin with, the configuration file defines a list of services. Each one is de
 - `method` an HTTP method
 - `path` an uri pattern (can contain variables)
 - `info` a short description of what it does
-- `scope` a list of the required permissions
+- `scope` a definition of the required permissions
 - `in` a list of input arguments
 - `out` a list of output arguments
 ```json
@@ -181,15 +187,15 @@ To begin with, the configuration file defines a list of services. Each one is de
 ]
 ```
 
-The `scope` is a 2-dimensional list of permissions. The first list means **or**, the second means **and**, it allows for complex permission combinations. The example above can be translated to: this method requires users to have permissions (author **and** reader) **or** (admin)
+The `scope` is a 2-dimensional list of permissions. The first list means **or**, the second means **and**, it allows for complex permission combinations. The example above can be translated to: this service requires requests to be granted permissions (author **and** reader) **or** (admin)
 
 ### Input and output parameters
 
 Input and output parameters share the same format, featuring:
 - `info` a short description of what it is
-- `type` its data type (_c.f. validation_)
+- `type` its data type (_c.f. type validation_)
 - `?` whether it is mandatory or optional
-- `name` a custom name for easy access in code
+- `name` a custom name for easy access in code; it **must** start with an uppercase letter in order to be accessible in go code.
 ```json
 [
     {
@@ -198,98 +204,250 @@ Input and output parameters share the same format, featuring:
         "scope": [["author"]],
         "info": "updates an article",
         "in": {
-            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
-            "GET@title": { "info": "...", "type": "?string", "name": "title" },
-            "content":   { "info": "...", "type": "string"                   }
+            "{id}":      { "info": "...", "type": "int",     "name": "ID"    },
+            "GET@title": { "info": "...", "type": "?string", "name": "Title" },
+            "Content":   { "info": "...", "type": "string"                   }
         },
         "out": {
-            "title":   { "info": "updated article title",   "type": "string" },
-            "content": { "info": "updated article content", "type": "string" }
+            "Title":   { "info": "updated article title",   "type": "string" },
+            "Content": { "info": "updated article content", "type": "string" }
         }
     }
 ]
 ```
 
-If a parameter is optional you just have to prefix its type with a question mark, by default all parameters are mandatory.
+If a parameter is optional you just have to prefix its "type" with a question mark, by default all parameters are mandatory.
 
 The format of the key of input arguments defines where it comes from:
 1. `{param}` is an URI parameter that is extracted from the `"path"`
 2. `GET@param` is an URL parameter that is extracted from the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
-3. `param` is a body parameter that can be extracted from 3 formats independently:
+3. `param` is a body parameter that can be extracted from 1 of 3 formats:
     - _url encoded_: data send in the body following the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
     - _multipart_: data send in the body with a dedicated [format](https://tools.ietf.org/html/rfc2388#section-3). This format can be quite heavy but allows to transmit data as well as files.
     - _JSON_: data sent in the body as a json object ; The _Content-Type_ header must be `application/json` for it to work.
 
-### Example
+
+In the example above, it reads:
+1. `{id}` is extracted from the end of the URI and is a number compliant with the `int` type checker. It is renamed `ID`, this new name will be used by the handler.
+2. `GET@title` is extracted from the query (_e.g. [http://host/uri?get-var=value](http://host/uri?get-var=value)_). It must be a valid `string` or not given at all (the `?` at the beginning of the type tells that the argument is **optional**) ; it will be named `Title`.
+3. `Content` can be extracted from json, multipart or url-encoded data; it makes no difference and only give clients a choice over the technology to use. It is not renamed, the variable will pass to the handler with its original name `Content`.
+
+## Writing handlers
+
+Besides your main package where you launch your server, you will need to create a handler for each service of your configuration.
+
+### Function signature
+
+Handler's function signature is defined by the configuration of the service.
+
+Every handler function must feature at least:
+- a first input argument of type `context.Context`
+- a last output argument of type `error`
+
+Request and/or response struct must be added when defined in the configuration. Here are some basic examples.
+
+<table>
+    <thead>
+        <tr>
+            <td>service configuration (json)</td>
+            <td>service handler (go)</td>
+        </tr>
+    </thead>
+    <tbody>
+<tr>
+<td>
+
+```json
+[
+    {
+        "method": "GET",
+        "path": "/users",
+        "scope": [],
+        "info": "lists all users",
+        "in": {},
+        "out": {}
+    }
+]
+```
+
+</td>
+<td>
+
+```go
+func serviceHandler(ctx context.Context) error {
+    return nil
+}
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
 ```json
 [
     {
         "method": "PUT",
-        "path": "/article/{id}",
-        "scope": [["author"]],
-        "info": "updates an article",
+        "path": "/user/{id}",
+        "scope": [],
+        "info": "updates an existing user",
         "in": {
-            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
-            "GET@title": { "info": "...", "type": "?string", "name": "title" },
-            "content":   { "info": "...", "type": "string"                   }
+            "{id}": {
+                "name": "ID",
+                "type": "uint",
+                "info": "target user uid"
+            },
+            "firstname": {
+                "name": "Firstname",
+                "type": "?string",
+                "info": "new firstname"
+            },
+            "lastname": {
+                "name": "Lastname",
+                "type": "?string",
+                "info": "new lastname"
+            }
         },
+        "out": {}
+    }
+]
+```
+
+</td>
+<td>
+
+Note: optional input arguments are pointers.
+```go
+type request {
+    ID uint
+    Firstname *string
+    Lastname *string
+}
+func serviceHandler(ctx context.Context, req request) error {
+    return nil
+}
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+```json
+[
+    {
+        "method": "GET",
+        "path": "/users",
+        "scope": [],
+        "info": "returns all existing users",
+        "in": {},
         "out": {
-            "id":      { "info": "updated article id",      "type": "uint"   },
-            "title":   { "info": "updated article title",   "type": "string" },
-            "content": { "info": "updated article content", "type": "string" }
+            "users": {
+                "name": "Users",
+                "type": "[]User",
+                "info": "list of existing users"
+            }
         }
     }
 ]
 ```
 
-1. `{id}` is extracted from the end of the URI and is a number compliant with the `int` type checker. It is renamed `ID`, this new name will be sent to the handler.
-2. `GET@title` is extracted from the query (_e.g. [http://host/uri?get-var=value](http://host/uri?get-var=value)_). It must be a valid `string` or not given at all (the `?` at the beginning of the type tells that the argument is **optional**) ; it will be named `title`.
-3. `content` can be extracted from json, multipart or url-encoded data; it makes no difference and only give clients a choice over the technology to use. If not renamed, the variable will be given to the handler with its original name `content`.
+</td>
+<td>
 
-
-
-## Writing your code
-
-Besides your main package where you launch your server, you will need to create handlers matching services from the configuration.
-
-The code below implements a simple handler.
 ```go
-// "in": {
-//  "Input1": { "info": "...", "type": "int"     },
-//  "Input2": { "info": "...", "type": "?string" }
-// },
-type req struct{
-    Input1 int
-    Input2 *string // optional are pointers
+type response {
+    Users []User
 }
-// "out": {
-//  "Output1": { "info": "...", "type": "string" },
-//  "Output2": { "info": "...", "type": "bool"   }
-// }
-type res struct{
-    Output1 string
-    Output2 bool
-}
-
-func myHandler(ctx context.Context, r req) (*res, error) {
-    err := doSomething()
-    if err != nil {
-        return nil, api.ErrFailure
-    }
-    return &res{"out1", true}, nil
+func serviceHandler(ctx context.Context) (*response, error) {
+    return &response{Users: []User{}}, nil
 }
 ```
 
-If your handler signature does not match the configuration exactly, the server will print out the error and won't start.
+</td>
+</tr>
+<tr>
+<td>
 
-The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json; clients have to manage the same format for every response:
 ```json
-HTTP/1.1 500 OK
-Content-Type: application/json
-{
-    "status": "it failed"
+[
+    {
+        "method": "PUT",
+        "path": "/user/{id}",
+        "scope": [],
+        "info": "updates an existing user",
+        "in": {
+            "{id}": {
+                "name": "ID",
+                "type": "uint",
+                "info": "target user uid"
+            },
+            "firstname": {
+                "name": "Firstname",
+                "type": "?string",
+                "info": "new firstname"
+            },
+            "lastname": {
+                "name": "Lastname",
+                "type": "?string",
+                "info": "new lastname"
+            }
+        },
+        "out": {
+            "user": {
+                "name": "User",
+                "type": "User",
+                "info": "updated user info",
+            }
+        }
+    }
+]
+```
+
+</td>
+<td>
+
+```go
+type request {
+    ID uint
+    Firstname *string
+    Lastname *string
+}
+type response {
+    User User
+}
+func serviceHandler(ctx context.Context, req request) (*response, error) {
+    return &response{User: User{}}, nil
 }
 ```
+
+</td>
+</tr>
+    </tbody>
+</table>
+
+If your handler signature does not exactly match the configuration, the server will print out the error and won't start.
+
+### Helpers
+
+#### Errors
+
+When using handlers, you shall use existing or custom `api.Err` errors, they are automatically mapped to http responses.
+> Builtin errors are defined [here](./api/errors.go), you can easily create your own.
+
+Every `api.Err` is mapped to an HTTP status code and an error message. It allows API clients to have a consistent error format.
+
+You can also create custom errors on-the-fly using the `api.Error()` [helper](./api/errors.go).
+
+#### Response
+
+When your handler issues output arguments or errors, it is by default rendered as JSON (_c.f. [default responder](./responder.go)_).
+
+You can completely customize how you print out responses using the `Builder.RespondWith()` method.
+
+#### Pass values
+
+If you require data to flow among handlers, you can set them into the request's `context.Context` with a middleware; see `Builder.WithContext()`. The context can be accessed as the first argument of each handler.
 
 ## Changelog
 
