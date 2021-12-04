@@ -12,8 +12,8 @@ type Responder func(http.ResponseWriter, map[string]interface{}, error)
 
 // DefaultResponder used for writing data and error into http responses
 func DefaultResponder(w http.ResponseWriter, data map[string]interface{}, e error) {
-	w.WriteHeader(api.GetErrorStatus(e))
 	w.Header().Add("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(api.GetErrorStatus(e))
 
 	if data == nil {
 		data = map[string]interface{}{}
