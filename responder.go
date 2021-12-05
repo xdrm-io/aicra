@@ -24,8 +24,7 @@ func DefaultResponder(w http.ResponseWriter, data map[string]interface{}, e erro
 		data["status"] = e.Error()
 	}
 
-	encoded, err := json.Marshal(data)
-	if err == nil {
-		w.Write(encoded)
-	}
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "\t")
+	enc.Encode(data)
 }
