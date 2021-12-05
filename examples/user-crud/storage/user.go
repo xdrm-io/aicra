@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"sync/atomic"
@@ -6,17 +6,11 @@ import (
 	"github.com/xdrm-io/aicra/api"
 )
 
-// User is the model of an user
+// User is the user model
 type User struct {
-	Username  string
-	Firstname string
-	Lastname  string
-}
-
-// DB emulates a database for this example but does nothing
-type DB struct {
-	autoIncrementID uint32
-	users           map[uint32]*User
+	Username  string `json:"username"`
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
 }
 
 // CreateUser creates a new user and returns its id
@@ -24,13 +18,26 @@ func (db *DB) CreateUser(username, firstname, lastname string) (uint32, error) {
 	if db.users == nil {
 		db.users = map[uint32]*User{}
 	}
-	id := atomic.AddUint32(&db.autoIncrementID, 1)
+	id := atomic.AddUint32(&db.userID, 1)
 	db.users[id] = &User{
 		Username:  username,
 		Firstname: firstname,
 		Lastname:  lastname,
 	}
 	return id, nil
+}
+
+// ListUsers returns all existing users
+func (db *DB) ListUsers() ([]User, error) {
+	users := []User{}
+	if db.users == nil {
+		return users, nil
+	}
+
+	for _, u := range db.users {
+		users = append(users, *u)
+	}
+	return users, nil
 }
 
 // FetchUser returns an existing user
@@ -81,5 +88,17 @@ func (db *DB) UpdateLastname(id uint32, lastname string) error {
 		return api.ErrNotFound
 	}
 	user.Lastname = lastname
+	return nil
+}
+
+// DeleteUser deletes an existing user
+func (db *DB) DeleteUser(id uint32) error {
+	if db.users == nil {
+		return api.ErrNotFound
+	}
+	if _, ok := db.users[id]; !ok {
+		return api.ErrNotFound
+	}
+	delete(db.users, id)
 	return nil
 }

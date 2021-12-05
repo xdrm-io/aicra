@@ -1,0 +1,64 @@
+[
+	{
+		"method": "GET",
+		"path": "/user",
+		"scope": [],
+		"info": "lists available users",
+		"in": {},
+		"out": {
+			"users":  { "info": "user list", "type": "[]user", "name": "Users" }
+		}
+	},
+	{
+		"method": "GET",
+		"path": "/user/{id}",
+		"scope": [],
+		"info": "fetch an existing user information",
+		"in": {
+			"{id}": { "info": "target user id", "type": "uint", "name": "ID" }
+		},
+		"out": {
+			"user":  { "info": "user info",  "type": "user", "name": "User" }
+		}
+	},
+	{
+		"method": "POST",
+		"path": "/user",
+		"scope": [],
+		"info": "create a new user",
+		"in": {
+			"username":  { "info": "optional new username",  "type": "string(3,20)", "name": "Username"  },
+			"firstname": { "info": "optional new firstname", "type": "string(3,20)", "name": "Firstname" },
+			"lastname":  { "info": "optional new lastname",  "type": "string(3,20)", "name": "Lastname"  }
+		},
+		"out": {
+			"id":    { "info": "create user id", "type": "uint", "name": "ID"   },
+			"user":  { "info": "new user info",  "type": "user", "name": "User" }
+		}
+	},
+	{
+		"method": "PUT",
+		"path": "/user/{id}",
+		"scope": [],
+		"info": "updates user information",
+		"in": {
+			"{id}":      { "info": "id of the user to update", "type": "uint",          "name": "ID"        },
+			"username":  { "info": "optional new username",    "type": "?string(3,20)", "name": "Username"  },
+			"firstname": { "info": "optional new firstname",   "type": "?string(3,20)", "name": "Firstname" },
+			"lastname":  { "info": "optional new lastname",    "type": "?string(3,20)", "name": "Lastname"  }
+		},
+		"out": {
+			"user": { "info": "updated user info", "type": "user", "name": "User" }
+		}
+	},
+	{
+		"method": "DELETE",
+		"path": "/user/{id}",
+		"scope": [],
+		"info": "deletes an existing user",
+		"in": {
+			"{id}": { "info": "id of the user to delete", "type": "uint", "name": "ID" }
+		},
+		"out": {}
+	}
+]
