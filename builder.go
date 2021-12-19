@@ -10,6 +10,13 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
+const (
+	// DefaultMaxURISize defines the default URI size to accept
+	DefaultMaxURISize = 1024
+	// DefaultMaxBodySize defines the default body size to accept
+	DefaultMaxBodySize = 1024 * 1024 // 1MB
+)
+
 // Builder for an aicra server
 type Builder struct {
 	// the server configuration defining available services
@@ -25,6 +32,15 @@ type Builder struct {
 	// they will benefit from the request's context that contains service-specific
 	// information (e.g. required permissions from the configuration)
 	ctxMiddlewares []func(http.Handler) http.Handler
+
+	// maxURISize is used to automatically reject requests that have a URI
+	// exceeding `maxURISize` (in bytes). Negative values means there is no
+	// limit. The default value (0) falls back to the default aicra limit
+	maxURISize int
+	// maxBodySize is used to automatically reject requests that have a body
+	// exceeding `maxBodySize` (in bytes). Negative value means there is no
+	// limit. The default value (0) falls back to the default aicra limit
+	maxBodySize int64
 }
 
 // serviceHandler links a handler func to a service (method-path combination)
@@ -32,6 +48,18 @@ type serviceHandler struct {
 	Method string
 	Path   string
 	dyn    *dynfunc.Handler
+}
+
+// SetMaxURISize defines the maximum size of request URIs that is accepted (in
+// bytes)
+func (b *Builder) SetMaxURISize(size int) {
+	b.maxURISize = size
+}
+
+// SetMaxBodySize defines the maximum size of request bodies that is accepted
+// (in bytes)
+func (b *Builder) SetMaxBodySize(size int64) {
+	b.maxBodySize = size
 }
 
 // Validate adds an available Type to validate in the api definition
@@ -151,6 +179,13 @@ func (b *Builder) Delete(path string, fn interface{}) error {
 
 // Build a fully-featured HTTP server
 func (b Builder) Build() (http.Handler, error) {
+	if b.maxURISize == 0 {
+		b.maxURISize = DefaultMaxURISize
+	}
+	if b.maxBodySize == 0 {
+		b.maxBodySize = DefaultMaxBodySize
+	}
+
 	if b.respond == nil {
 		b.respond = DefaultResponder
 	}
