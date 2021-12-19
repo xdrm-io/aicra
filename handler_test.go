@@ -1419,3 +1419,138 @@ func TestHandler_Response(t *testing.T) {
 		})
 	}
 }
+
+func TestHandler_RequestTooLarge(t *testing.T) {
+	tt := []struct {
+		name              string
+		uriMax, uriSize   int
+		bodyMax, bodySize int
+		err               error
+	}{
+		{
+			name:     "defaults -1",
+			uriSize:  aicra.DefaultMaxURISize - 1,
+			bodySize: aicra.DefaultMaxBodySize - 1,
+			err:      api.ErrUnknownService,
+		},
+		{
+			name:     "defaults eq",
+			uriSize:  aicra.DefaultMaxURISize,
+			bodySize: aicra.DefaultMaxBodySize,
+			err:      api.ErrUnknownService,
+		},
+		{
+			name:    "defaults uri",
+			uriSize: aicra.DefaultMaxURISize + 1,
+			err:     api.ErrURITooLong,
+		},
+		{
+			name:     "defaults body",
+			bodySize: aicra.DefaultMaxBodySize + 1,
+			err:      api.ErrBodyTooLarge,
+		},
+		{
+			name:     "defaults both",
+			uriSize:  aicra.DefaultMaxURISize + 1,
+			bodySize: aicra.DefaultMaxBodySize + 1,
+			err:      api.ErrURITooLong,
+		},
+
+		{
+			name:    "unlimited uri",
+			uriMax:  -1,
+			uriSize: aicra.DefaultMaxURISize + 1,
+			err:     api.ErrUnknownService,
+		},
+		{
+			name:     "unlimited body",
+			bodyMax:  -1,
+			bodySize: aicra.DefaultMaxBodySize + 1,
+			err:      api.ErrUnknownService,
+		},
+		{
+			name:    "custom uri ok",
+			uriMax:  50,
+			uriSize: 50,
+			err:     api.ErrUnknownService,
+		},
+		{
+			name:    "custom uri",
+			uriMax:  50,
+			uriSize: 51,
+			err:     api.ErrURITooLong,
+		},
+		{
+			name:     "custom body ok",
+			bodyMax:  50,
+			bodySize: 50,
+			err:      api.ErrUnknownService,
+		},
+		{
+			name:     "custom body",
+			bodyMax:  50,
+			bodySize: 51,
+			err:      api.ErrBodyTooLarge,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			b := &aicra.Builder{}
+
+			if err := b.Setup(strings.NewReader(`[]`)); err != nil {
+				t.Fatalf("cannot setup builder: %s", err)
+			}
+
+			b.SetMaxURISize(tc.uriMax)
+			b.SetMaxBodySize(int64(tc.bodyMax))
+
+			handler, err := b.Build()
+			if err != nil {
+				t.Fatalf("cannot build handler: %s", err)
+			}
+
+			srv := httptest.NewServer(handler)
+			defer srv.Close()
+
+			host := fmt.Sprintf("%s/", srv.URL)
+
+			// build fake uri and body according to test sizes
+			var (
+				fakeURI  = strings.Repeat("a", tc.uriSize)
+				fakeBody = strings.Repeat("a", tc.bodySize)
+			)
+			// remove 1 to take the '/' into account
+			if len(fakeURI) > 0 {
+				fakeURI = strings.TrimSuffix(fakeURI, "a")
+			}
+
+			req, err := http.NewRequest(
+				"POST",
+				host+fakeURI,
+				strings.NewReader(fakeBody),
+			)
+			if err != nil {
+				t.Fatalf("cannot create request: %s", err)
+			}
+
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("request failed: %s", err)
+			}
+
+			var expect int = http.StatusOK
+			if tc.err != nil {
+				cast, ok := tc.err.(api.Err)
+				if !ok {
+					t.Fatalf("invalid error")
+				}
+				expect = cast.Status()
+			}
+
+			if res.StatusCode != expect {
+				t.Fatalf("wrong status %d ; expected %d (%v)", res.StatusCode, expect, tc.err)
+			}
+		})
+	}
+}
