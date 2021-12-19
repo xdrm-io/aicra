@@ -81,6 +81,12 @@ const (
 	// ErrInvalidParam is thrown when a given parameter fails its type check as
 	// defined in the config file.
 	ErrInvalidParam = Err("400:invalid parameter")
+
+	// ErrURITooLong is thrown when an URI is too long
+	ErrURITooLong = Err("414:uri too long")
+
+	// ErrBodyTooLarge is thrown when a request's body is too large
+	ErrBodyTooLarge = Err("413:request too large")
 )
 
 // GetErrorStatus returns the http status associated with a given error if the
