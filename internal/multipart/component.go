@@ -8,16 +8,15 @@ import (
 )
 
 // parseHeaders parses a component headers.
-func (comp *Component) parseHeaders(_raw []byte) error {
-
+func (comp *Component) parseHeaders(raw []byte) error {
 	// 1. Extract lines
-	_lines := strings.Split(string(_raw), "\n")
-	if len(_lines) < 2 {
+	lines := strings.Split(string(raw), "\n")
+	if len(lines) < 2 {
 		return errNoHeader
 	}
 
 	// 2. trim each line + remove 'Content-Disposition' prefix
-	header := strings.Trim(_lines[0], " \t\r")
+	header := strings.Trim(lines[0], " \t\r")
 
 	if !strings.HasPrefix(header, "Content-Disposition: form-data;") {
 		return errNoHeader
@@ -46,12 +45,10 @@ func (comp *Component) parseHeaders(_raw []byte) error {
 		if _, keyExists := comp.Headers[key]; !keyExists {
 			comp.Headers[key] = value
 		}
-
 	}
 
 	// 5. Extract content-type if set on the second line
-	for _, l := range _lines[1:] {
-
+	for _, l := range lines[1:] {
 		if strings.HasPrefix(l, "Content-Type: ") {
 			comp.ContentType = strings.Trim(l[len("Content-Type: "):], " \t\r")
 			break
@@ -63,8 +60,8 @@ func (comp *Component) parseHeaders(_raw []byte) error {
 }
 
 // GetHeader returns the header value associated with a key.
-func (comp *Component) GetHeader(_key string) string {
-	value, ok := comp.Headers[_key]
+func (comp *Component) GetHeader(key string) string {
+	value, ok := comp.Headers[key]
 
 	if !ok {
 		return ""
@@ -74,14 +71,14 @@ func (comp *Component) GetHeader(_key string) string {
 }
 
 // read all until the next boundary is found (and parse current MultipartData)
-func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
+func (comp *Component) read(r *bufio.Reader, boundary string) error {
 
 	headerRead := false
 	rawHeader := make([]byte, 0)
 
 	for { // Read until boundary or error
 
-		line, err := _reader.ReadBytes('\n')
+		line, err := r.ReadBytes('\n')
 
 		// 1. Stop on error
 		if err != nil {
@@ -96,7 +93,7 @@ func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
 		}
 
 		// 2. Stop at boundary
-		if strings.HasPrefix(string(line), _boundary) {
+		if strings.HasPrefix(string(line), boundary) {
 
 			// remove last CR (newline)
 			if strings.HasSuffix(string(comp.Data), "\n") {
@@ -107,7 +104,7 @@ func (comp *Component) read(_reader *bufio.Reader, _boundary string) error {
 			}
 
 			// io.EOF if last boundary
-			if strings.Trim(string(line), " \t\r\n") == fmt.Sprintf("%s--", _boundary) {
+			if strings.Trim(string(line), " \t\r\n") == fmt.Sprintf("%s--", boundary) {
 				return io.EOF
 			}
 
