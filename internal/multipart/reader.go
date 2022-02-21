@@ -6,6 +6,9 @@ import (
 	"io"
 )
 
+// DefaultContentType used when a component is NOT a file but literal data
+const DefaultContentType = "raw"
+
 // Reader is a multipart reader.
 type Reader struct {
 	// io.Reader used for reading multipart components reading.
