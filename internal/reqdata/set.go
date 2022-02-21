@@ -234,7 +234,7 @@ func (i *T) parseMultipart(req http.Request) error {
 			continue
 		}
 
-		parsed := parseParameter(string(component.Data))
+		parsed := parseParameter(component.Data)
 		cast, valid := param.Validator(parsed)
 		if !valid {
 			return &Err{field: param.Rename, err: ErrInvalidType}
