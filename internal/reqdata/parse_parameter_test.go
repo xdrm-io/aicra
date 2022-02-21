@@ -227,9 +227,9 @@ func TestJsonBoolSlice(t *testing.T) {
 func TestBoolSlice(t *testing.T) {
 	p := parseParameter([]bool{true, false})
 
-	slice, canCast := p.([]interface{})
+	slice, canCast := p.([]bool)
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
+		t.Errorf("expected parameter to be a []bool")
 		t.FailNow()
 	}
 
@@ -241,12 +241,7 @@ func TestBoolSlice(t *testing.T) {
 	results := []bool{true, false}
 
 	for i, res := range results {
-
-		cast, canCast := slice[i].(bool)
-		if !canCast {
-			t.Errorf("expected parameter %d to be a bool, got %v", i, slice[i])
-			continue
-		}
+		cast := slice[i]
 		if cast != res {
 			t.Errorf("expected first value to be '%t', got '%t'", res, cast)
 			continue
