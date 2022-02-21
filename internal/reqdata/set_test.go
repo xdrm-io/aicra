@@ -1,6 +1,7 @@
 package reqdata
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -832,10 +833,16 @@ func TestJsonParameters(t *testing.T) {
 }
 
 func TestMultipartParameters(t *testing.T) {
+	fileContent := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
+
 	tt := []struct {
 		serviceParams []string
 		rawMultipart  string
 		err           error
+
+		// we must receive []byte when we send a file. In the opposite, we wait
+		// for a string when we send a literal parameter
+		lastParamBytes bool
 
 		paramNames  []string
 		paramValues []interface{}
@@ -913,6 +920,23 @@ x
 			paramNames:  []string{"a"},
 			paramValues: []interface{}{"b"},
 		},
+		{
+			serviceParams:  []string{"a", "file"},
+			lastParamBytes: true,
+			rawMultipart: fmt.Sprintf(`--xxx
+Content-Disposition: form-data; name="a"
+
+a-content
+--xxx
+Content-Disposition: form-data; name="file"
+Content-Type: application/zip
+
+%s
+--xxx--`, fileContent),
+			err:         nil,
+			paramNames:  []string{"a", "file"},
+			paramValues: []interface{}{"a-content", fileContent},
+		},
 	}
 
 	for i, tc := range tt {
@@ -921,6 +945,27 @@ x
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "multipart/form-data; boundary=xxx")
 			defer req.Body.Close()
+
+			service := &config.Service{
+				Input: make(map[string]*config.Parameter),
+				Form:  make(map[string]*config.Parameter),
+			}
+
+			for i, name := range tc.serviceParams {
+				isLast := (i == len(tc.serviceParams)-1)
+
+				gotype := reflect.TypeOf("")
+				if isLast && tc.lastParamBytes {
+					gotype = reflect.TypeOf([]byte{})
+				}
+				service.Input[name] = &config.Parameter{
+					Rename:    name,
+					GoType:    gotype,
+					Validator: func(value interface{}) (interface{}, bool) { return value, true },
+				}
+				service.Form[name] = service.Input[name]
+			}
+
 			store := New(getServiceWithForm(reflect.TypeOf(""), tc.serviceParams...))
 
 			err := store.GetForm(*req)
@@ -945,27 +990,45 @@ x
 			}
 
 			for pi, key := range tc.paramNames {
-				value := tc.paramValues[pi]
+				isLast := (pi == len(tc.paramNames)-1)
+				expect := tc.paramValues[pi]
 
 				t.Run(key, func(t *testing.T) {
-
-					param, isset := store.Data[key]
-					if !isset {
+					param, exists := store.Data[key]
+					if !exists {
 						t.Fatalf("store should contain element with key '%s'", key)
 						return
 					}
 
-					valueType := reflect.TypeOf(value)
+					// expect a []byte
+					if isLast && tc.lastParamBytes {
+						expectVal, ok := expect.([]byte)
+						if !ok {
+							t.Fatalf("expected value is not a []byte")
+						}
+						actualVal, ok := param.([]byte)
+						if !ok {
+							t.Fatalf("actual value is not a []byte")
+						}
 
-					paramValue := param
-					paramValueType := reflect.TypeOf(param)
-
-					if valueType != paramValueType {
-						t.Fatalf("should be of type %v (got '%v')", valueType, paramValueType)
+						if bytes.Compare(actualVal, expectVal) != 0 {
+							t.Fatalf("invalid bytes\nactual: %v\nexpect: %v", actualVal, expectVal)
+						}
+						return
 					}
 
-					if paramValue != value {
-						t.Fatalf("should return %v (got '%v')", value, paramValue)
+					// expect a string
+					expectVal, ok := expect.(string)
+					if !ok {
+						t.Fatalf("expected value is not a string")
+					}
+					actualVal, ok := param.(string)
+					if !ok {
+						t.Fatalf("actual value is not a string")
+					}
+
+					if actualVal != expectVal {
+						t.Fatalf("invalid string\nactual: %s\nexpect: %s", actualVal, expectVal)
 					}
 
 				})
