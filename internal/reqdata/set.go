@@ -234,7 +234,14 @@ func (i *T) parseMultipart(req http.Request) error {
 			continue
 		}
 
-		parsed := parseParameter(component.Data)
+		isFile := (component.ContentType != multipart.DefaultContentType)
+		var parsed interface{}
+		if isFile {
+			parsed = parseParameter(component.Data)
+		} else {
+			parsed = parseParameter(string(component.Data))
+		}
+
 		cast, valid := param.Validator(parsed)
 		if !valid {
 			return &Err{field: param.Rename, err: ErrInvalidType}
@@ -258,6 +265,11 @@ func parseParameter(data interface{}) interface{} {
 	// []string -> recursive
 	case reflect.Slice:
 		if rv.Len() == 0 {
+			return data
+		}
+
+		// ignore non-string slices (bypass []byte for instance)
+		if rv.Index(0).Kind() != reflect.String {
 			return data
 		}
 
