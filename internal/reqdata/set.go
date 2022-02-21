@@ -256,53 +256,40 @@ func (i *T) parseMultipart(req http.Request) error {
 // parseParameter parses http URI/GET/POST data
 // - []string : return array of json elements
 // - string   : return json if valid, else return raw string
+// - other    : bypass
 func parseParameter(data interface{}) interface{} {
-	rt := reflect.TypeOf(data)
-	rv := reflect.ValueOf(data)
-
-	switch rt.Kind() {
+	switch cast := data.(type) {
 
 	// []string -> recursive
-	case reflect.Slice:
-		if rv.Len() == 0 {
-			return data
+	case []string:
+		if len(cast) == 0 {
+			return cast
 		}
-
-		// ignore non-string slices (bypass []byte for instance)
-		if rv.Index(0).Kind() != reflect.String {
-			return data
-		}
-
-		slice := make([]interface{}, rv.Len())
-		for i, l := 0, rv.Len(); i < l; i++ {
-			element := rv.Index(i)
-			slice[i] = parseParameter(element.Interface())
+		slice := make([]interface{}, len(cast))
+		for i, v := range cast {
+			slice[i] = parseParameter(v)
 		}
 		return slice
 
 	// string -> parse as json
-	// keep as string if invalid json
-	case reflect.String:
-		var cast interface{}
-		wrapper := fmt.Sprintf("{\"wrapped\":%s}", rv.String())
-		err := json.Unmarshal([]byte(wrapper), &cast)
+	case string:
+		var (
+			receiver map[string]interface{}
+			wrapper  = fmt.Sprintf("{\"wrapped\":%s}", cast)
+			err      = json.Unmarshal([]byte(wrapper), &receiver)
+		)
 		if err != nil {
-			return rv.String()
+			return cast
 		}
 
-		mapval, ok := cast.(map[string]interface{})
+		wrapped, ok := receiver["wrapped"]
 		if !ok {
-			return rv.String()
-		}
-
-		wrapped, ok := mapval["wrapped"]
-		if !ok {
-			return rv.String()
+			return cast
 		}
 		return wrapped
 
-	// any type -> unchanged
+	// other -> bypass
 	default:
-		return rv.Interface()
+		return cast
 	}
 }
