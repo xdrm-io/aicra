@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"mime"
 	"reflect"
 
 	"github.com/xdrm-io/aicra/internal/config"
-	"github.com/xdrm-io/aicra/internal/multipart"
 
+	"mime/multipart"
 	"net/http"
 	"strings"
 )
@@ -109,22 +111,29 @@ func (i *T) GetForm(req http.Request) error {
 		return nil
 	}
 
-	ct := req.Header.Get("Content-Type")
+	var (
+		contentType            = req.Header.Get("Content-Type")
+		mediaType, params, err = mime.ParseMediaType(contentType)
+	)
+	if err != nil {
+		return err
+	}
+
 	switch {
-	case strings.HasPrefix(ct, "application/json"):
+	case strings.HasPrefix(mediaType, "application/json"):
 		err := i.parseJSON(req)
 		if err != nil {
 			return err
 		}
 
-	case strings.HasPrefix(ct, "application/x-www-form-urlencoded"):
+	case strings.HasPrefix(mediaType, "application/x-www-form-urlencoded"):
 		err := i.parseUrlencoded(req)
 		if err != nil {
 			return err
 		}
 
-	case strings.HasPrefix(ct, "multipart/form-data; boundary="):
-		err := i.parseMultipart(req)
+	case strings.HasPrefix(mediaType, "multipart/form-data"):
+		err := i.parseMultipart(req, params["boundary"])
 		if err != nil {
 			return err
 		}
@@ -212,34 +221,54 @@ func (i *T) parseUrlencoded(req http.Request) error {
 
 // parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func (i *T) parseMultipart(req http.Request) error {
-	boundary := req.Header.Get("Content-Type")[len("multipart/form-data; boundary="):]
-	mpr, err := multipart.NewReader(req.Body, boundary)
-	if err == io.EOF {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("%s: %w", err, ErrInvalidMultipart)
+func (i *T) parseMultipart(req http.Request, boundary string) error {
+	type Part struct {
+		contentType string
+		data        []byte
 	}
 
-	err = mpr.Parse()
-	if err != nil {
-		return fmt.Errorf("%s: %w", err, ErrInvalidMultipart)
+	var (
+		parts = map[string]Part{}
+		mr    = multipart.NewReader(req.Body, boundary)
+	)
+	var firstPart = true
+	for {
+		p, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		// first part is empty -> consider as empty multipart
+		if firstPart && err != nil && strings.HasSuffix(err.Error(), ": EOF") {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("%w: %s", ErrInvalidMultipart, err)
+		}
+		firstPart = false
+
+		data, err := ioutil.ReadAll(p)
+		if err != nil {
+			return fmt.Errorf("%w: %s: %s", ErrInvalidMultipart, p.FormName(), err)
+		}
+		parts[p.FormName()] = Part{
+			contentType: p.Header.Get("Content-Type"),
+			data:        data,
+		}
 	}
 
 	for name, param := range i.service.Form {
-		component, exist := mpr.Data[name]
-
+		part, exist := parts[name]
 		if !exist {
 			continue
 		}
 
-		isFile := (component.ContentType != multipart.DefaultContentType)
+		var isFile = len(part.contentType) > 0
+
 		var parsed interface{}
 		if isFile {
-			parsed = parseParameter(component.Data)
+			parsed = part.data
 		} else {
-			parsed = parseParameter(string(component.Data))
+			parsed = parseParameter(string(part.data))
 		}
 
 		cast, valid := param.Validator(parsed)
@@ -250,7 +279,6 @@ func (i *T) parseMultipart(req http.Request) error {
 	}
 
 	return nil
-
 }
 
 // parseParameter parses http URI/GET/POST data
