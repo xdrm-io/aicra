@@ -836,6 +836,7 @@ func TestMultipartParameters(t *testing.T) {
 	fileContent := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
 
 	tt := []struct {
+		name          string
 		serviceParams []string
 		rawMultipart  string
 		err           error
@@ -848,6 +849,7 @@ func TestMultipartParameters(t *testing.T) {
 		paramValues []interface{}
 	}{
 		{
+			name:          "empty body",
 			serviceParams: []string{},
 			rawMultipart:  ``,
 			err:           nil,
@@ -855,14 +857,16 @@ func TestMultipartParameters(t *testing.T) {
 			paramValues:   []interface{}{},
 		},
 		{
+			name:          "only boundary",
 			serviceParams: []string{},
 			rawMultipart: `--xxx
-			`,
-			err:         ErrInvalidMultipart,
+`,
+			err:         nil,
 			paramNames:  []string{},
 			paramValues: []interface{}{},
 		},
 		{
+			name:          "only boundaries",
 			serviceParams: []string{},
 			rawMultipart: `--xxx
 --xxx--`,
@@ -871,6 +875,7 @@ func TestMultipartParameters(t *testing.T) {
 			paramValues: []interface{}{},
 		},
 		{
+			name:          "1 ignored part",
 			serviceParams: []string{},
 			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
@@ -881,6 +886,7 @@ b
 			paramValues: []interface{}{},
 		},
 		{
+			name:          "1 part",
 			serviceParams: []string{"a"},
 			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
@@ -891,6 +897,7 @@ b
 			paramValues: []interface{}{"b"},
 		},
 		{
+			name:          "2 parts",
 			serviceParams: []string{"a", "c"},
 			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
@@ -906,6 +913,7 @@ d
 			paramValues: []interface{}{"b", "d"},
 		},
 		{
+			name:          "1 part 1 ignored",
 			serviceParams: []string{"a"},
 			rawMultipart: `--xxx
 Content-Disposition: form-data; name="a"
@@ -921,6 +929,7 @@ x
 			paramValues: []interface{}{"b"},
 		},
 		{
+			name:           "1 param 1 file",
 			serviceParams:  []string{"a", "file"},
 			lastParamBytes: true,
 			rawMultipart: fmt.Sprintf(`--xxx
@@ -939,8 +948,8 @@ Content-Type: application/zip
 		},
 	}
 
-	for i, tc := range tt {
-		t.Run(fmt.Sprintf("request.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			body := strings.NewReader(tc.rawMultipart)
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "multipart/form-data; boundary=xxx")
