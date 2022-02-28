@@ -111,31 +111,28 @@ func (i *T) GetForm(req http.Request) error {
 		return nil
 	}
 
-	var (
-		contentType            = req.Header.Get("Content-Type")
-		mediaType, params, err = mime.ParseMediaType(contentType)
-	)
-	if err != nil {
-		return err
-	}
+	var contentType = req.Header.Get("Content-Type")
 
-	switch {
-	case strings.HasPrefix(mediaType, "application/json"):
-		err := i.parseJSON(req)
-		if err != nil {
-			return err
-		}
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err == nil {
+		switch {
+		case strings.HasPrefix(mediaType, "application/json"):
+			err := i.parseJSON(req)
+			if err != nil {
+				return err
+			}
 
-	case strings.HasPrefix(mediaType, "application/x-www-form-urlencoded"):
-		err := i.parseUrlencoded(req)
-		if err != nil {
-			return err
-		}
+		case strings.HasPrefix(mediaType, "application/x-www-form-urlencoded"):
+			err := i.parseUrlencoded(req)
+			if err != nil {
+				return err
+			}
 
-	case strings.HasPrefix(mediaType, "multipart/form-data"):
-		err := i.parseMultipart(req, params["boundary"])
-		if err != nil {
-			return err
+		case strings.HasPrefix(mediaType, "multipart/form-data"):
+			err := i.parseMultipart(req, params["boundary"])
+			if err != nil {
+				return err
+			}
 		}
 	}
 
