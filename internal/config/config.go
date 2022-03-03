@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/xdrm-io/aicra/validator"
@@ -27,6 +28,16 @@ func (s *Server) AddInputValidator(v validator.Type) {
 	}
 	s.Input = append(s.Input, v)
 }
+
+// AddOutputValidator adds an available output no-op validator. It only features
+// a type name and a go type ; it must be called before Parse() or will be ignored
+func (s *Server) AddOutputValidator(typename string, goType reflect.Type) {
+	if s.Output == nil {
+		s.Output = make([]validator.Type, 0)
+	}
+	s.Output = append(s.Output, noOp{name: typename, goType: goType})
+}
+
 // Parse a configuration into a server. Server.Validators must be set beforehand
 // to make datatypes available when checking and formatting the configuration.
 func (s *Server) Parse(r io.Reader) error {
@@ -193,4 +204,22 @@ func SplitURL(url string) []string {
 		return []string{}
 	}
 	return split
+}
+
+// noOp defines a no-op validator used for output parameters
+type noOp struct {
+	name   string
+	goType reflect.Type
+}
+
+func (v noOp) GoType() reflect.Type {
+	return v.goType
+}
+func (v noOp) Validator(typename string, avail ...validator.Type) validator.ValidateFunc {
+	if typename != v.name {
+		return nil
+	}
+	return func(value interface{}) (interface{}, bool) {
+		return reflect.Zero(v.goType), false
+	}
 }
