@@ -19,6 +19,14 @@ type Server struct {
 	Services []*Service
 }
 
+// AddInputValidator adds an available input validator ; it must be called before
+// Parse() or will be ignored
+func (s *Server) AddInputValidator(v validator.Type) {
+	if s.Input == nil {
+		s.Input = make([]validator.Type, 0)
+	}
+	s.Input = append(s.Input, v)
+}
 // Parse a configuration into a server. Server.Validators must be set beforehand
 // to make datatypes available when checking and formatting the configuration.
 func (s *Server) Parse(r io.Reader) error {
