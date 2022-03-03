@@ -12,8 +12,11 @@ import (
 
 // Server definition
 type Server struct {
-	Validators []validator.Type
-	Services   []*Service
+	// Input type validators available
+	Input []validator.Type
+	// Ouput types (no-op) validators available
+	Output   []validator.Type
+	Services []*Service
 }
 
 // Parse a configuration into a server. Server.Validators must be set beforehand
@@ -32,9 +35,9 @@ func (s *Server) Parse(r io.Reader) error {
 }
 
 // validate all services
-func (s Server) validate(datatypes ...validator.Type) error {
+func (s Server) validate() error {
 	for _, service := range s.Services {
-		err := service.validate(s.Validators...)
+		err := service.validate(s.Input, s.Output)
 		if err != nil {
 			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
 		}
