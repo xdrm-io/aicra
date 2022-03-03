@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 
 	"github.com/xdrm-io/aicra/internal/config"
 	"github.com/xdrm-io/aicra/internal/dynfunc"
@@ -62,18 +63,27 @@ func (b *Builder) SetMaxBodySize(size int64) {
 	b.maxBodySize = size
 }
 
-// Validate adds an available Type to validate in the api definition
-func (b *Builder) Validate(t validator.Type) error {
+// Input adds an available validator for input arguments
+func (b *Builder) Input(t validator.Type) error {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
 		return errLateType
 	}
-	if b.conf.Validators == nil {
-		b.conf.Validators = make([]validator.Type, 0)
+	b.conf.AddInputValidator(t)
+	return nil
+}
+
+// Output adds an go type to use for output arguments
+func (b *Builder) Output(name string, goType reflect.Type) error {
+	if b.conf == nil {
+		b.conf = &config.Server{}
 	}
-	b.conf.Validators = append(b.conf.Validators, t)
+	if b.conf.Services != nil {
+		return errLateType
+	}
+	b.conf.AddOutputValidator(name, goType)
 	return nil
 }
 
