@@ -34,10 +34,13 @@ Repetitive tasks are automatically processed by `aicra` based on your configurat
 - [Getting started](#getting-started)
 - [Configuration file](#configuration-file)
   * [Services](#services)
-  * [Input and output parameters](#input-and-output-parameters)
+  * [Parameters](#parameters)
+      - [Input parameters](#input-parameters)
+      - [Mandatory vs. Optional:](#mandatory-vs-optional)
+      - [Renaming](#renaming)
   * [Example](#example)
-- [Writing your code](#writing-your-code)
-- [Changelog](#changelog)
+- [Writing handlers](#writing-handlers)
+- [TODO](#todo)
 
 <!-- tocstop -->
 
@@ -46,7 +49,7 @@ Repetitive tasks are automatically processed by `aicra` based on your configurat
 To install the aicra package, you need to install Go and set your Go workspace first.
 > not tested under Go 1.14
 
-1. you can use the below Go command to install aicra.
+1. you can use the command below to install aicra.
 ```bash
 $ go get -u github.com/xdrm-io/aicra
 ```
@@ -59,22 +62,28 @@ import "github.com/xdrm-io/aicra"
 
 As the configuration file is here to make your life easier, let's take a quick look at what you do not have to do ; or in other words, what does `aicra` automates.
 
-Http requests are only accepted when they have the permissions you have defined. If unauthorized, the request is rejected with an error response.
+Http requests and responses are automatically handled.
 
-Request data is automatically extracted and validated before it reaches your code. If a request has missing or invalid data an automatic error response is sent.
+Requests are only accepted when they meet the permissions you have defined. Otherwise, the request is automatically rejected with an error.
 
-When launching the server, it ensures everything is ok and won't start until fixed. You will get errors for:
-- handler signature does not match the configuration
-- a configuration service has no handler
-- a handler does not match any service
+Request data is automatically validated and extracted before it reaches your code. Missing or invalid data results in an automatic error response.
 
-The same applies if your configuration is invalid:
+Aicra injects input data into your handlers and formats the output data back to an http response.
+
+Any error in the configuration or your code is spotted before the server accepts incoming requests. Only when the server is valid (the configuration and your handlers), it starts listening for incoming requests. There will be no surprise at "runtime" !
+
+Configuration errors:
+- missing configuration fields
 - unknown HTTP method
 - invalid uri
 - uri collision between 2 services
-- missing fields
-- unknown data type
-- input name collision
+- unknown input/output data type
+- collision between input/output variable names
+
+Handler errors:
+- a service from the configuration has no handler attached
+- a handler from your code does not match any service from the configuration
+- a handler from your code does not match the configuration service's input or output
 
 ## Getting started
 
@@ -112,22 +121,22 @@ func main() {
         log.Fatalf("invalid config: %s", err)
     }
 
-    // add http middlewares (logger)
+    // add http middlewares (e.g. logger)
     builder.With(func(next http.Handler) http.Handler{ /* ... */ })
 
-    // add contextual middlewares (authentication)
+    // add contextual middlewares (e.g. authentication)
     builder.WithContext(func(next http.Handler) http.Handler{ /* ... */ })
 
     // bind handlers
     err = builder.Bind(http.MethodGet, "/user/{id}", getUserById)
     if err != nil {
-        log.Fatalf("cannog bind GET /user/{id}: %s", err)
+        log.Fatalf("cannot bind: %s", err)
     }
 
     // build your services
     handler, err := builder.Build()
     if err != nil {
-        log.Fatalf("cannot build handler: %s", err)
+        log.Fatalf("cannot build: %s", err)
     }
     http.ListenAndServe("localhost:8080", handler)
 }
@@ -136,13 +145,13 @@ func main() {
 If you want to use HTTPS, you can configure your own `http.Server`.
 ```go
 func main() {
-    server := &http.Server{
-        Addr:      "localhost:8080",
-		TLSConfig: tls.Config{},
-        // ...
-		Handler:   AICRAHandler,
+	server := &http.Server{
+		Addr:      "localhost:8080",
+		TLSConfig: &tls.Config{},
+		// ...
+		Handler: handler,
 	}
-    server.ListenAndServe()
+	server.ListenAndServeTLS("server.crt", "server.key")
 }
 ```
 
@@ -150,7 +159,7 @@ func main() {
 
 First of all, the configuration uses `json`.
 
-> Quick note if you thought: "I hate JSON, I would have preferred yaml, or even xml !"
+> Quick note if you thought: "I don't like JSON, I would have preferred yaml, or even xml !"
 >
 > I've had a hard time deciding and testing different formats including yaml and xml.
 > But as it describes our entire api and is crucial for our server to keep working over updates; xml would have been too verbose with growth and yaml on the other side would have been too difficult to read. Json sits in the right spot for this.
@@ -180,10 +189,9 @@ To begin with, the configuration file defines a list of services. Each one is de
     }
 ]
 ```
-
 The `scope` is a 2-dimensional list of permissions. The first list means **or**, the second means **and**, it allows for complex permission combinations. The example above can be translated to: this method requires users to have permissions (author **and** reader) **or** (admin)
 
-### Input and output parameters
+### Parameters
 
 Input and output parameters share the same format, featuring:
 - `info` a short description of what it is
@@ -198,27 +206,40 @@ Input and output parameters share the same format, featuring:
         "scope": [["author"]],
         "info": "updates an article",
         "in": {
-            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
-            "GET@title": { "info": "...", "type": "?string", "name": "title" },
+            "{id}":      { "info": "...", "type": "int",     "name": "ID"    },
+            "GET@title": { "info": "...", "type": "?string", "name": "Title" },
             "content":   { "info": "...", "type": "string"                   }
         },
         "out": {
-            "title":   { "info": "updated article title",   "type": "string" },
-            "content": { "info": "updated article content", "type": "string" }
+            "Title":   { "info": "updated article title",   "type": "string" },
+            "Content": { "info": "updated article content", "type": "string" }
         }
     }
 ]
 ```
+##### Input parameters
 
-If a parameter is optional you just have to prefix its type with a question mark, by default all parameters are mandatory.
+The format of the key for input arguments defines where it comes from:
+- `{var}` is an uri parameter, must be present in the `"path"`
+- `GET@var` is an get parameter (see [http query](https://tools.ietf.org/html/rfc3986#section-3.4))
+- `var` is body parameter
 
-The format of the key of input arguments defines where it comes from:
-1. `{param}` is an URI parameter that is extracted from the `"path"`
-2. `GET@param` is an URL parameter that is extracted from the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
-3. `param` is a body parameter that can be extracted from 3 formats independently:
-    - _url encoded_: data send in the body following the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
-    - _multipart_: data send in the body with a dedicated [format](https://tools.ietf.org/html/rfc2388#section-3). This format can be quite heavy but allows to transmit data as well as files.
-    - _JSON_: data sent in the body as a json object ; The _Content-Type_ header must be `application/json` for it to work.
+Body parameters are extracted based on the `Content-Type` http header. Available values are:
+- `application/x-www-form-urlencoded`
+- `multipart/form-data`
+- `application/json`
+
+##### Mandatory vs. Optional:
+If you want to make a parameter optional, prefix its type with a question mark, by default all parameters are mandatory.
+
+##### Renaming
+
+Renaming with the field `"name"` is mandatory for:
+- uri parameters, the `{var}` syntax
+- get parameters, the `GET@var` syntax
+- body parameters that do not start with an uppercase letter
+
+These names are the same as input or output parameters in your code, they must begin with an uppercase letter in order to be exported and valid go.
 
 ### Example
 ```json
@@ -229,42 +250,78 @@ The format of the key of input arguments defines where it comes from:
         "scope": [["author"]],
         "info": "updates an article",
         "in": {
-            "{id}":      { "info": "...", "type": "int",     "name": "id"    },
-            "GET@title": { "info": "...", "type": "?string", "name": "title" },
-            "content":   { "info": "...", "type": "string"                   }
+            "{id}":      { "name": "ID",      "type": "uint",    "info": "article id"          },
+            "GET@title": { "name": "Title",   "type": "?string", "info": "new article title"   },
+            "content":   { "name": "Content", "type": "string",  "info": "new article content" }
         },
         "out": {
-            "id":      { "info": "updated article id",      "type": "uint"   },
-            "title":   { "info": "updated article title",   "type": "string" },
-            "content": { "info": "updated article content", "type": "string" }
+            "article": { "name": "Article", "type": "article", "info": "updated article" }
         }
     }
 ]
 ```
 
-1. `{id}` is extracted from the end of the URI and is a number compliant with the `int` type checker. It is renamed `ID`, this new name will be sent to the handler.
-2. `GET@title` is extracted from the query (_e.g. [http://host/uri?get-var=value](http://host/uri?get-var=value)_). It must be a valid `string` or not given at all (the `?` at the beginning of the type tells that the argument is **optional**) ; it will be named `title`.
-3. `content` can be extracted from json, multipart or url-encoded data; it makes no difference and only give clients a choice over the technology to use. If not renamed, the variable will be given to the handler with its original name `content`.
+Sample requests:
+
+<table>
+<tr>
+    <td>HTTP Request</td>
+    <td>ID</td>
+    <td>Title</td>
+    <td>Content</td>
+</tr>
+<tr><td>
+
+```http
+PUT /articles/26 HTTP/2
+Content-Type: application/x-www-form-urlencoded
+
+content=new content
+```
+</td><td>26</td><td></td><td>new content</td></tr>
+<tr><td>
+
+```http
+PUT /articles/32 HTTP/2
+Content-Type: multipart/form-data; boundary=XXX
+
+--XXX
+Content-Disposition: form-data; name="content"
+new content
+on
+multiple lines
+--XXX--
+```
+</td><td>32</td><td></td><td>new content<br>on<br>multiple lines</td></tr>
+<tr><td>
+
+```http
+PUT /articles/11?title=new-title HTTP/2
+Content-Type: application/json
+
+{"content": "new content"}
+```
+</td><td>11</td><td>new-title</td><td>new content</td></tr>
+</table>
 
 
-
-## Writing your code
+## Writing handlers
 
 Besides your main package where you launch your server, you will need to create handlers matching services from the configuration.
 
 The code below implements a simple handler.
 ```go
 // "in": {
-//  "Input1": { "info": "...", "type": "int"     },
-//  "Input2": { "info": "...", "type": "?string" }
+//  "input1": { "name": "Input1", "type": "int",     "info": "..." },
+//  "input2": { "name": "Input2", "type": "?string", "info": "..." }
 // },
 type req struct{
     Input1 int
     Input2 *string // optional are pointers
 }
 // "out": {
-//  "Output1": { "info": "...", "type": "string" },
-//  "Output2": { "info": "...", "type": "bool"   }
+//  "output1": { "name": "Output1", "type": "string", "info": "..." },
+//  "output2": { "name": "Output2", "type": "bool",   "info": "..." }
 // }
 type res struct{
     Output1 string
@@ -272,69 +329,32 @@ type res struct{
 }
 
 func myHandler(ctx context.Context, r req) (*res, error) {
-    err := doSomething()
-    if err != nil {
+    if err := fetchData(req.Input1); err != nil {
         return nil, api.ErrFailure
     }
-    return &res{"out1", true}, nil
+
+    if req.Input2 != nil {
+        if err := fetchData(req.Input2); err != nil {
+            return nil, api.Error(404, "error description")
+        }
+    }
+
+    return &res{Output1: "out1", Output2: true}, nil
 }
 ```
 
 If your handler signature does not match the configuration exactly, the server will print out the error and won't start.
 
-The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json; clients have to manage the same format for every response:
-```json
-HTTP/1.1 500 OK
+The `api.Err` type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json. This way, clients can manage the same format for every response:
+```http
+HTTP/1.1 404 OK
 Content-Type: application/json
-{
-    "status": "it failed"
-}
+
+{"status":"not found"}
 ```
 
-## Changelog
+## TODO
 
-- [x] human-readable json configuration
-- [x] nested routes (*i.e. `/user/{id}` and `/user/post/{id}`*)
-- [x] nested URL arguments (*i.e. `/user/{id}` and `/user/{uid}/post/​{id}`*)
-- [x] useful http methods: GET, POST, PUT, DELETE
-    - [ ] add support for PATCH method
-    - [ ] add support for OPTIONS method
-        - [ ] it might be interesting to generate the list of allowed methods from the configuration
-        - [ ] add CORS support
-- [x] manage request data extraction:
-    - [x] URL slash-separated strings
-    - [x] HTTP Query named parameters
-        - [x] manage array format
-    - [x] body parameters
-        - [x] multipart/form-data (variables and file uploads)
-        - [x] application/x-www-form-urlencoded
-        - [x] application/json
-- [x] required vs. optional parameters with a default value
-- [x] parameter renaming
-- [x] generic type check (*i.e. you can add custom types alongside built-in ones*)
-- [x] built-in types
-    - [x] `any` - matches any value
-    - [x] `int` - see go types
-    - [x] `uint` - see go types
-    - [x] `float` - see go types
-    - [x] `string` - any text
-    - [x] `string(len)` - any string with a length of exactly `len` characters
-    - [x] `string(min, max)` - any string with a length between `min` and `max`
-    - [ ] `[]a` - array containing **only** elements matching `a` type
-    - [ ] `a[b]` - map containing **only** keys of type `a` and values of type `b` (*a or b can be ommited*)
-- [x] generic handler implementation
-- [x] responder interface
-- [x] generic errors that automatically formats into response
-    - [x] only use the `error` interface, with an optional `interface{ Status() int }` to associate http status codes
-    - [x] builtin errors
-    - [x] possibility to add custom errors
-- [x] check for missing handlers when building the handler
-- [x] check handlers not matching a route in the configuration at server boot
-- [x] specific configuration format errors qt server boot
-- [x] statically typed handlers - avoids having to check every input and its type (_which is used by context.Context for instance_)
-    - [x] using reflection to use structs as input and output arguments to match the configuration
-        - [x] check for input and output arguments structs at server boot
-- [x] check for unavailable types in configuration at server boot
-- [x] recover panics from handlers
-- [ ] improve tests and coverage
+- [ ] add support for PATCH method
+    - [ ] it might be interesting to generate the list of allowed methods from the configuration
 
