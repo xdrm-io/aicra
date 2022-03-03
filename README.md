@@ -353,8 +353,7 @@ Content-Type: application/json
 {"status":"not found"}
 ```
 
-## TODO
-
-- [ ] add support for PATCH method
-    - [ ] it might be interesting to generate the list of allowed methods from the configuration
+## Coming next
+- [ ] support for PATCH or other random http methods. It might be interesting to generate the list of allowed methods from the configuration. A check against available http methods as a failsafe might be required.
+- [ ] differentiating input and output type validators, as input types requires validation but output types only require an association with a go type.
 
