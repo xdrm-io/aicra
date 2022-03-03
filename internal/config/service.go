@@ -107,7 +107,7 @@ func (svc *Service) matchPattern(uri string) bool {
 }
 
 // validate the service configuration
-func (svc *Service) validate(datatypes ...validator.Type) error {
+func (svc *Service) validate(input []validator.Type, output []validator.Type) error {
 	err := svc.checkMethod()
 	if err != nil {
 		return fmt.Errorf("field 'method': %w", err)
@@ -123,7 +123,7 @@ func (svc *Service) validate(datatypes ...validator.Type) error {
 		return fmt.Errorf("field 'description': %w", ErrMissingDescription)
 	}
 
-	err = svc.checkInput(datatypes)
+	err = svc.checkInput(input)
 	if err != nil {
 		return fmt.Errorf("field 'in': %w", err)
 	}
@@ -135,7 +135,7 @@ func (svc *Service) validate(datatypes ...validator.Type) error {
 		}
 	}
 
-	err = svc.checkOutput(datatypes)
+	err = svc.checkOutput(output)
 	if err != nil {
 		return fmt.Errorf("field 'out': %w", err)
 	}
@@ -206,7 +206,7 @@ func (svc *Service) checkPattern() error {
 	return nil
 }
 
-func (svc *Service) checkInput(types []validator.Type) error {
+func (svc *Service) checkInput(validators []validator.Type) error {
 	// no parameter
 	if svc.Input == nil || len(svc.Input) < 1 {
 		svc.Input = map[string]*Parameter{}
@@ -236,7 +236,7 @@ func (svc *Service) checkInput(types []validator.Type) error {
 			p.Rename = name
 		}
 
-		err = p.validate(types...)
+		err = p.validate(validators...)
 		if err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
@@ -254,7 +254,7 @@ func (svc *Service) checkInput(types []validator.Type) error {
 	return nil
 }
 
-func (svc *Service) checkOutput(types []validator.Type) error {
+func (svc *Service) checkOutput(validators []validator.Type) error {
 	// no parameter
 	if svc.Output == nil || len(svc.Output) < 1 {
 		svc.Output = make(map[string]*Parameter, 0)
@@ -271,7 +271,7 @@ func (svc *Service) checkOutput(types []validator.Type) error {
 			p.Rename = name
 		}
 
-		err := p.validate(types...)
+		err := p.validate(validators...)
 		if err != nil {
 			return fmt.Errorf("%s: %w", name, err)
 		}
