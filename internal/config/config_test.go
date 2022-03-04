@@ -239,7 +239,7 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 		}
 	]`)
 	srv := &Server{}
-	srv.Validators = append(srv.Validators, validator.AnyType{})
+	srv.Input = append(srv.Input, validator.AnyType{})
 	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
@@ -275,8 +275,8 @@ func TestOptionalParam(t *testing.T) {
 		}
 	]`)
 	srv := &Server{}
-	srv.Validators = append(srv.Validators, validator.AnyType{})
-	srv.Validators = append(srv.Validators, validator.BoolType{})
+	srv.Input = append(srv.Input, validator.AnyType{})
+	srv.Input = append(srv.Input, validator.BoolType{})
 	err := srv.Parse(r)
 	if err != nil {
 		t.Errorf("unexpected error: '%s'", err)
@@ -588,7 +588,7 @@ func TestParseParameters(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Validators = append(srv.Validators, validator.AnyType{})
+			srv.Input = append(srv.Input, validator.AnyType{})
 			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if err == nil && test.Error != nil {
@@ -827,8 +827,8 @@ func TestServiceCollision(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Validators = append(srv.Validators, validator.StringType{})
-			srv.Validators = append(srv.Validators, validator.UintType{})
+			srv.Input = append(srv.Input, validator.StringType{})
+			srv.Input = append(srv.Input, validator.UintType{})
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err == nil && test.Error != nil {
@@ -1007,9 +1007,9 @@ func TestMatchSimple(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Validators = append(srv.Validators, validator.AnyType{})
-			srv.Validators = append(srv.Validators, validator.IntType{})
-			srv.Validators = append(srv.Validators, validator.BoolType{})
+			srv.Input = append(srv.Input, validator.AnyType{})
+			srv.Input = append(srv.Input, validator.IntType{})
+			srv.Input = append(srv.Input, validator.BoolType{})
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {
@@ -1091,9 +1091,9 @@ func TestFindPriority(t *testing.T) {
 
 		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
 			srv := &Server{}
-			srv.Validators = append(srv.Validators, validator.AnyType{})
-			srv.Validators = append(srv.Validators, validator.IntType{})
-			srv.Validators = append(srv.Validators, validator.BoolType{})
+			srv.Input = append(srv.Input, validator.AnyType{})
+			srv.Input = append(srv.Input, validator.IntType{})
+			srv.Input = append(srv.Input, validator.BoolType{})
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {
