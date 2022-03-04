@@ -40,7 +40,7 @@ Repetitive tasks are automatically processed by `aicra` based on your configurat
       - [Renaming](#renaming)
   * [Example](#example)
 - [Writing handlers](#writing-handlers)
-- [TODO](#todo)
+- [Coming next](#coming-next)
 
 <!-- tocstop -->
 
