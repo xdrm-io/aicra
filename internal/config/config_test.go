@@ -5,11 +5,47 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
+
+func TestAddInputType(t *testing.T) {
+	t.Parallel()
+
+	srv := &Server{}
+
+	srv.AddInputValidator(validator.BoolType{})
+	if srv.Input == nil {
+		t.Fatalf("input is nil")
+	}
+	if len(srv.Input) != 1 {
+		t.Fatalf("expected 1 input validator; got %d", len(srv.Input))
+	}
+	srv.AddInputValidator(validator.IntType{})
+	if len(srv.Input) != 2 {
+		t.Fatalf("expected 2 input validator; got %d", len(srv.Input))
+	}
+}
+func TestAddOutputType(t *testing.T) {
+	t.Parallel()
+
+	srv := &Server{}
+
+	srv.AddOutputValidator("bool", reflect.TypeOf(true))
+	if srv.Output == nil {
+		t.Fatalf("input is nil")
+	}
+	if len(srv.Output) != 1 {
+		t.Fatalf("expected 1 input validator; got %d", len(srv.Output))
+	}
+	srv.AddOutputValidator("string", reflect.TypeOf(""))
+	if len(srv.Output) != 2 {
+		t.Fatalf("expected 2 input validator; got %d", len(srv.Output))
+	}
+}
 
 func TestLegalServiceName(t *testing.T) {
 	t.Parallel()
