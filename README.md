@@ -105,10 +105,16 @@ import (
 func main() {
     builder := &aicra.Builder{}
 
-    // add custom type validators
-    builder.Validate(validator.BoolDataType{})
-    builder.Validate(validator.UintDataType{})
-    builder.Validate(validator.StringDataType{})
+    // add input validators
+    builder.Input(validator.BoolDataType{})
+    builder.Input(validator.UintDataType{})
+    builder.Input(validator.StringDataType{})
+
+    // add output types
+    builder.Output("string", reflect.TypeOf(""))
+    builder.Output("bool", reflect.TypeOf(true))
+    builder.Output("user", reflect.TypeOf(UserStruct))
+    builder.Output("users", reflect.TypeOf([]UserStruct))
 
     // load your configuration
     config, err := os.Open("api.json")
@@ -218,7 +224,6 @@ Input and output parameters share the same format, featuring:
 ]
 ```
 ##### Input parameters
-
 The format of the key for input arguments defines where it comes from:
 - `{var}` is an uri parameter, must be present in the `"path"`
 - `GET@var` is an get parameter (see [http query](https://tools.ietf.org/html/rfc3986#section-3.4))
@@ -233,13 +238,17 @@ Body parameters are extracted based on the `Content-Type` http header. Available
 If you want to make a parameter optional, prefix its type with a question mark, by default all parameters are mandatory.
 
 ##### Renaming
-
 Renaming with the field `"name"` is mandatory for:
 - uri parameters, the `{var}` syntax
 - get parameters, the `GET@var` syntax
 - body parameters that do not start with an uppercase letter
 
 These names are the same as input or output parameters in your code, they must begin with an uppercase letter in order to be exported and valid go.
+
+##### Types
+
+Every input type must match one of the input validators registered with `Builder.Input()`.
+Every output type must match one of the output types registered with `Builder.Output()`
 
 ### Example
 ```json
@@ -355,5 +364,4 @@ Content-Type: application/json
 
 ## Coming next
 - [ ] support for PATCH or other random http methods. It might be interesting to generate the list of allowed methods from the configuration. A check against available http methods as a failsafe might be required.
-- [ ] differentiating input and output type validators, as input types requires validation but output types only require an association with a go type.
 

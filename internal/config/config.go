@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/xdrm-io/aicra/validator"
@@ -12,8 +13,30 @@ import (
 
 // Server definition
 type Server struct {
-	Validators []validator.Type
-	Services   []*Service
+	// Input type validators available
+	Input []validator.Type
+	// Output types (no-op) validators available
+	Output   []validator.Type
+	Services []*Service
+}
+
+// AddInputValidator makes a new type available for services "in". It must be
+// called before Parse() or will be ignored
+func (s *Server) AddInputValidator(v validator.Type) {
+	if s.Input == nil {
+		s.Input = make([]validator.Type, 0)
+	}
+	s.Input = append(s.Input, v)
+}
+
+// AddOutputValidator adds an available output no-op validator for services "out"
+// It only features a type name and a go type ; it must be called before Parse()
+// or will be ignored
+func (s *Server) AddOutputValidator(typename string, goType reflect.Type) {
+	if s.Output == nil {
+		s.Output = make([]validator.Type, 0)
+	}
+	s.Output = append(s.Output, noOp{name: typename, goType: goType})
 }
 
 // Parse a configuration into a server. Server.Validators must be set beforehand
@@ -32,9 +55,9 @@ func (s *Server) Parse(r io.Reader) error {
 }
 
 // validate all services
-func (s Server) validate(datatypes ...validator.Type) error {
+func (s Server) validate() error {
 	for _, service := range s.Services {
-		err := service.validate(s.Validators...)
+		err := service.validate(s.Input, s.Output)
 		if err != nil {
 			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
 		}
@@ -182,4 +205,22 @@ func SplitURL(url string) []string {
 		return []string{}
 	}
 	return split
+}
+
+// noOp defines a no-op validator used for output parameters
+type noOp struct {
+	name   string
+	goType reflect.Type
+}
+
+func (v noOp) GoType() reflect.Type {
+	return v.goType
+}
+func (v noOp) Validator(typename string, avail ...validator.Type) validator.ValidateFunc {
+	if typename != v.name {
+		return nil
+	}
+	return func(value interface{}) (interface{}, bool) {
+		return reflect.Zero(v.goType), false
+	}
 }

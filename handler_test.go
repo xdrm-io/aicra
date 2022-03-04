@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -22,23 +23,32 @@ func printEscaped(raw string) string {
 }
 
 func addDefaultTypes(b *aicra.Builder) error {
-	if err := b.Validate(validator.AnyType{}); err != nil {
-		return err
+	inputTypes := []validator.Type{
+		validator.AnyType{},
+		validator.BoolType{},
+		validator.FloatType{},
+		validator.IntType{},
+		validator.StringType{},
+		validator.UintType{},
 	}
-	if err := b.Validate(validator.BoolType{}); err != nil {
-		return err
+	outputTypes := map[string]reflect.Type{
+		"any":    reflect.TypeOf(interface{}(nil)),
+		"bool":   reflect.TypeOf(true),
+		"float":  reflect.TypeOf(float64(2)),
+		"int":    reflect.TypeOf(int(0)),
+		"string": reflect.TypeOf(""),
+		"uint":   reflect.TypeOf(uint(0)),
 	}
-	if err := b.Validate(validator.FloatType{}); err != nil {
-		return err
+
+	for _, t := range inputTypes {
+		if err := b.Input(t); err != nil {
+			return err
+		}
 	}
-	if err := b.Validate(validator.IntType{}); err != nil {
-		return err
-	}
-	if err := b.Validate(validator.StringType{}); err != nil {
-		return err
-	}
-	if err := b.Validate(validator.UintType{}); err != nil {
-		return err
+	for k, v := range outputTypes {
+		if err := b.Output(k, v); err != nil {
+			return err
+		}
 	}
 	return nil
 }
