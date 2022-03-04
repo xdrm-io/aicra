@@ -15,13 +15,13 @@ import (
 type Server struct {
 	// Input type validators available
 	Input []validator.Type
-	// Ouput types (no-op) validators available
+	// Output types (no-op) validators available
 	Output   []validator.Type
 	Services []*Service
 }
 
-// AddInputValidator adds an available input validator ; it must be called before
-// Parse() or will be ignored
+// AddInputValidator makes a new type available for services "in". It must be
+// called before Parse() or will be ignored
 func (s *Server) AddInputValidator(v validator.Type) {
 	if s.Input == nil {
 		s.Input = make([]validator.Type, 0)
@@ -29,8 +29,9 @@ func (s *Server) AddInputValidator(v validator.Type) {
 	s.Input = append(s.Input, v)
 }
 
-// AddOutputValidator adds an available output no-op validator. It only features
-// a type name and a go type ; it must be called before Parse() or will be ignored
+// AddOutputValidator adds an available output no-op validator for services "out"
+// It only features a type name and a go type ; it must be called before Parse()
+// or will be ignored
 func (s *Server) AddOutputValidator(typename string, goType reflect.Type) {
 	if s.Output == nil {
 		s.Output = make([]validator.Type, 0)
