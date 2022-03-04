@@ -172,7 +172,7 @@ First of all, the configuration uses `json`.
 
 Let's take a quick look at the configuration format !
 
-> if you don't like boring explanations and prefer a working example, see [here](https://git.xdrm.io/go/articles-api/src/master/api.json)
+> if you don't like boring explanations and prefer a working example, see [here](https://github.com/xdrm-io/articles-api/blob/main/api/definition.json)
 
 ### Services
 
