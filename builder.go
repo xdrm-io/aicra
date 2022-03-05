@@ -75,15 +75,19 @@ func (b *Builder) Input(t validator.Type) error {
 	return nil
 }
 
-// Output adds an go type to use for output arguments
-func (b *Builder) Output(name string, goType reflect.Type) error {
+// Output adds an type available for output arguments as well as a value example.
+// Some examples:
+// - Output("uint",  uint(0))
+// - Output("user",  model.User{})
+// - Output("users", []model.User{})
+func (b *Builder) Output(name string, sample interface{}) error {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
 		return errLateType
 	}
-	b.conf.AddOutputValidator(name, goType)
+	b.conf.AddOutputValidator(name, reflect.TypeOf(sample))
 	return nil
 }
 

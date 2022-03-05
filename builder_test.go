@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -21,13 +20,13 @@ func addBuiltinTypes(b *Builder) error {
 		validator.StringType{},
 		validator.UintType{},
 	}
-	outputTypes := map[string]reflect.Type{
-		"any":    reflect.TypeOf(interface{}(nil)),
-		"bool":   reflect.TypeOf(true),
-		"float":  reflect.TypeOf(float64(2)),
-		"int":    reflect.TypeOf(int(0)),
-		"string": reflect.TypeOf(""),
-		"uint":   reflect.TypeOf(uint(0)),
+	outputTypes := map[string]interface{}{
+		"any":    interface{}(nil),
+		"bool":   true,
+		"float":  float64(2),
+		"int":    int(0),
+		"string": "",
+		"uint":   uint(0),
 	}
 
 	for _, t := range inputTypes {
@@ -64,7 +63,7 @@ func TestAddOutputType(t *testing.T) {
 	t.Parallel()
 
 	builder := &Builder{}
-	err := builder.Output("bool", reflect.TypeOf(true))
+	err := builder.Output("bool", true)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -72,7 +71,7 @@ func TestAddOutputType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	err = builder.Output("bool", reflect.TypeOf(true))
+	err = builder.Output("bool", true)
 	if err != errLateType {
 		t.Fatalf("expected <%v> got <%v>", errLateType, err)
 	}

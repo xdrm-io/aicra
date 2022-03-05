@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -31,13 +30,13 @@ func addDefaultTypes(b *aicra.Builder) error {
 		validator.StringType{},
 		validator.UintType{},
 	}
-	outputTypes := map[string]reflect.Type{
-		"any":    reflect.TypeOf(interface{}(nil)),
-		"bool":   reflect.TypeOf(true),
-		"float":  reflect.TypeOf(float64(2)),
-		"int":    reflect.TypeOf(int(0)),
-		"string": reflect.TypeOf(""),
-		"uint":   reflect.TypeOf(uint(0)),
+	outputTypes := map[string]interface{}{
+		"any":    interface{}(nil),
+		"bool":   true,
+		"float":  float64(2),
+		"int":    int(0),
+		"string": "",
+		"uint":   uint(0),
 	}
 
 	for _, t := range inputTypes {
