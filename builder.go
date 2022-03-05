@@ -89,11 +89,12 @@ func (b *Builder) Output(name string, goType reflect.Type) error {
 
 // RespondWith defines the server responder, i.e. how to write data and error
 // into the http response.
-func (b *Builder) RespondWith(responder Responder) {
+func (b *Builder) RespondWith(responder Responder) error {
 	if responder == nil {
-		return
+		return errNilResponder
 	}
 	b.respond = responder
+	return nil
 }
 
 // With adds an http middleware on top of the http connection
