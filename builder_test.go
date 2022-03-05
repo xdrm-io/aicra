@@ -78,6 +78,25 @@ func TestAddOutputType(t *testing.T) {
 	}
 }
 
+func TestNilResponder(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.RespondWith(nil)
+	if !errors.Is(err, errNilResponder) {
+		t.Fatalf("expected %q, got %v", errNilResponder.Error(), err)
+	}
+}
+func TestNonNilResponder(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.RespondWith(DefaultResponder)
+	if !errors.Is(err, nil) {
+		t.Fatalf("unexpected error %s", err)
+	}
+}
+
 func TestSetupNoType(t *testing.T) {
 	t.Parallel()
 
@@ -87,6 +106,7 @@ func TestSetupNoType(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 }
+
 func TestSetupTwice(t *testing.T) {
 	t.Parallel()
 
@@ -126,6 +146,7 @@ func TestBindUnknownService(t *testing.T) {
 		t.Fatalf("expected error %v, got %v", errUnknownService, err)
 	}
 }
+
 func TestBindInvalidHandler(t *testing.T) {
 	t.Parallel()
 
@@ -153,7 +174,8 @@ func TestBindInvalidHandler(t *testing.T) {
 		t.Fatalf("expected a dynfunc.Err got %v", err)
 	}
 }
-func TestBindGet(t *testing.T) {
+
+func TestBindMethods(t *testing.T) {
 	t.Parallel()
 
 	builder := &Builder{}

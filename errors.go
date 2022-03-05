@@ -22,4 +22,7 @@ const (
 
 	// errMissingHandler - missing handler
 	errMissingHandler = cerr("missing handler")
+
+	// errNilResponder - nil responder provided
+	errNilResponder = cerr("nil responder")
 )
