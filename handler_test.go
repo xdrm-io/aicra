@@ -131,7 +131,7 @@ func TestHandlerWith(t *testing.T) {
 	}
 	token := fmt.Sprintf("#%d#", n)
 	if !strings.Contains(response.Body.String(), token) {
-		t.Fatalf("expected '%s' to be in response <%s>", token, response.Body.String())
+		t.Fatalf("expected %q to be in response <%s>", token, response.Body.String())
 	}
 
 }
@@ -1220,7 +1220,7 @@ Content-Disposition: form-data; name="id"
 			}
 
 			if parsedError.Status != tc.errReason {
-				t.Fatalf("invalid error description '%s' ; expected '%s'", parsedError.Status, tc.errReason)
+				t.Fatalf("invalid error description %q ; expected %q", parsedError.Status, tc.errReason)
 			}
 
 		})

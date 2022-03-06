@@ -11,11 +11,11 @@ type Parameter struct {
 	Description string `json:"info"`
 	Type        string `json:"type"`
 	Rename      string `json:"name,omitempty"`
-	Optional    bool
+	Optional    bool   `json:"-"`
 	// GoType is the type the Validator will cast into
-	GoType reflect.Type
+	GoType reflect.Type `json:"-"`
 	// Validator is inferred from the "type" property
-	Validator validator.ValidateFunc
+	Validator validator.ValidateFunc `json:"-"`
 }
 
 func (param *Parameter) validate(validators ...validator.Type) error {

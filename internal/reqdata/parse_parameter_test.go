@@ -7,21 +7,23 @@ import (
 )
 
 func TestSimpleString(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter("some-string")
 
 	cast, canCast := p.(string)
 	if !canCast {
-		t.Errorf("expected parameter to be a string")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a string")
 	}
 
 	if cast != "some-string" {
-		t.Errorf("expected parameter to equal 'some-string', got '%s'", cast)
-		t.FailNow()
+		t.Fatalf("expected parameter to equal 'some-string', got %q", cast)
 	}
 }
 
 func TestSimpleFloat(t *testing.T) {
+	t.Parallel()
+
 	tcases := []float64{12.3456789, -12.3456789, 0.0000001, -0.0000001}
 
 	for i, tcase := range tcases {
@@ -30,19 +32,19 @@ func TestSimpleFloat(t *testing.T) {
 
 			cast, canCast := p.(float64)
 			if !canCast {
-				t.Errorf("expected parameter to be a float64")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a float64")
 			}
 
 			if math.Abs(cast-tcase) > 0.00000001 {
-				t.Errorf("expected parameter to equal '%f', got '%f'", tcase, cast)
-				t.FailNow()
+				t.Fatalf("expected parameter to equal '%f', got '%f'", tcase, cast)
 			}
 		})
 	}
 }
 
 func TestSimpleBool(t *testing.T) {
+	t.Parallel()
+
 	tcases := []bool{true, false}
 
 	for i, tcase := range tcases {
@@ -51,30 +53,28 @@ func TestSimpleBool(t *testing.T) {
 
 			cast, canCast := p.(bool)
 			if !canCast {
-				t.Errorf("expected parameter to be a bool")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a bool")
 			}
 
 			if cast != tcase {
-				t.Errorf("expected parameter to equal '%t', got '%t'", tcase, cast)
-				t.FailNow()
+				t.Fatalf("expected parameter to equal '%t', got '%t'", tcase, cast)
 			}
 		})
 	}
 }
 
 func TestJsonStringSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter(`["str1", "str2"]`)
 
 	slice, canCast := p.([]interface{})
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []interface{}")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []string{"str1", "str2"}
@@ -87,7 +87,7 @@ func TestJsonStringSlice(t *testing.T) {
 			continue
 		}
 		if cast != res {
-			t.Errorf("expected first value to be '%s', got '%s'", res, cast)
+			t.Errorf("expected first value to be %q, got %q", res, cast)
 			continue
 		}
 
@@ -96,17 +96,17 @@ func TestJsonStringSlice(t *testing.T) {
 }
 
 func TestStringSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter([]string{"str1", "str2"})
 
 	slice, canCast := p.([]interface{})
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []interface{}")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []string{"str1", "str2"}
@@ -119,7 +119,7 @@ func TestStringSlice(t *testing.T) {
 			continue
 		}
 		if cast != res {
-			t.Errorf("expected first value to be '%s', got '%s'", res, cast)
+			t.Errorf("expected first value to be %q, got %q", res, cast)
 			continue
 		}
 
@@ -128,6 +128,8 @@ func TestStringSlice(t *testing.T) {
 }
 
 func TestJsonPrimitiveBool(t *testing.T) {
+	t.Parallel()
+
 	tcases := []struct {
 		Raw       string
 		BoolValue bool
@@ -142,13 +144,11 @@ func TestJsonPrimitiveBool(t *testing.T) {
 
 			cast, canCast := p.(bool)
 			if !canCast {
-				t.Errorf("expected parameter to be a bool")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a bool")
 			}
 
 			if cast != tcase.BoolValue {
-				t.Errorf("expected a value of %t, got %t", tcase.BoolValue, cast)
-				t.FailNow()
+				t.Fatalf("expected a value of %t, got %t", tcase.BoolValue, cast)
 			}
 		})
 	}
@@ -156,6 +156,8 @@ func TestJsonPrimitiveBool(t *testing.T) {
 }
 
 func TestJsonPrimitiveFloat(t *testing.T) {
+	t.Parallel()
+
 	tcases := []struct {
 		Raw        string
 		FloatValue float64
@@ -179,13 +181,11 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 
 			cast, canCast := p.(float64)
 			if !canCast {
-				t.Errorf("expected parameter to be a float64")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a float64")
 			}
 
 			if math.Abs(cast-tcase.FloatValue) > 0.00001 {
-				t.Errorf("expected a value of %f, got %f", tcase.FloatValue, cast)
-				t.FailNow()
+				t.Fatalf("expected a value of %f, got %f", tcase.FloatValue, cast)
 			}
 		})
 	}
@@ -193,17 +193,17 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 }
 
 func TestJsonBoolSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter([]string{"true", "false"})
 
 	slice, canCast := p.([]interface{})
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []interface{}")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []bool{true, false}
@@ -225,17 +225,17 @@ func TestJsonBoolSlice(t *testing.T) {
 }
 
 func TestBoolSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter([]bool{true, false})
 
 	slice, canCast := p.([]bool)
 	if !canCast {
-		t.Errorf("expected parameter to be a []bool")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []bool")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []bool{true, false}

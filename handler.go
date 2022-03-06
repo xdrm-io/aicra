@@ -65,7 +65,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// Only URI arguments can be used
 	var input = reqdata.New(service)
 	if err := input.GetURI(*r); err != nil {
-		// should never fail as type validators are always checks in
+		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
 		s.respond(w, nil, enrichInputError(err))
 		return
@@ -79,9 +79,9 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 	// create http handler
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// should not happen
 		auth := api.GetAuth(r.Context())
 		if auth == nil {
+			// should never happen
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}

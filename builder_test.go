@@ -213,36 +213,36 @@ func TestUnhandledService(t *testing.T) {
 func TestBind(t *testing.T) {
 	t.Parallel()
 
-	tcases := []struct {
-		Name          string
-		Config        string
-		HandlerMethod string
-		HandlerPath   string
-		HandlerFn     interface{} // not bound if nil
-		BindErr       error
-		BuildErr      error
+	tt := []struct {
+		name          string
+		conf          string
+		handlerMethod string
+		handlerPath   string
+		handler       interface{} // not bound if nil
+		bindErr       error
+		buildErr      error
 	}{
 		{
-			Name:          "none required none provided",
-			Config:        "[]",
-			HandlerMethod: "",
-			HandlerPath:   "",
-			HandlerFn:     nil,
-			BindErr:       nil,
-			BuildErr:      nil,
+			name:          "none required none provided",
+			conf:          "[]",
+			handlerMethod: "",
+			handlerPath:   "",
+			handler:       nil,
+			bindErr:       nil,
+			buildErr:      nil,
 		},
 		{
-			Name:          "none required 1 provided",
-			Config:        "[]",
-			HandlerMethod: "",
-			HandlerPath:   "",
-			HandlerFn:     func(context.Context) (*struct{}, error) { return nil, nil },
-			BindErr:       errUnknownService,
-			BuildErr:      nil,
+			name:          "none required 1 provided",
+			conf:          "[]",
+			handlerMethod: "",
+			handlerPath:   "",
+			handler:       func(context.Context) (*struct{}, error) { return nil, nil },
+			bindErr:       errUnknownService,
+			buildErr:      nil,
 		},
 		{
-			Name: "1 required none provided",
-			Config: `[
+			name: "1 required none provided",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -252,15 +252,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: "",
-			HandlerPath:   "",
-			HandlerFn:     nil,
-			BindErr:       nil,
-			BuildErr:      errMissingHandler,
+			handlerMethod: "",
+			handlerPath:   "",
+			handler:       nil,
+			bindErr:       nil,
+			buildErr:      errMissingHandler,
 		},
 		{
-			Name: "1 required wrong method provided",
-			Config: `[
+			name: "1 required wrong method provided",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -270,15 +270,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodPost,
-			HandlerPath:   "/path",
-			HandlerFn:     func(context.Context) (*struct{}, error) { return nil, nil },
-			BindErr:       errUnknownService,
-			BuildErr:      errMissingHandler,
+			handlerMethod: http.MethodPost,
+			handlerPath:   "/path",
+			handler:       func(context.Context) (*struct{}, error) { return nil, nil },
+			bindErr:       errUnknownService,
+			buildErr:      errMissingHandler,
 		},
 		{
-			Name: "1 required wrong path provided",
-			Config: `[
+			name: "1 required wrong path provided",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -288,15 +288,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodGet,
-			HandlerPath:   "/paths",
-			HandlerFn:     func(context.Context) (*struct{}, error) { return nil, nil },
-			BindErr:       errUnknownService,
-			BuildErr:      errMissingHandler,
+			handlerMethod: http.MethodGet,
+			handlerPath:   "/paths",
+			handler:       func(context.Context) (*struct{}, error) { return nil, nil },
+			bindErr:       errUnknownService,
+			buildErr:      errMissingHandler,
 		},
 		{
-			Name: "1 required valid provided",
-			Config: `[
+			name: "1 required valid provided",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -306,15 +306,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodGet,
-			HandlerPath:   "/path",
-			HandlerFn:     func(context.Context) (*struct{}, error) { return nil, nil },
-			BindErr:       nil,
-			BuildErr:      nil,
+			handlerMethod: http.MethodGet,
+			handlerPath:   "/path",
+			handler:       func(context.Context) (*struct{}, error) { return nil, nil },
+			bindErr:       nil,
+			buildErr:      nil,
 		},
 		{
-			Name: "1 required with int",
-			Config: `[
+			name: "1 required with int",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -326,15 +326,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodGet,
-			HandlerPath:   "/path",
-			HandlerFn:     func(context.Context, struct{ Name int }) (*struct{}, error) { return nil, nil },
-			BindErr:       nil,
-			BuildErr:      nil,
+			handlerMethod: http.MethodGet,
+			handlerPath:   "/path",
+			handler:       func(context.Context, struct{ Name int }) (*struct{}, error) { return nil, nil },
+			bindErr:       nil,
+			buildErr:      nil,
 		},
 		{
-			Name: "1 required with uint",
-			Config: `[
+			name: "1 required with uint",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -346,15 +346,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodGet,
-			HandlerPath:   "/path",
-			HandlerFn:     func(context.Context, struct{ Name uint }) (*struct{}, error) { return nil, nil },
-			BindErr:       nil,
-			BuildErr:      nil,
+			handlerMethod: http.MethodGet,
+			handlerPath:   "/path",
+			handler:       func(context.Context, struct{ Name uint }) (*struct{}, error) { return nil, nil },
+			bindErr:       nil,
+			buildErr:      nil,
 		},
 		{
-			Name: "1 required with string",
-			Config: `[
+			name: "1 required with string",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -366,15 +366,15 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodGet,
-			HandlerPath:   "/path",
-			HandlerFn:     func(context.Context, struct{ Name string }) (*struct{}, error) { return nil, nil },
-			BindErr:       nil,
-			BuildErr:      nil,
+			handlerMethod: http.MethodGet,
+			handlerPath:   "/path",
+			handler:       func(context.Context, struct{ Name string }) (*struct{}, error) { return nil, nil },
+			bindErr:       nil,
+			buildErr:      nil,
 		},
 		{
-			Name: "1 required with bool",
-			Config: `[
+			name: "1 required with bool",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/path",
@@ -386,39 +386,38 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			HandlerMethod: http.MethodGet,
-			HandlerPath:   "/path",
-			HandlerFn:     func(context.Context, struct{ Name bool }) (*struct{}, error) { return nil, nil },
-			BindErr:       nil,
-			BuildErr:      nil,
+			handlerMethod: http.MethodGet,
+			handlerPath:   "/path",
+			handler:       func(context.Context, struct{ Name bool }) (*struct{}, error) { return nil, nil },
+			bindErr:       nil,
+			buildErr:      nil,
 		},
 	}
 
-	for _, tcase := range tcases {
-		t.Run(tcase.Name, func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			builder := &Builder{}
-
 			if err := addBuiltinTypes(builder); err != nil {
 				t.Fatalf("add built-in types: %s", err)
 			}
 
-			err := builder.Setup(strings.NewReader(tcase.Config))
+			err := builder.Setup(strings.NewReader(tc.conf))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			if tcase.HandlerFn != nil {
-				err := builder.Bind(tcase.HandlerMethod, tcase.HandlerPath, tcase.HandlerFn)
-				if !errors.Is(err, tcase.BindErr) {
-					t.Fatalf("bind: expected <%v> got <%v>", tcase.BindErr, err)
+			if tc.handler != nil {
+				err := builder.Bind(tc.handlerMethod, tc.handlerPath, tc.handler)
+				if !errors.Is(err, tc.bindErr) {
+					t.Fatalf("invalid bind error\nactual: %v\nexpect: %v", err, tc.bindErr)
 				}
 			}
 
 			_, err = builder.Build()
-			if !errors.Is(err, tcase.BuildErr) {
-				t.Fatalf("build: expected <%v> got <%v>", tcase.BuildErr, err)
+			if !errors.Is(err, tc.buildErr) {
+				t.Fatalf("invalid build error\nactual: %v\nexpect: %v", err, tc.buildErr)
 			}
 
 		})

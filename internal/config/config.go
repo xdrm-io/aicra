@@ -59,7 +59,7 @@ func (s Server) validate() error {
 	for _, service := range s.Services {
 		err := service.validate(s.Input, s.Output)
 		if err != nil {
-			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
+			return fmt.Errorf("%s %q: %w", service.Method, service.Pattern, err)
 		}
 	}
 
@@ -109,7 +109,7 @@ func (s *Server) collide() error {
 
 			err := checkURICollision(aURIParts, bURIParts, aService.Input, bService.Input)
 			if err != nil {
-				return fmt.Errorf("(%s '%s') vs (%s '%s'): %w", aService.Method, aService.Pattern, bService.Method, bService.Pattern, err)
+				return fmt.Errorf("(%s %q) vs (%s %q): %w", aService.Method, aService.Pattern, bService.Method, bService.Pattern, err)
 			}
 		}
 	}
@@ -118,81 +118,56 @@ func (s *Server) collide() error {
 }
 
 // check if uri of services A and B collide
-func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter) error {
-	var errors = []error{}
+func checkURICollision(aURI, bURI []string, aInput, bInput map[string]*Parameter) error {
+	var err error
 
 	// for each part
-	for pi, aPart := range uriA {
-		bPart := uriB[pi]
+	for i, aSeg := range aURI {
+		var (
+			bSeg = bURI[i]
 
-		// no need for further check as it has been done earlier in the validation process
-		aIsCapture := len(aPart) > 1 && aPart[0] == '{'
-		bIsCapture := len(bPart) > 1 && bPart[0] == '{'
+			// no need for check deeper as it has been done earlier in the
+			// validation process
+			aIsCapture = len(aSeg) > 1 && aSeg[0] == '{'
+			bIsCapture = len(bSeg) > 1 && bSeg[0] == '{'
+		)
 
 		// both captures -> as we cannot check, consider a collision
 		if aIsCapture && bIsCapture {
-			errors = append(errors, fmt.Errorf("%w (path %s and %s)", ErrPatternCollision, aPart, bPart))
+			err = fmt.Errorf("%w (path %s and %s)", ErrPatternCollision, aSeg, bSeg)
 			continue
 		}
 
 		// no capture -> check strict equality
-		if !aIsCapture && !bIsCapture {
-			if aPart == bPart {
-				errors = append(errors, fmt.Errorf("%w (same path '%s')", ErrPatternCollision, aPart))
-				continue
-			}
+		if !aIsCapture && !bIsCapture && aSeg == bSeg {
+			err = fmt.Errorf("%w (same path %q)", ErrPatternCollision, aSeg)
+			continue
 		}
 
-		// A captures B -> check type (B is A ?)
-		if aIsCapture {
-			input, exists := inputA[aPart]
-
-			// fail if no type or no validator
-			if !exists || input.Validator == nil {
-				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", ErrPatternCollision, aPart))
-				continue
-			}
-
-			// fail if not valid
-			if _, valid := input.Validator(bPart); valid {
-				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", ErrPatternCollision, aPart, bPart))
-				continue
-			}
-
-			// B captures A -> check type (A is B ?)
-		} else if bIsCapture {
-			input, exists := inputB[bPart]
-
-			// fail if no type or no validator
-			if !exists || input.Validator == nil {
-				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", ErrPatternCollision, bPart))
-				continue
-			}
-
-			// fail if not valid
-			if _, valid := input.Validator(aPart); valid {
-				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", ErrPatternCollision, bPart, aPart))
-				continue
-			}
+		// A captures B -> fail if B is a valid A value
+		if aIsCapture && validates(aInput, aSeg, bSeg) {
+			err = fmt.Errorf("%w (%s captures %q)", ErrPatternCollision, aSeg, bSeg)
+			continue
 		}
-
-		errors = append(errors, nil)
-
+		// B captures A -> fail is A is a valid B value
+		if bIsCapture && validates(bInput, bSeg, aSeg) {
+			err = fmt.Errorf("%w (%s captures %q)", ErrPatternCollision, bSeg, aSeg)
+			continue
+		}
+		// no match for at least one segment -> no collision
+		return nil
 	}
+	return err
+}
 
-	// at least 1 URI part not matching -> no collision
-	var firstError error
-	for _, err := range errors {
-		if err != nil && firstError == nil {
-			firstError = err
-		}
-
-		if err == nil {
-			return nil
-		}
+// validates returns whether a parameter validates a given value
+func validates(params map[string]*Parameter, checkerName, value string) bool {
+	checker, exists := params[checkerName]
+	if !exists || checker.Validator == nil {
+		panic(fmt.Errorf("invalid validator %q", checkerName))
 	}
-
-	return firstError
+	_, valid := checker.Validator(value)
+	return valid
 }
 
 // SplitURL without empty sets
@@ -221,6 +196,6 @@ func (v noOp) Validator(typename string, avail ...validator.Type) validator.Vali
 		return nil
 	}
 	return func(value interface{}) (interface{}, bool) {
-		return reflect.Zero(v.goType), false
+		return reflect.Zero(v.goType), true
 	}
 }

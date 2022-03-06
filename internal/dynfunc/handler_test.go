@@ -2,6 +2,7 @@ package dynfunc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -41,124 +42,125 @@ func TestInput(t *testing.T) {
 		P1 *int
 	}
 
-	tcases := []struct {
-		Name           string
-		Spec           *testsignature
-		HasContext     bool
-		Fn             interface{}
-		Input          []interface{}
-		ExpectedOutput []interface{}
-		ExpectedErr    error
+	tt := []struct {
+		name   string
+		spec   *testsignature
+		hasCtx bool
+		fn     interface{}
+		in     []interface{}
+
+		out []interface{}
+		err error
 	}{
 		{
-			Name:           "none required none provided",
-			Spec:           (&testsignature{}).withArgs(),
-			Fn:             func(context.Context) (*struct{}, error) { return nil, nil },
-			HasContext:     false,
-			Input:          []interface{}{},
-			ExpectedOutput: []interface{}{},
-			ExpectedErr:    nil,
+			name:   "none required none provided",
+			spec:   (&testsignature{}).withArgs(),
+			fn:     func(context.Context) (*struct{}, error) { return nil, nil },
+			hasCtx: false,
+			in:     []interface{}{},
+			out:    []interface{}{},
+			err:    nil,
 		},
 		{
-			Name:           "no input with error",
-			Spec:           (&testsignature{}).withArgs(),
-			Fn:             func(context.Context) (*struct{}, error) { return nil, api.ErrForbidden },
-			HasContext:     false,
-			Input:          []interface{}{},
-			ExpectedOutput: []interface{}{},
-			ExpectedErr:    api.ErrForbidden,
+			name:   "no input with error",
+			spec:   (&testsignature{}).withArgs(),
+			fn:     func(context.Context) (*struct{}, error) { return nil, api.ErrForbidden },
+			hasCtx: false,
+			in:     []interface{}{},
+			out:    []interface{}{},
+			err:    api.ErrForbidden,
 		},
 		{
-			Name: "int proxy (0)",
-			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+			name: "int proxy (0)",
+			spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
+			fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
 				return &intstruct{P1: in.P1}, nil
 			},
-			HasContext:     false,
-			Input:          []interface{}{int(0)},
-			ExpectedOutput: []interface{}{int(0)},
-			ExpectedErr:    nil,
+			hasCtx: false,
+			in:     []interface{}{int(0)},
+			out:    []interface{}{int(0)},
+			err:    nil,
 		},
 		{
-			Name: "int proxy with error",
-			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+			name: "int proxy with error",
+			spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
+			fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
 				return &intstruct{P1: in.P1}, api.ErrNotImplemented
 			},
-			HasContext:     false,
-			Input:          []interface{}{int(0)},
-			ExpectedOutput: []interface{}{int(0)},
-			ExpectedErr:    api.ErrNotImplemented,
+			hasCtx: false,
+			in:     []interface{}{int(0)},
+			out:    []interface{}{int(0)},
+			err:    api.ErrNotImplemented,
 		},
 		{
-			Name: "int proxy (11)",
-			Spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			Fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+			name: "int proxy (11)",
+			spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
+			fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
 				return &intstruct{P1: in.P1}, nil
 			},
-			HasContext:     false,
-			Input:          []interface{}{int(11)},
-			ExpectedOutput: []interface{}{int(11)},
-			ExpectedErr:    nil,
+			hasCtx: false,
+			in:     []interface{}{int(11)},
+			out:    []interface{}{int(11)},
+			err:    nil,
 		},
 		{
-			Name: "*int proxy (nil)",
-			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx context.Context, in intptrstruct) (*intptrstruct, error) {
+			name: "*int proxy (nil)",
+			spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
+			fn: func(ctx context.Context, in intptrstruct) (*intptrstruct, error) {
 				return &intptrstruct{P1: in.P1}, nil
 			},
-			HasContext:     false,
-			Input:          []interface{}{},
-			ExpectedOutput: []interface{}{nil},
-			ExpectedErr:    nil,
+			hasCtx: false,
+			in:     []interface{}{},
+			out:    []interface{}{nil},
+			err:    nil,
 		},
 		{
-			Name: "*int proxy (28)",
-			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
+			name: "*int proxy (28)",
+			spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
+			fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
 				return &intstruct{P1: *in.P1}, nil
 			},
-			HasContext:     false,
-			Input:          []interface{}{28},
-			ExpectedOutput: []interface{}{28},
-			ExpectedErr:    nil,
+			hasCtx: false,
+			in:     []interface{}{28},
+			out:    []interface{}{28},
+			err:    nil,
 		},
 		{
-			Name: "*int proxy (13)",
-			Spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			Fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
+			name: "*int proxy (13)",
+			spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
+			fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
 				return &intstruct{P1: *in.P1}, nil
 			},
-			HasContext:     false,
-			Input:          []interface{}{13},
-			ExpectedOutput: []interface{}{13},
-			ExpectedErr:    nil,
+			hasCtx: false,
+			in:     []interface{}{13},
+			out:    []interface{}{13},
+			err:    nil,
 		},
 	}
 
-	for _, tcase := range tcases {
-		t.Run(tcase.Name, func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			var handler = &Handler{
-				signature: &Signature{Input: tcase.Spec.Input, Output: tcase.Spec.Output},
-				fn:        tcase.Fn,
+				signature: &Signature{Input: tc.spec.Input, Output: tc.spec.Output},
+				fn:        tc.fn,
 			}
 
 			// build input
 			input := make(map[string]interface{})
-			for i, val := range tcase.Input {
+			for i, val := range tc.in {
 				var key = fmt.Sprintf("P%d", i+1)
 				input[key] = val
 			}
 
 			var output, err = handler.Handle(context.Background(), input)
-			if err != tcase.ExpectedErr {
-				t.Fatalf("expected api error <%v> got <%v>", tcase.ExpectedErr, err)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 
 			// check output
-			for i, expected := range tcase.ExpectedOutput {
+			for i, expect := range tc.out {
 				var (
 					key         = fmt.Sprintf("P%d", i+1)
 					val, exists = output[key]
@@ -166,18 +168,18 @@ func TestInput(t *testing.T) {
 				if !exists {
 					t.Fatalf("missing output[%s]", key)
 				}
-				if expected != val {
+				if expect != val {
 					var (
-						expectedt   = reflect.ValueOf(expected)
-						valt        = reflect.ValueOf(val)
-						expectedNil = !expectedt.IsValid() || expectedt.Kind() == reflect.Ptr && expectedt.IsNil()
-						valNil      = !valt.IsValid() || valt.Kind() == reflect.Ptr && valt.IsNil()
+						expectt   = reflect.ValueOf(expect)
+						valt      = reflect.ValueOf(val)
+						expectNil = !expectt.IsValid() || expectt.Kind() == reflect.Ptr && expectt.IsNil()
+						valNil    = !valt.IsValid() || valt.Kind() == reflect.Ptr && valt.IsNil()
 					)
 					// ignore both nil
-					if valNil && expectedNil {
+					if valNil && expectNil {
 						continue
 					}
-					t.Fatalf("expected output[%s] to equal %T <%v> got %T <%v>", key, expected, expected, val, val)
+					t.Fatalf("invalid output %q\nactual: (%T) %v\nexpect: (%T) %v", key, val, val, expect, expect)
 				}
 			}
 

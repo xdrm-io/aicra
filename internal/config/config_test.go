@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,11 +13,86 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
+func TestNoOpValidator(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name string
+
+		valName string
+		valType reflect.Type
+
+		typename string
+		value    interface{}
+		match    bool
+	}{
+		{
+			name:     "string mismatch",
+			valName:  "string",
+			valType:  reflect.TypeOf(""),
+			typename: "uint",
+			value:    "abc",
+		},
+		{
+			name:     "string match",
+			valName:  "string",
+			valType:  reflect.TypeOf(""),
+			typename: "string",
+			value:    "abc",
+			match:    true,
+		},
+		{
+			name:     "uint mismatch",
+			valName:  "uint",
+			valType:  reflect.TypeOf(uint(0)),
+			typename: "string",
+			value:    uint(123),
+		},
+		{
+			name:     "uint match",
+			valName:  "uint",
+			valType:  reflect.TypeOf(uint(0)),
+			typename: "uint",
+			value:    uint(123),
+			match:    true,
+		},
+		{
+			name:     "uint match invalid",
+			valName:  "uint",
+			valType:  reflect.TypeOf(uint(0)),
+			typename: "uint",
+			value:    "abc", // validation is never used, anything is considered valid
+			match:    true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			v := noOp{name: tc.valName, goType: tc.valType}
+
+			if v.GoType() != tc.valType {
+				t.Fatalf("invalid go type\nactual: %v\nexpect: %v", v.GoType(), tc.valType)
+			}
+
+			validate := v.Validator(tc.typename)
+			match := (validate != nil)
+			if match != tc.match {
+				t.Fatalf("invalid match\nactual: %t\nexpect: %t", match, tc.match)
+			}
+			if !tc.match || !match {
+				return
+			}
+			if _, valid := validate(tc.value); !valid {
+				t.Fatalf("expect to always be valid")
+			}
+		})
+	}
+}
+
 func TestAddInputType(t *testing.T) {
 	t.Parallel()
 
 	srv := &Server{}
-
 	srv.AddInputValidator(validator.BoolType{})
 	if srv.Input == nil {
 		t.Fatalf("input is nil")
@@ -33,7 +109,6 @@ func TestAddOutputType(t *testing.T) {
 	t.Parallel()
 
 	srv := &Server{}
-
 	srv.AddOutputValidator("bool", reflect.TypeOf(true))
 	if srv.Output == nil {
 		t.Fatalf("input is nil")
@@ -47,141 +122,145 @@ func TestAddOutputType(t *testing.T) {
 	}
 }
 
-func TestLegalServiceName(t *testing.T) {
+func TestLegalServicePath(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		Raw   string
-		Error error
+	tt := []struct {
+		name string
+		conf string
+		err  error
 	}{
-		// empty
 		{
-			`[ { "method": "GET", "info": "a", "path": "" } ]`,
-			ErrInvalidPattern,
+			name: "empty path",
+			conf: `[ { "method": "GET", "info": "a", "path": "" } ]`,
+			err:  ErrInvalidPattern,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "no-starting-slash" } ]`,
-			ErrInvalidPattern,
+			name: "path no starting slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "no-starting-slash" } ]`,
+			err:  ErrInvalidPattern,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "ending-slash/" } ]`,
-			ErrInvalidPattern,
+			name: "path ending slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "ending-slash/" } ]`,
+			err:  ErrInvalidPattern,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/" } ]`,
-			nil,
+			name: "root path",
+			conf: `[ { "method": "GET", "info": "a", "path": "/" } ]`,
+			err:  nil,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/valid-name" } ]`,
-			nil,
+			name: "valid path",
+			conf: `[ { "method": "GET", "info": "a", "path": "/valid-name" } ]`,
+			err:  nil,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/valid/nested/name" } ]`,
-			nil,
+			name: "valid nested path",
+			conf: `[ { "method": "GET", "info": "a", "path": "/valid/nested/name" } ]`,
+			err:  nil,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}" } ]`,
-			ErrInvalidPatternBraceCapture,
+			name: "capture not after slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}" } ]`,
+			err:  ErrInvalidPatternBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}a" } ]`,
-			ErrInvalidPatternBraceCapture,
+			name: "capture not before slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{braces}a" } ]`,
+			err:  ErrInvalidPatternBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}" } ]`,
-			ErrUndefinedBraceCapture,
+			name: "valid ending capture",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{braces}" } ]`,
+			err:  ErrUndefinedBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}/abc" } ]`,
-			ErrInvalidPatternBraceCapture,
+			name: "invalid middle capture before slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}/abc" } ]`,
+			err:  ErrInvalidPatternBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}s/abc" } ]`,
-			ErrInvalidPatternBraceCapture,
+			name: "invalid middle capture after slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{braces}s/abc" } ]`,
+			err:  ErrInvalidPatternBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/abc" } ]`,
-			ErrUndefinedBraceCapture,
+			name: "valid middle capture",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/abc" } ]`,
+			err:  ErrUndefinedBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/{b{races}s/abc" } ]`,
-			ErrInvalidPatternBraceCapture,
+			name: "invalid middle capture with {",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{b{races}s/abc" } ]`,
+			err:  ErrInvalidPatternBraceCapture,
 		},
 		{
-			`[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/}abc" } ]`,
-			ErrInvalidPatternBraceCapture,
+			name: "valid middle capture invalid } after slash",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{braces}/}abc" } ]`,
+			err:  ErrInvalidPatternBraceCapture,
 		},
 	}
 
-	for i, test := range tests {
-
-		t.Run(fmt.Sprintf("service.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			err := srv.Parse(strings.NewReader(test.Raw))
-
-			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: '%s'", test.Error.Error())
-				t.FailNow()
-			}
-			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
-				t.FailNow()
-			}
-
-			if err != nil && test.Error != nil {
-				if !errors.Is(err, test.Error) {
-					t.Errorf("expected the error '%s' (got '%s')", test.Error.Error(), err.Error())
-					t.FailNow()
-				}
+			err := srv.Parse(strings.NewReader(tc.conf))
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 		})
 	}
 }
 func TestAvailableMethods(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Raw         string
-		ValidMethod bool
+
+	tt := []struct {
+		name        string
+		conf        string
+		validMethod bool
 	}{
-		{ // missing description
-			`[ { "method": "GET", "path": "/", "info": "valid-description" }]`,
-			true,
+		{
+			name:        "missing description",
+			conf:        `[ { "method": "GET", "path": "/", "info": "valid-description" }]`,
+			validMethod: true,
 		},
-		{ // missing description
-			`[ { "method": "POST", "path": "/", "info": "valid-description" }]`,
-			true,
+		{
+			name:        "missing description",
+			conf:        `[ { "method": "POST", "path": "/", "info": "valid-description" }]`,
+			validMethod: true,
 		},
-		{ // empty description
-			`[ { "method": "PUT", "path": "/", "info": "valid-description" }]`,
-			true,
+		{
+			name:        "empty description",
+			conf:        `[ { "method": "PUT", "path": "/", "info": "valid-description" }]`,
+			validMethod: true,
 		},
-		{ // empty trimmed description
-			`[ { "method": "DELETE", "path": "/", "info": "valid-description" }]`,
-			true,
+		{
+			name:        "empty trimmed description",
+			conf:        `[ { "method": "DELETE", "path": "/", "info": "valid-description" }]`,
+			validMethod: true,
 		},
-		{ // valid description
-			`[ { "method": "get", "path": "/", "info": "valid-description" }]`,
-			false,
+		{
+			name:        "valid description",
+			conf:        `[ { "method": "get", "path": "/", "info": "valid-description" }]`,
+			validMethod: false,
 		},
-		{ // valid description
-			`[ { "method": "UNknOwN", "path": "/", "info": "valid-description" }]`,
-			false,
+		{
+			name:        "valid description",
+			conf:        `[ { "method": "UNknOwN", "path": "/", "info": "valid-description" }]`,
+			validMethod: false,
 		},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("service.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			err := srv.Parse(strings.NewReader(test.Raw))
-
-			if test.ValidMethod && err != nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
-				t.FailNow()
+			err := srv.Parse(strings.NewReader(tc.conf))
+			if tc.validMethod && err != nil {
+				t.Fatalf("unexpected error: %q", err.Error())
 			}
-
-			if !test.ValidMethod && !errors.Is(err, ErrUnknownMethod) {
-				t.Errorf("expected error <%s> got <%s>", ErrUnknownMethod, err)
-				t.FailNow()
+			if !tc.validMethod && !errors.Is(err, ErrUnknownMethod) {
+				t.Fatalf("expected error <%s> got <%s>", ErrUnknownMethod, err)
 			}
 		})
 	}
@@ -192,70 +271,70 @@ func TestParseEmpty(t *testing.T) {
 	srv := &Server{}
 	err := srv.Parse(r)
 	if err != nil {
-		t.Errorf("unexpected error (got '%s')", err)
-		t.FailNow()
+		t.Fatalf("unexpected error (got %q)", err)
 	}
 }
 func TestParseJsonError(t *testing.T) {
 	r := strings.NewReader(`{
-		"GET": {
-			"info": "info
-		},
+		"GET": { "info": "info },
 	}`) // trailing ',' is invalid JSON
 	srv := &Server{}
 	err := srv.Parse(r)
 	if err == nil {
-		t.Errorf("expected error")
-		t.FailNow()
+		t.Fatalf("expected error")
 	}
 }
 
 func TestParseMissingMethodDescription(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Raw              string
-		ValidDescription bool
+
+	tt := []struct {
+		name      string
+		conf      string
+		validDesc bool
 	}{
-		{ // missing description
-			`[ { "method": "GET", "path": "/" }]`,
-			false,
+		{
+			name:      "missing description",
+			conf:      `[ { "method": "GET", "path": "/" }]`,
+			validDesc: false,
 		},
-		{ // missing descriptiontype
-			`[ { "method": "GET", "path": "/subservice" }]`,
-			false,
+		{
+			name:      "missing descriptiontype",
+			conf:      `[ { "method": "GET", "path": "/subservice" }]`,
+			validDesc: false,
 		},
-		{ // empty description
-			`[ { "method": "GET", "path": "/", "info": "" }]`,
-			false,
+		{
+			name:      "empty description",
+			conf:      `[ { "method": "GET", "path": "/", "info": "" }]`,
+			validDesc: false,
 		},
-		{ // empty trimmed description
-			`[ { "method": "GET", "path": "/", "info": " " }]`,
-			false,
+		{
+			name:      "empty trimmed description",
+			conf:      `[ { "method": "GET", "path": "/", "info": " " }]`,
+			validDesc: false,
 		},
-		{ // valid description
-			`[ { "method": "GET", "path": "/", "info": "a" }]`,
-			true,
+		{
+			name:      "valid description",
+			conf:      `[ { "method": "GET", "path": "/", "info": "a" }]`,
+			validDesc: true,
 		},
-		{ // valid description
-			`[ { "method": "GET", "path": "/", "info": "some description" }]`,
-			true,
+		{
+			name:      "valid description",
+			conf:      `[ { "method": "GET", "path": "/", "info": "some description" }]`,
+			validDesc: true,
 		},
 	}
 
-	for i, test := range tests {
+	for _, tc := range tt {
 
-		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			err := srv.Parse(strings.NewReader(test.Raw))
-
-			if test.ValidDescription && err != nil {
-				t.Errorf("unexpected error: '%s'", err)
-				t.FailNow()
+			err := srv.Parse(strings.NewReader(tc.conf))
+			if tc.validDesc && err != nil {
+				t.Fatalf("unexpected error: %q", err)
 			}
-
-			if !test.ValidDescription && !errors.Is(err, ErrMissingDescription) {
-				t.Errorf("expected error <%s> got <%s>", ErrMissingDescription, err)
-				t.FailNow()
+			if !tc.validDesc && !errors.Is(err, ErrMissingDescription) {
+				t.Fatalf("expected error <%s> got <%s>", ErrMissingDescription, err)
 			}
 		})
 	}
@@ -275,22 +354,19 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 		}
 	]`)
 	srv := &Server{}
-	srv.Input = append(srv.Input, validator.AnyType{})
+	srv.AddInputValidator(validator.AnyType{})
 	err := srv.Parse(r)
 	if err != nil {
-		t.Errorf("unexpected error: '%s'", err)
-		t.FailNow()
+		t.Fatalf("unexpected error: %q", err)
 	}
 
 	if len(srv.Services) < 1 {
-		t.Errorf("expected a service")
-		t.FailNow()
+		t.Fatalf("expected a service")
 	}
 
 	for _, param := range srv.Services[0].Input {
 		if param.Rename != "original" {
-			t.Errorf("expected the parameter 'original' not to be renamed to '%s'", param.Rename)
-			t.FailNow()
+			t.Fatalf("expected the parameter 'original' not to be renamed to %q", param.Rename)
 		}
 	}
 
@@ -428,6 +504,7 @@ func TestMissingParam(t *testing.T) {
 
 func TestOptionalParam(t *testing.T) {
 	t.Parallel()
+
 	r := strings.NewReader(`[
 		{
 			"method": "GET",
@@ -442,30 +519,25 @@ func TestOptionalParam(t *testing.T) {
 		}
 	]`)
 	srv := &Server{}
-	srv.Input = append(srv.Input, validator.AnyType{})
-	srv.Input = append(srv.Input, validator.BoolType{})
+	srv.AddInputValidator(validator.AnyType{})
+	srv.AddInputValidator(validator.BoolType{})
 	err := srv.Parse(r)
 	if err != nil {
-		t.Errorf("unexpected error: '%s'", err)
-		t.FailNow()
+		t.Fatalf("unexpected error: %q", err)
 	}
 
 	if len(srv.Services) < 1 {
-		t.Errorf("expected a service")
-		t.FailNow()
+		t.Fatalf("expected a service")
 	}
 	for pName, param := range srv.Services[0].Input {
-
 		if pName == "optional" || pName == "optional2" {
 			if !param.Optional {
-				t.Errorf("expected parameter '%s' to be optional", pName)
-				t.Failed()
+				t.Fatalf("expected parameter %q to be optional", pName)
 			}
 		}
 		if pName == "required" || pName == "required2" {
 			if param.Optional {
-				t.Errorf("expected parameter '%s' to be required", pName)
-				t.Failed()
+				t.Fatalf("expected parameter %q to be required", pName)
 			}
 		}
 	}
@@ -473,52 +545,52 @@ func TestOptionalParam(t *testing.T) {
 }
 func TestParseParameters(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Raw   string
-		Error error
+
+	tt := []struct {
+		name string
+		conf string
+		err  error
 	}{
-		{ // invalid param name prefix
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"_param1": { }
-					}
+		{
+			name: "invalid param name prefix",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"_param1": { }
 				}
-			]`,
-			ErrMissingParamDesc,
+			} ]`,
+			err: ErrMissingParamDesc,
 		},
-		{ // invalid param name suffix
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1_": { }
-					}
+		{
+			name: "invalid param name suffix",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1_": { }
 				}
-			]`,
-			ErrMissingParamDesc,
+			} ]`,
+			err: ErrMissingParamDesc,
 		},
 
-		{ // missing param description
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { }
-					}
+		{
+			name: "missing param info",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { }
 				}
-			]`,
-			ErrMissingParamDesc,
+			} ]`,
+			err: ErrMissingParamDesc,
 		},
-		{ // empty param description
-			`[
+		{
+			name: "empty param info",
+			conf: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -528,677 +600,688 @@ func TestParseParameters(t *testing.T) {
 					}
 				}
 			]`,
-			ErrMissingParamDesc,
+			err: ErrMissingParamDesc,
 		},
 
-		{ // missing param type
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid" }
-					}
-				}
-			]`,
-			ErrMissingParamType,
-		},
-		{ // empty param type
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "" }
-					}
-				}
-			]`,
-			ErrMissingParamType,
-		},
-		{ // invalid type (optional mark only)
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "?" }
-					}
-				}
-			]`,
-
-			ErrMissingParamType,
-		},
-		{ // valid description + valid type
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "any" }
-					}
-				}
-			]`,
-			nil,
-		},
-		{ // valid description + valid OPTIONAL type
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "?any" }
-					}
-				}
-			]`,
-			nil,
-		},
-
-		{ // name conflict with rename
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "any" },
-						"param2": { "info": "valid", "type": "any", "name": "param1" }
-					}
-				}
-			]`,
-			// 2 possible errors as map order is not deterministic
-			ErrParamNameConflict,
-		},
-		{ // rename conflict with name
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "any", "name": "param2" },
-						"param2": { "info": "valid", "type": "any" }
-					}
-				}
-			]`,
-			// 2 possible errors as map order is not deterministic
-			ErrParamNameConflict,
-		},
-		{ // rename conflict with rename
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "any", "name": "conflict" },
-						"param2": { "info": "valid", "type": "any", "name": "conflict" }
-					}
-				}
-			]`,
-			// 2 possible errors as map order is not deterministic
-			ErrParamNameConflict,
-		},
-
-		{ // both renamed with no conflict
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"param1": { "info": "valid", "type": "any", "name": "freename" },
-						"param2": { "info": "valid", "type": "any", "name": "freename2" }
-					}
-				}
-			]`,
-			nil,
-		},
-		// missing rename
 		{
-			`[
-				{
-					"method": "GET",
-					"path": "/{uri}",
-					"info": "info",
-					"in": {
-						"{uri}": { "info": "valid", "type": "any" }
-					}
+			name: "missing param type",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid" }
 				}
-			]`,
-			ErrMandatoryRename,
+			} ]`,
+			err: ErrMissingParamType,
 		},
 		{
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"GET@abc": { "info": "valid", "type": "any" }
-					}
+			name: "empty param type",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "" }
 				}
-			]`,
-			ErrMandatoryRename,
+			} ]`,
+			err: ErrMissingParamType,
 		},
 		{
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"GET@abc": { "info": "valid", "type": "any", "name": "abc" }
-					}
+			name: "invalid type: optional mark only",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "?" }
 				}
-			]`,
-			nil,
+			} ]`,
+			err: ErrMissingParamType,
+		},
+		{
+			name: "valid description and type",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "any" }
+				}
+			} ]`,
+			err: nil,
+		},
+		{
+			name: "valid description and optional type",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "?any" }
+				}
+			} ]`,
+			err: nil,
 		},
 
-		{ // URI parameter
-			`[
-				{
-					"method": "GET",
-					"path": "/{uri}",
-					"info": "info",
-					"in": {
-						"{uri}": { "info": "valid", "type": "any", "name": "freename" }
-					}
+		{
+			name: "name conflict with rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "any" },
+					"param2": { "info": "valid", "type": "any", "name": "param1" }
 				}
-			]`,
-			nil,
+			} ]`,
+			// 2 possible errors as map order is not deterministic
+			err: ErrParamNameConflict,
 		},
-		{ // URI parameter cannot be optional
-			`[
-				{
-					"method": "GET",
-					"path": "/{uri}",
-					"info": "info",
-					"in": {
-						"{uri}": { "info": "valid", "type": "?any", "name": "freename" }
-					}
+		{
+			name: "rename conflict with name",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "any", "name": "param2" },
+					"param2": { "info": "valid", "type": "any" }
 				}
-			]`,
-			ErrIllegalOptionalURIParam,
+			} ]`,
+			// 2 possible errors as map order is not deterministic
+			err: ErrParamNameConflict,
 		},
-		{ // URI parameter not specified
-			`[
-				{
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {
-						"{uri}": { "info": "valid", "type": "?any", "name": "freename" }
-					}
+		{
+			name: "rename conflict with rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "any", "name": "conflict" },
+					"param2": { "info": "valid", "type": "any", "name": "conflict" }
 				}
-			]`,
-			ErrUnspecifiedBraceCapture,
+			} ]`,
+			// 2 possible errors as map order is not deterministic
+			err: ErrParamNameConflict,
 		},
-		{ // URI parameter not defined
-			`[
-				{
-					"method": "GET",
-					"path": "/{uri}",
-					"info": "info",
-					"in": { }
+
+		{
+			name: "both renamed with no conflict",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"param1": { "info": "valid", "type": "any", "name": "freename" },
+					"param2": { "info": "valid", "type": "any", "name": "freename2" }
 				}
-			]`,
-			ErrUndefinedBraceCapture,
+			} ]`,
+			err: nil,
+		},
+		{
+			name: "missing uri rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/{uri}",
+				"info": "info",
+				"in": {
+					"{uri}": { "info": "valid", "type": "any" }
+				}
+			} ]`,
+			err: ErrMandatoryRename,
+		},
+		{
+			name: "valid uri with rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/{uri}",
+				"info": "info",
+				"in": {
+					"{uri}": { "info": "valid", "type": "any", "name": "freename" }
+				}
+			} ]`,
+			err: nil,
+		},
+		{
+			name: "missing query rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"GET@abc": { "info": "valid", "type": "any" }
+				}
+			} ]`,
+			err: ErrMandatoryRename,
+		},
+		{
+			name: "valid query with rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"GET@abc": { "info": "valid", "type": "any", "name": "abc" }
+				}
+			} ]`,
+			err: nil,
+		},
+
+		{
+			name: "optional uri",
+			conf: `[ {
+				"method": "GET",
+				"path": "/{uri}",
+				"info": "info",
+				"in": {
+					"{uri}": { "info": "valid", "type": "?any", "name": "freename" }
+				}
+			} ]`,
+			err: ErrIllegalOptionalURIParam,
+		},
+		{
+			name: "uri missing in path",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"{uri}": { "info": "valid", "type": "?any", "name": "freename" }
+				}
+			} ]`,
+			err: ErrUnspecifiedBraceCapture,
+		},
+		{
+			name: "missing uri from path",
+			conf: `[ {
+				"method": "GET",
+				"path": "/{uri}",
+				"info": "info",
+				"in": { }
+			} ]`,
+			err: ErrUndefinedBraceCapture,
 		},
 	}
 
-	for i, test := range tests {
-
-		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			srv.Input = append(srv.Input, validator.AnyType{})
-			err := srv.Parse(strings.NewReader(test.Raw))
-
-			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: '%s'", test.Error.Error())
-				t.FailNow()
-			}
-			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
-				t.FailNow()
-			}
-
-			if err != nil && test.Error != nil {
-				if !errors.Is(err, test.Error) {
-					t.Errorf("expected the error <%s> got <%s>", test.Error, err)
-					t.FailNow()
-				}
+			srv.AddInputValidator(validator.AnyType{})
+			err := srv.Parse(strings.NewReader(tc.conf))
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 		})
 	}
 
 }
 
+func serializeParams(t *testing.T, params map[string]string) []byte {
+	var parameters = map[string]*Parameter{}
+	for k, t := range params {
+		parameters[k] = &Parameter{
+			Description: "info",
+			Type:        t,
+			GoType:      validator.StringType{}.GoType(),
+			Validator:   validator.StringType{}.Validator(t),
+			Rename:      strings.TrimSuffix(strings.TrimPrefix(k, "{"), "}"),
+		}
+		if t == "bool" {
+			parameters[k].GoType = validator.BoolType{}.GoType()
+			parameters[k].Validator = validator.BoolType{}.Validator(t)
+		}
+	}
+
+	raw, err := json.Marshal(parameters)
+	if err != nil {
+		t.Fatalf("cannot serialize: %s", err)
+	}
+	return raw
+}
+
 func TestServiceCollision(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Config string
-		Error  error
+
+	type service struct {
+		method string
+		path   string
+		params map[string]string // name: type
+	}
+
+	tt := []struct {
+		name       string
+		srv1, srv2 service
+		err        error
 	}{
 		{
-			`[
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/b",
-					"info": "info", "in": {}
-				}
-			]`,
-			nil,
+			name: "diff 1-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/b"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "diff 2-part",
+			srv1: service{method: "GET", path: "/a/b"},
+			srv2: service{method: "GET", path: "/a/c"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				}
-			]`,
-			nil,
+			name: "diff 1-part 2-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/a/b"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				}
-			]`,
-			nil,
+			name: "same 1-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/a"},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "same diff method",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "POST", path: "/a"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "collide 2nd part",
+			srv1: service{method: "GET", path: "/a/b"},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "collide 2nd part invert",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			srv2: service{method: "GET", path: "/a/b"},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "diff 2nd part incompatible type",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/b"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "middle path collision",
+			srv1: service{method: "GET", path: "/a/b/c"},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "middle path collision inverted",
+			srv1: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			srv2: service{method: "GET", path: "/a/b/c"},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "diff middle path collision type",
+			srv1: service{method: "GET", path: "/a/b/c"},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "diff middle path collision type inverted",
+			srv1: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/b/c"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "collide left additional part",
+			srv1: service{method: "GET", path: "/a/123/c"},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "collide left additional part inverted",
+			srv1: service{method: "GET", path: "/a/123"},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/{b}",
-					"info": "info", "in": {
-						"{b}": { "info":"info", "type": "uint", "name": "b" }
-					}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "collide uint",
+			srv1: service{method: "GET", path: "/a/123"},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/{b}",
-					"info": "info", "in": {
-						"{b}": { "info":"info", "type": "uint", "name": "b" }
-					}
-				},
-				{ "method": "PUT", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil, // different methods
+			name: "colliding end captures",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			err:  ErrPatternCollision,
+		},
+		{
+			name: "colliding end captures diff types",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			err:  ErrPatternCollision,
+		},
+		{
+			name: "colliding middle captures",
+			srv1: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			err:  ErrPatternCollision,
 		},
 	}
 
-	for i, test := range tests {
-
-		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			srv.Input = append(srv.Input, validator.StringType{})
-			srv.Input = append(srv.Input, validator.UintType{})
-			err := srv.Parse(strings.NewReader(test.Config))
+			srv.AddInputValidator(validator.StringType{})
+			srv.AddInputValidator(validator.UintType{})
 
-			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: '%s'", test.Error.Error())
-				t.FailNow()
+			var (
+				params1 = serializeParams(t, tc.srv1.params)
+				params2 = serializeParams(t, tc.srv2.params)
+			)
+
+			raw := fmt.Sprintf(`[
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s },
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s }
+				]`,
+				tc.srv1.method, tc.srv1.path, params1,
+				tc.srv2.method, tc.srv2.path, params2,
+			)
+
+			err := srv.Parse(strings.NewReader(raw))
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
-			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
-				t.FailNow()
+		})
+	}
+}
+
+func TestServiceCollisionPanic(t *testing.T) {
+	t.Parallel()
+
+	type service struct {
+		method string
+		path   string
+		params map[string]string // name: type
+	}
+
+	tt := []struct {
+		name       string
+		srv1, srv2 service
+		panics     bool
+	}{
+		{
+			name: "same 1-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/a"},
+		},
+		{
+			name:   "collide 2nd part",
+			srv1:   service{method: "GET", path: "/a/b"},
+			srv2:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			panics: true,
+		},
+		{
+			name:   "collide 2nd part invert",
+			srv1:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			srv2:   service{method: "GET", path: "/a/b"},
+			panics: true,
+		},
+		{
+			name:   "middle path collision",
+			srv1:   service{method: "GET", path: "/a/b/c"},
+			srv2:   service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			panics: true,
+		},
+		{
+			name:   "middle path collision inverted",
+			srv1:   service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			srv2:   service{method: "GET", path: "/a/b/c"},
+			panics: true,
+		},
+		{
+			name:   "colliding end captures",
+			srv1:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			panics: false, // exit before we can panic
+		},
+		{
+			name:   "colliding end captures diff types",
+			srv1:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			panics: false, // exit before we can panic
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run("missing param:"+tc.name, func(t *testing.T) {
+			srv := &Server{}
+			srv.AddInputValidator(validator.StringType{})
+			srv.AddInputValidator(validator.UintType{})
+
+			var (
+				params1 = serializeParams(t, tc.srv1.params)
+				params2 = serializeParams(t, tc.srv2.params)
+			)
+
+			raw := fmt.Sprintf(`[
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s },
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s }
+				]`,
+				tc.srv1.method, tc.srv1.path, params1,
+				tc.srv2.method, tc.srv2.path, params2,
+			)
+
+			// parse first but ignore error
+			srv.Parse(strings.NewReader(raw))
+
+			// remove parameters
+			for _, svc := range srv.Services {
+				svc.Input = map[string]*Parameter{}
 			}
 
-			if err != nil && test.Error != nil {
-				if !errors.Is(err, test.Error) {
-					t.Errorf("expected the error <%s> got <%s>", test.Error, err)
-					t.FailNow()
+			// recheck for collissions
+			defer func() {
+				r := recover()
+				if r == nil && tc.panics {
+					t.Fatalf("expected a panic")
+				}
+				if r != nil && !tc.panics {
+					t.Fatalf("unexpected panic")
+				}
+			}()
+			srv.collide()
+		})
+
+		t.Run("nil validator:"+tc.name, func(t *testing.T) {
+			srv := &Server{}
+			srv.AddInputValidator(validator.StringType{})
+			srv.AddInputValidator(validator.UintType{})
+
+			var (
+				params1 = serializeParams(t, tc.srv1.params)
+				params2 = serializeParams(t, tc.srv2.params)
+			)
+
+			raw := fmt.Sprintf(`[
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s },
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s }
+				]`,
+				tc.srv1.method, tc.srv1.path, params1,
+				tc.srv2.method, tc.srv2.path, params2,
+			)
+
+			// parse first but ignore error
+			srv.Parse(strings.NewReader(raw))
+
+			// remove param validators
+			for _, svc := range srv.Services {
+				for i, _ := range svc.Input {
+					svc.Input[i].Validator = nil
 				}
 			}
+
+			// recheck for collissions
+			defer func() {
+				r := recover()
+				if r == nil && tc.panics {
+					t.Fatalf("expected a panic")
+				}
+				if r != nil && !tc.panics {
+					t.Fatalf("unexpected panic")
+				}
+			}()
+			srv.collide()
 		})
 	}
 }
 
 func TestMatchSimple(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Config string
-		URL    string
-		Match  bool
+	tt := []struct {
+		name  string
+		conf  string
+		uri   string
+		match bool
 	}{
-		{ // false positive -1
-			`[ {
-					"method": "GET",
-					"path": "/a",
-					"info": "info",
-					"in": {}
+		{
+			name: "incomplete uri",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a",
+				"info": "info",
+				"in": {}
 			} ]`,
-			"/",
-			false,
-		},
-		{ // false positive +1
-			`[ {
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {}
-			} ]`,
-			"/a",
-			false,
-		},
-		{ // root url
-			`[ {
-					"method": "GET",
-					"path": "/a",
-					"info": "info",
-					"in": {}
-			} ]`,
-			"/",
-			false,
+			uri:   "/",
+			match: false,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a",
-					"info": "info",
-					"in": {}
+			name: "additional parts",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {}
 			} ]`,
-			"/",
-			false,
+			uri:   "/a",
+			match: false,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/",
-					"info": "info",
-					"in": {}
+			name: "root match",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {}
 			} ]`,
-			"/",
-			true,
+			uri:   "/",
+			match: true,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a",
-					"info": "info",
-					"in": {}
+			name: "1part uri match",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a",
+				"info": "info",
+				"in": {}
 			} ]`,
-			"/a",
-			true,
+			uri:   "/a",
+			match: true,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a",
-					"info": "info",
-					"in": {}
+			name: "1part uri match ending slash",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a",
+				"info": "info",
+				"in": {}
 			} ]`,
-			"/a/",
-			true,
+			uri:   "/a/",
+			match: true,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a",
-					"info": "info",
-					"in": {}
+			name: "1part uri match ending slashes",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a",
+				"info": "info",
+				"in": {}
 			} ]`,
-			"/a?param=value",
-			true,
+			uri:   "/a///////",
+			match: true,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a/{id}",
-					"info": "info",
-					"in": {
-						"{id}": {
-							"info": "info",
-							"type": "bool",
-							"name": "id"
-						}
+			name: "1part ignored query",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a",
+				"info": "info",
+				"in": {}
+			} ]`,
+			uri:   "/a?param=value",
+			match: true,
+		},
+		{
+			name: "2part mismatching bool",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a/{id}",
+				"info": "info",
+				"in": {
+					"{id}": { "info": "info", "type": "bool", "name": "id"
 					}
+				}
 			} ]`,
-			"/a/12/",
-			false,
+			uri:   "/a/12/",
+			match: false,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a/{id}",
-					"info": "info",
-					"in": {
-						"{id}": {
-							"info": "info",
-							"type": "int",
-							"name": "id"
-						}
-					}
+			name: "2part matching int",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a/{id}",
+				"info": "info",
+				"in": {
+					"{id}": { "info": "info", "type": "int", "name": "id" }
+				}
 			} ]`,
-			"/a/12/",
-			true,
+			uri:   "/a/12/",
+			match: true,
 		},
 		{
-			`[ {
-					"method": "GET",
-					"path": "/a/{valid}",
-					"info": "info",
-					"in": {
-						"{valid}": {
-							"info": "info",
-							"type": "bool",
-							"name": "valid"
-						}
-					}
+			name: "2part matching bool",
+			conf: `[ {
+				"method": "GET",
+				"path": "/a/{valid}",
+				"info": "info",
+				"in": {
+					"{valid}": { "info": "info", "type": "bool", "name": "valid" }
+				}
 			} ]`,
-			"/a/12/",
-			false,
-		},
-		{
-			`[ {
-					"method": "GET",
-					"path": "/a/{valid}",
-					"info": "info",
-					"in": {
-						"{valid}": {
-							"info": "info",
-							"type": "bool",
-							"name": "valid"
-						}
-					}
-			} ]`,
-			"/a/true/",
-			true,
+			uri:   "/a/true/",
+			match: true,
 		},
 	}
 
-	for i, test := range tests {
-
-		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			srv.Input = append(srv.Input, validator.AnyType{})
-			srv.Input = append(srv.Input, validator.IntType{})
-			srv.Input = append(srv.Input, validator.BoolType{})
-			err := srv.Parse(strings.NewReader(test.Config))
+			srv.AddInputValidator(validator.AnyType{})
+			srv.AddInputValidator(validator.IntType{})
+			srv.AddInputValidator(validator.BoolType{})
+			err := srv.Parse(strings.NewReader(tc.conf))
 
 			if err != nil {
-				t.Errorf("unexpected error: '%s'", err)
-				t.FailNow()
+				t.Fatalf("unexpected error: %q", err)
 			}
 
 			if len(srv.Services) != 1 {
-				t.Errorf("expected to have 1 service, got %d", len(srv.Services))
-				t.FailNow()
+				t.Fatalf("expected to have 1 service, got %d", len(srv.Services))
 			}
 
-			req := httptest.NewRequest(http.MethodGet, test.URL, nil)
-
+			req := httptest.NewRequest(http.MethodGet, tc.uri, nil)
 			match := srv.Services[0].Match(req)
-			if test.Match && !match {
-				t.Errorf("expected '%s' to match", test.URL)
-				t.FailNow()
+			if tc.match && !match {
+				t.Fatalf("expected %q to match", tc.uri)
 			}
-			if !test.Match && match {
-				t.Errorf("expected '%s' NOT to match", test.URL)
-				t.FailNow()
+			if !tc.match && match {
+				t.Fatalf("expected %q NOT to match", tc.uri)
 			}
 		})
 	}
@@ -1207,76 +1290,99 @@ func TestMatchSimple(t *testing.T) {
 
 func TestFindPriority(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Config       string
-		URL          string
-		MatchingDesc string
+	tt := []struct {
+		name  string
+		conf  string
+		uri   string
+		match bool
+		info  string
 	}{
 		{
-			`[
+			name: "mismatch",
+			conf: `[
 				{ "method": "GET", "path": "/a", "info": "s1" },
 				{ "method": "GET", "path": "/",  "info": "s2" }
-			]`,
-			"/",
-			"s2",
+				]`,
+			uri:   "/b",
+			match: false,
 		},
 		{
-			`[
+			name: "match root last",
+			conf: `[
+				{ "method": "GET", "path": "/a", "info": "s1" },
+				{ "method": "GET", "path": "/",  "info": "s2" }
+				]`,
+			uri:   "/",
+			match: true,
+			info:  "s2",
+		},
+		{
+			name: "match root first",
+			conf: `[
 				{ "method": "GET", "path": "/",  "info": "s2" },
 				{ "method": "GET", "path": "/a", "info": "s1" }
 			]`,
-			"/",
-			"s2",
+			uri:   "/",
+			match: true,
+			info:  "s2",
 		},
 		{
-			`[
+			name: "match non-root last",
+			conf: `[
 				{ "method": "GET", "path": "/a", "info": "s1" },
 				{ "method": "GET", "path": "/",  "info": "s2" }
 			]`,
-			"/a",
-			"s1",
+			uri:   "/a",
+			match: true,
+			info:  "s1",
 		},
 		{
-			`[
+			name: "match longest",
+			conf: `[
 				{ "method": "GET", "path": "/a/b/c",  "info": "s1" },
 				{ "method": "GET", "path": "/a/b",    "info": "s2" }
 			]`,
-			"/a/b/c",
-			"s1",
+			uri:   "/a/b/c",
+			match: true,
+			info:  "s1",
 		},
 		{
-			`[
+			name: "match shortest",
+			conf: `[
 				{ "method": "GET", "path": "/a/b/c",  "info": "s1" },
 				{ "method": "GET", "path": "/a/b",    "info": "s2" }
 			]`,
-			"/a/b/",
-			"s2",
+			uri:   "/a/b/",
+			match: true,
+			info:  "s2",
 		},
 	}
 
-	for i, test := range tests {
-
-		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			srv.Input = append(srv.Input, validator.AnyType{})
-			srv.Input = append(srv.Input, validator.IntType{})
-			srv.Input = append(srv.Input, validator.BoolType{})
-			err := srv.Parse(strings.NewReader(test.Config))
+			srv.AddInputValidator(validator.AnyType{})
+			srv.AddInputValidator(validator.IntType{})
+			srv.AddInputValidator(validator.BoolType{})
+			err := srv.Parse(strings.NewReader(tc.conf))
 
 			if err != nil {
-				t.Errorf("unexpected error: '%s'", err)
-				t.FailNow()
+				t.Fatalf("unexpected error: %q", err)
 			}
 
-			req := httptest.NewRequest(http.MethodGet, test.URL, nil)
-			service := srv.Find(req)
-			if service == nil {
-				t.Errorf("expected to find a service")
-				t.FailNow()
+			req := httptest.NewRequest(http.MethodGet, tc.uri, nil)
+			svc := srv.Find(req)
+			if svc == nil && tc.match {
+				t.Fatalf("expected to find a service")
 			}
-			if service.Description != test.MatchingDesc {
-				t.Errorf("expected description '%s', got '%s'", test.MatchingDesc, service.Description)
-				t.FailNow()
+			if svc != nil && !tc.match {
+				t.Fatalf("expected to find no service, got %q", svc.Description)
+			}
+			if !tc.match {
+				return
+			}
+			if svc.Description != tc.info {
+				t.Fatalf("invalid description\nactual: %q\nexpect: %q", svc.Description, tc.info)
 			}
 		})
 	}
