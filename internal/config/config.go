@@ -146,11 +146,8 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 		// A captures B -> check type (B is A ?)
 		if aIsCapture {
 			input, exists := inputA[aPart]
-
-			// fail if no type or no validator
 			if !exists || input.Validator == nil {
-				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", ErrPatternCollision, aPart))
-				continue
+				panic(fmt.Errorf("invalid validator %q", aPart))
 			}
 
 			// fail if not valid
@@ -162,11 +159,8 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 			// B captures A -> check type (A is B ?)
 		} else if bIsCapture {
 			input, exists := inputB[bPart]
-
-			// fail if no type or no validator
 			if !exists || input.Validator == nil {
-				errors = append(errors, fmt.Errorf("%w (invalid type for %s)", ErrPatternCollision, bPart))
-				continue
+				panic(fmt.Errorf("invalid validator %q", bPart))
 			}
 
 			// fail if not valid

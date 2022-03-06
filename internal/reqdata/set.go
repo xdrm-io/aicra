@@ -47,9 +47,8 @@ func (i *T) GetURI(req http.Request) error {
 		}
 		value := uriparts[capture.Index]
 
-		// should not happen
 		if capture.Ref == nil {
-			return &Err{field: capture.Ref.Rename, err: ErrUnknownType}
+			panic(fmt.Errorf("unknown uri part type: %q", capture.Name))
 		}
 
 		parsed := parseParameter(value)
