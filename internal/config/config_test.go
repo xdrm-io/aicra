@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -778,253 +779,175 @@ func TestParseParameters(t *testing.T) {
 
 }
 
+func serializeParams(t *testing.T, params map[string]string) []byte {
+	var parameters = map[string]*Parameter{}
+	for k, t := range params {
+		parameters[k] = &Parameter{
+			Description: "info",
+			Type:        t,
+			GoType:      validator.StringType{}.GoType(),
+			Validator:   validator.StringType{}.Validator(t),
+			Rename:      strings.TrimSuffix(strings.TrimPrefix(k, "{"), "}"),
+		}
+		if t == "bool" {
+			parameters[k].GoType = validator.BoolType{}.GoType()
+			parameters[k].Validator = validator.BoolType{}.Validator(t)
+		}
+	}
+
+	raw, err := json.Marshal(parameters)
+	if err != nil {
+		t.Fatalf("cannot serialize: %s", err)
+	}
+	return raw
+}
+
 func TestServiceCollision(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		Config string
-		Error  error
+
+	type service struct {
+		method string
+		path   string
+		params map[string]string // name: type
+	}
+
+	tt := []struct {
+		name       string
+		srv1, srv2 service
+		err        error
 	}{
 		{
-			`[
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/b",
-					"info": "info", "in": {}
-				}
-			]`,
-			nil,
+			name: "diff 1-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/b"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "diff 2-part",
+			srv1: service{method: "GET", path: "/a/b"},
+			srv2: service{method: "GET", path: "/a/c"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				}
-			]`,
-			nil,
+			name: "diff 1-part 2-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/a/b"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a",
-					"info": "info", "in": {}
-				}
-			]`,
-			nil,
+			name: "same 1-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/a"},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "same diff method",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "POST", path: "/a"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				},
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "collide 2nd part",
+			srv1: service{method: "GET", path: "/a/b"},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "collide 2nd part invert",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			srv2: service{method: "GET", path: "/a/b"},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/b/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "diff 2nd part incompatible type",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/b"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "middle path collision",
+			srv1: service{method: "GET", path: "/a/b/c"},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "middle path collision inverted",
+			srv1: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			srv2: service{method: "GET", path: "/a/b/c"},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "string", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "diff middle path collision type",
+			srv1: service{method: "GET", path: "/a/b/c"},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "diff middle path collision type inverted",
+			srv1: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/b/c"},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "collide left additional part",
+			srv1: service{method: "GET", path: "/a/123/c"},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil,
+			name: "collide left additional part inverted",
+			srv1: service{method: "GET", path: "/a/123"},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			err:  nil,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/123/d",
-					"info": "info", "in": {}
-				},
-				{ "method": "GET", "path": "/a/{c}/d",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "collide uint",
+			srv1: service{method: "GET", path: "/a/123"},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/{b}",
-					"info": "info", "in": {
-						"{b}": { "info":"info", "type": "uint", "name": "b" }
-					}
-				},
-				{ "method": "GET", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			ErrPatternCollision,
+			name: "colliding end captures",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			err:  ErrPatternCollision,
 		},
 		{
-			`[
-				{ "method": "GET", "path": "/a/{b}",
-					"info": "info", "in": {
-						"{b}": { "info":"info", "type": "uint", "name": "b" }
-					}
-				},
-				{ "method": "PUT", "path": "/a/{c}",
-					"info": "info", "in": {
-						"{c}": { "info":"info", "type": "uint", "name": "c" }
-					}
-				}
-			]`,
-			nil, // different methods
+			name: "colliding end captures diff types",
+			srv1: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			err:  ErrPatternCollision,
+		},
+		{
+			name: "colliding middle captures",
+			srv1: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			srv2: service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "uint"}},
+			err:  ErrPatternCollision,
 		},
 	}
 
-	for i, test := range tests {
-
-		t.Run(fmt.Sprintf("method.%d", i), func(t *testing.T) {
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
 			srv := &Server{}
-			srv.Input = append(srv.Input, validator.StringType{})
-			srv.Input = append(srv.Input, validator.UintType{})
-			err := srv.Parse(strings.NewReader(test.Config))
+			srv.AddInputValidator(validator.StringType{})
+			srv.AddInputValidator(validator.UintType{})
 
-			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: %q", test.Error.Error())
-				t.FailNow()
-			}
-			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: %q", err.Error())
-				t.FailNow()
-			}
+			var (
+				params1 = serializeParams(t, tc.srv1.params)
+				params2 = serializeParams(t, tc.srv2.params)
+			)
 
-			if err != nil && test.Error != nil {
-				if !errors.Is(err, test.Error) {
-					t.Errorf("expected the error <%s> got <%s>", test.Error, err)
-					t.FailNow()
-				}
+			raw := fmt.Sprintf(`[
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s },
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s }
+				]`,
+				tc.srv1.method, tc.srv1.path, params1,
+				tc.srv2.method, tc.srv2.path, params2,
+			)
+
+			err := srv.Parse(strings.NewReader(raw))
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 		})
 	}
