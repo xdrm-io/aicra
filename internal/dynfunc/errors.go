@@ -14,7 +14,7 @@ const (
 	// ErrNoServiceForHandler - no service matching this handler
 	ErrNoServiceForHandler = Err("no service found for this handler")
 
-	// errMissingHandlerArgumentParam - missing params arguments for handler
+	// ErrMissingHandlerContextArgument - missing params arguments for handler
 	ErrMissingHandlerContextArgument = Err("missing handler first argument of type context.Context")
 
 	// ErrInvalidHandlerContextArgument - missing handler output error
