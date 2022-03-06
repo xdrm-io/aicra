@@ -174,66 +174,6 @@ func TestBindInvalidHandler(t *testing.T) {
 	}
 }
 
-func TestBindMethods(t *testing.T) {
-	t.Parallel()
-
-	builder := &Builder{}
-	err := builder.Setup(strings.NewReader(`[
-		{
-			"method": "GET",
-			"path": "/path",
-			"scope": [[]],
-			"info": "info",
-			"in": {},
-			"out": {}
-		},
-		{
-			"method": "POST",
-			"path": "/path",
-			"scope": [[]],
-			"info": "info",
-			"in": {},
-			"out": {}
-		},
-		{
-			"method": "PUT",
-			"path": "/path",
-			"scope": [[]],
-			"info": "info",
-			"in": {},
-			"out": {}
-		},
-		{
-			"method": "DELETE",
-			"path": "/path",
-			"scope": [[]],
-			"info": "info",
-			"in": {},
-			"out": {}
-		}
-	]`))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-
-	err = builder.Get("/path", func(context.Context) (*struct{}, error) { return nil, nil })
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-	err = builder.Post("/path", func(context.Context) (*struct{}, error) { return nil, nil })
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-	err = builder.Put("/path", func(context.Context) (*struct{}, error) { return nil, nil })
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-	err = builder.Delete("/path", func(context.Context) (*struct{}, error) { return nil, nil })
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-}
-
 func TestUnhandledService(t *testing.T) {
 	t.Parallel()
 
@@ -260,7 +200,7 @@ func TestUnhandledService(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	err = builder.Get("/path", func(context.Context) (*struct{}, error) { return nil, nil })
+	err = builder.Bind(http.MethodGet, "/path", func(context.Context) (*struct{}, error) { return nil, nil })
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
