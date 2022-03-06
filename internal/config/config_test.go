@@ -992,6 +992,146 @@ func TestServiceCollision(t *testing.T) {
 	}
 }
 
+func TestServiceCollisionPanic(t *testing.T) {
+	t.Parallel()
+
+	type service struct {
+		method string
+		path   string
+		params map[string]string // name: type
+	}
+
+	tt := []struct {
+		name       string
+		srv1, srv2 service
+		panics     bool
+	}{
+		{
+			name: "same 1-part",
+			srv1: service{method: "GET", path: "/a"},
+			srv2: service{method: "GET", path: "/a"},
+		},
+		{
+			name:   "collide 2nd part",
+			srv1:   service{method: "GET", path: "/a/b"},
+			srv2:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			panics: true,
+		},
+		{
+			name:   "collide 2nd part invert",
+			srv1:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			srv2:   service{method: "GET", path: "/a/b"},
+			panics: true,
+		},
+		{
+			name:   "middle path collision",
+			srv1:   service{method: "GET", path: "/a/b/c"},
+			srv2:   service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			panics: true,
+		},
+		{
+			name:   "middle path collision inverted",
+			srv1:   service{method: "GET", path: "/a/{var}/c", params: map[string]string{"{var}": "string"}},
+			srv2:   service{method: "GET", path: "/a/b/c"},
+			panics: true,
+		},
+		{
+			name:   "colliding end captures",
+			srv1:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			panics: false, // exit before we can panic
+		},
+		{
+			name:   "colliding end captures diff types",
+			srv1:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "uint"}},
+			srv2:   service{method: "GET", path: "/a/{var}", params: map[string]string{"{var}": "string"}},
+			panics: false, // exit before we can panic
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run("missing param:"+tc.name, func(t *testing.T) {
+			srv := &Server{}
+			srv.AddInputValidator(validator.StringType{})
+			srv.AddInputValidator(validator.UintType{})
+
+			var (
+				params1 = serializeParams(t, tc.srv1.params)
+				params2 = serializeParams(t, tc.srv2.params)
+			)
+
+			raw := fmt.Sprintf(`[
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s },
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s }
+				]`,
+				tc.srv1.method, tc.srv1.path, params1,
+				tc.srv2.method, tc.srv2.path, params2,
+			)
+
+			// parse first but ignore error
+			srv.Parse(strings.NewReader(raw))
+
+			// remove parameters
+			for _, svc := range srv.Services {
+				svc.Input = map[string]*Parameter{}
+			}
+
+			// recheck for collissions
+			defer func() {
+				r := recover()
+				if r == nil && tc.panics {
+					t.Fatalf("expected a panic")
+				}
+				if r != nil && !tc.panics {
+					t.Fatalf("unexpected panic")
+				}
+			}()
+			srv.collide()
+		})
+
+		t.Run("nil validator:"+tc.name, func(t *testing.T) {
+			srv := &Server{}
+			srv.AddInputValidator(validator.StringType{})
+			srv.AddInputValidator(validator.UintType{})
+
+			var (
+				params1 = serializeParams(t, tc.srv1.params)
+				params2 = serializeParams(t, tc.srv2.params)
+			)
+
+			raw := fmt.Sprintf(`[
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s },
+					{ "method": "%s", "path": "%s", "info": "info", "in": %s }
+				]`,
+				tc.srv1.method, tc.srv1.path, params1,
+				tc.srv2.method, tc.srv2.path, params2,
+			)
+
+			// parse first but ignore error
+			srv.Parse(strings.NewReader(raw))
+
+			// remove param validators
+			for _, svc := range srv.Services {
+				for i, _ := range svc.Input {
+					svc.Input[i].Validator = nil
+				}
+			}
+
+			// recheck for collissions
+			defer func() {
+				r := recover()
+				if r == nil && tc.panics {
+					t.Fatalf("expected a panic")
+				}
+				if r != nil && !tc.panics {
+					t.Fatalf("unexpected panic")
+				}
+			}()
+			srv.collide()
+		})
+	}
+}
+
 func TestMatchSimple(t *testing.T) {
 	t.Parallel()
 	tt := []struct {
