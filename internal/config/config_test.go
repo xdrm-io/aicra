@@ -843,6 +843,19 @@ func TestServiceCollision(t *testing.T) {
 		},
 		{
 			`[
+				{ "method": "GET", "path": "/a/{c}",
+					"info": "info", "in": {
+						"{c}": { "info":"info", "type": "string", "name": "c" }
+					}
+				},
+				{ "method": "GET", "path": "/a/b",
+					"info": "info", "in": {}
+				}
+			]`,
+			ErrPatternCollision,
+		},
+		{
+			`[
 				{ "method": "GET", "path": "/a/b",
 					"info": "info", "in": {}
 				},
