@@ -158,7 +158,7 @@ func (svc *Service) checkMethod() error {
 // example, input parameters with names `{b}` and `{d}` are expected.
 //
 // This methods sets up the service state with adding capture params that are
-// expected; checkInputs() will be able to check params agains pattern captures.
+// expected; checkInputs() will be able to check params against pattern captures
 func (svc *Service) checkPattern() error {
 	length := len(svc.Pattern)
 
