@@ -295,6 +295,137 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 	}
 
 }
+
+func TestMissingParam(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name   string
+		in     []validator.Type
+		out    map[string]interface{}
+		config string
+		match  string // match found in the error string
+	}{
+		{
+			name: "no input",
+			in:   []validator.Type{},
+			out:  map[string]interface{}{},
+			config: `[{
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"in1": { "info": "info", "type": "bool" }
+				},
+				"out": {}
+			}]`,
+			match: "field 'in': in1:",
+		},
+		{
+			name: "no input optional",
+			in:   []validator.Type{},
+			out:  map[string]interface{}{},
+			config: `[{
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"in1": { "info": "info", "type": "?bool" }
+				},
+				"out": {}
+			}]`,
+			match: "field 'in': in1:",
+		},
+		{
+			name: "out as in",
+			in:   []validator.Type{},
+			out: map[string]interface{}{
+				"bool": true,
+			},
+			config: `[{
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"in1": { "info": "info", "type": "bool" }
+				},
+				"out": {}
+			}]`,
+			match: "field 'in': in1:",
+		},
+		{
+			name: "out as in optional",
+			in:   []validator.Type{},
+			out: map[string]interface{}{
+				"bool": true,
+			},
+			config: `[{
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"in1": { "info": "info", "type": "?bool" }
+				},
+				"out": {}
+			}]`,
+			match: "field 'in': in1:",
+		},
+		{
+			name: "no output",
+			in:   []validator.Type{},
+			out:  map[string]interface{}{},
+			config: `[{
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {},
+				"out": {
+					"out1": { "info": "info", "type": "bool" }
+				}
+			}]`,
+			match: "field 'out': out1:",
+		},
+		{
+			name: "in as out",
+			in:   []validator.Type{validator.BoolType{}},
+			out:  map[string]interface{}{},
+			config: `[{
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {},
+				"out": {
+					"out1": { "info": "info", "type": "bool" }
+				}
+			}]`,
+			match: "field 'out': out1:",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := &Server{}
+			for _, t := range tc.in {
+				srv.AddInputValidator(t)
+			}
+			for k, v := range tc.out {
+				srv.AddOutputValidator(k, reflect.TypeOf(v))
+			}
+
+			err := srv.Parse(strings.NewReader(tc.config))
+			if !errors.Is(err, ErrUnknownParamType) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, ErrUnknownParamType)
+			}
+			if err == nil {
+				return
+			}
+			if !strings.Contains(err.Error(), tc.match) {
+				t.Fatalf("error %q does not contain %q", err, tc.match)
+			}
+		})
+	}
+}
+
 func TestOptionalParam(t *testing.T) {
 	t.Parallel()
 	r := strings.NewReader(`[
