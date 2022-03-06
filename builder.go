@@ -172,26 +172,6 @@ func (b *Builder) Bind(method, path string, fn interface{}) error {
 	return nil
 }
 
-// Get is equivalent to Bind(http.MethodGet)
-func (b *Builder) Get(path string, fn interface{}) error {
-	return b.Bind(http.MethodGet, path, fn)
-}
-
-// Post is equivalent to Bind(http.MethodPost)
-func (b *Builder) Post(path string, fn interface{}) error {
-	return b.Bind(http.MethodPost, path, fn)
-}
-
-// Put is equivalent to Bind(http.MethodPut)
-func (b *Builder) Put(path string, fn interface{}) error {
-	return b.Bind(http.MethodPut, path, fn)
-}
-
-// Delete is equivalent to Bind(http.MethodDelete)
-func (b *Builder) Delete(path string, fn interface{}) error {
-	return b.Bind(http.MethodDelete, path, fn)
-}
-
 // Build a fully-featured HTTP server
 func (b Builder) Build() (http.Handler, error) {
 	if b.maxURISize == 0 {
