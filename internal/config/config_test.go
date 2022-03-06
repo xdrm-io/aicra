@@ -13,6 +13,82 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
+func TestNoOpValidator(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name string
+
+		valName string
+		valType reflect.Type
+
+		typename string
+		value    interface{}
+		match    bool
+	}{
+		{
+			name:     "string mismatch",
+			valName:  "string",
+			valType:  reflect.TypeOf(""),
+			typename: "uint",
+			value:    "abc",
+		},
+		{
+			name:     "string match",
+			valName:  "string",
+			valType:  reflect.TypeOf(""),
+			typename: "string",
+			value:    "abc",
+			match:    true,
+		},
+		{
+			name:     "uint mismatch",
+			valName:  "uint",
+			valType:  reflect.TypeOf(uint(0)),
+			typename: "string",
+			value:    uint(123),
+		},
+		{
+			name:     "uint match",
+			valName:  "uint",
+			valType:  reflect.TypeOf(uint(0)),
+			typename: "uint",
+			value:    uint(123),
+			match:    true,
+		},
+		{
+			name:     "uint match invalid",
+			valName:  "uint",
+			valType:  reflect.TypeOf(uint(0)),
+			typename: "uint",
+			value:    "abc", // validation is never used, anything is considered valid
+			match:    true,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			v := noOp{name: tc.valName, goType: tc.valType}
+
+			if v.GoType() != tc.valType {
+				t.Fatalf("invalid go type\nactual: %v\nexpect: %v", v.GoType(), tc.valType)
+			}
+
+			validate := v.Validator(tc.typename)
+			match := (validate != nil)
+			if match != tc.match {
+				t.Fatalf("invalid match\nactual: %t\nexpect: %t", match, tc.match)
+			}
+			if !tc.match || !match {
+				return
+			}
+			if _, valid := validate(tc.value); !valid {
+				t.Fatalf("expect to always be valid")
+			}
+		})
+	}
+}
+
 func TestAddInputType(t *testing.T) {
 	t.Parallel()
 
