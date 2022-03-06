@@ -7,6 +7,8 @@ import (
 )
 
 func TestSimpleString(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter("some-string")
 
 	cast, canCast := p.(string)
@@ -20,6 +22,8 @@ func TestSimpleString(t *testing.T) {
 }
 
 func TestSimpleFloat(t *testing.T) {
+	t.Parallel()
+
 	tcases := []float64{12.3456789, -12.3456789, 0.0000001, -0.0000001}
 
 	for i, tcase := range tcases {
@@ -39,6 +43,8 @@ func TestSimpleFloat(t *testing.T) {
 }
 
 func TestSimpleBool(t *testing.T) {
+	t.Parallel()
+
 	tcases := []bool{true, false}
 
 	for i, tcase := range tcases {
@@ -58,6 +64,8 @@ func TestSimpleBool(t *testing.T) {
 }
 
 func TestJsonStringSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter(`["str1", "str2"]`)
 
 	slice, canCast := p.([]interface{})
@@ -88,6 +96,8 @@ func TestJsonStringSlice(t *testing.T) {
 }
 
 func TestStringSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter([]string{"str1", "str2"})
 
 	slice, canCast := p.([]interface{})
@@ -118,6 +128,8 @@ func TestStringSlice(t *testing.T) {
 }
 
 func TestJsonPrimitiveBool(t *testing.T) {
+	t.Parallel()
+
 	tcases := []struct {
 		Raw       string
 		BoolValue bool
@@ -144,6 +156,8 @@ func TestJsonPrimitiveBool(t *testing.T) {
 }
 
 func TestJsonPrimitiveFloat(t *testing.T) {
+	t.Parallel()
+
 	tcases := []struct {
 		Raw        string
 		FloatValue float64
@@ -179,6 +193,8 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 }
 
 func TestJsonBoolSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter([]string{"true", "false"})
 
 	slice, canCast := p.([]interface{})
@@ -209,6 +225,8 @@ func TestJsonBoolSlice(t *testing.T) {
 }
 
 func TestBoolSlice(t *testing.T) {
+	t.Parallel()
+
 	p := parseParameter([]bool{true, false})
 
 	slice, canCast := p.([]bool)

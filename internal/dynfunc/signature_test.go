@@ -218,17 +218,8 @@ func TestInputValidation(t *testing.T) {
 			}
 
 			err := s.ValidateInput(reflect.TypeOf(tc.fn))
-			if err == nil && tc.err != nil {
-				t.Fatalf("expected an error: %q", tc.err.Error())
-			}
-			if err != nil && tc.err == nil {
-				t.Fatalf("unexpected error: %q", err.Error())
-			}
-
-			if err != nil && tc.err != nil {
-				if !errors.Is(err, tc.err) {
-					t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
-				}
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 		})
 	}
@@ -354,10 +345,9 @@ func TestOutputValidation(t *testing.T) {
 				Input:  nil,
 				Output: tc.output,
 			}
-
 			err := s.ValidateOutput(reflect.TypeOf(tc.fn))
 			if !errors.Is(err, tc.err) {
-				t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 		})
 	}
@@ -548,21 +538,21 @@ func TestServiceValidation(t *testing.T) {
 			err := s.ValidateInput(reflect.TypeOf(tc.fn))
 			if err != nil {
 				if !errors.Is(err, tc.err) {
-					t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
+					t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 				}
 				return
 			}
 			err = s.ValidateOutput(reflect.TypeOf(tc.fn))
 			if err != nil {
 				if !errors.Is(err, tc.err) {
-					t.Fatalf("expected the error <%s> got <%s>", tc.err, err)
+					t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 				}
 				return
 			}
 
 			// no error encountered but expected 1
 			if tc.err != nil {
-				t.Fatalf("expected an error <%v>", tc.err)
+				t.Fatalf("expected an error: %v", tc.err)
 			}
 		})
 	}
