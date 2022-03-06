@@ -155,12 +155,12 @@ func (b *Builder) Bind(method, path string, fn interface{}) error {
 	}
 
 	if service == nil {
-		return fmt.Errorf("%s '%s': %w", method, path, errUnknownService)
+		return fmt.Errorf("%s %q: %w", method, path, errUnknownService)
 	}
 
 	var dyn, err = dynfunc.Build(fn, *service)
 	if err != nil {
-		return fmt.Errorf("%s '%s' handler: %w", method, path, err)
+		return fmt.Errorf("%s %q handler: %w", method, path, err)
 	}
 
 	b.handlers = append(b.handlers, &serviceHandler{
@@ -194,7 +194,7 @@ func (b Builder) Build() (http.Handler, error) {
 			}
 		}
 		if !isHandled {
-			return nil, fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, errMissingHandler)
+			return nil, fmt.Errorf("%s %q: %w", service.Method, service.Pattern, errMissingHandler)
 		}
 	}
 

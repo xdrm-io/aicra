@@ -16,7 +16,7 @@ func TestSimpleString(t *testing.T) {
 	}
 
 	if cast != "some-string" {
-		t.Errorf("expected parameter to equal 'some-string', got '%s'", cast)
+		t.Errorf("expected parameter to equal 'some-string', got %q", cast)
 		t.FailNow()
 	}
 }
@@ -87,7 +87,7 @@ func TestJsonStringSlice(t *testing.T) {
 			continue
 		}
 		if cast != res {
-			t.Errorf("expected first value to be '%s', got '%s'", res, cast)
+			t.Errorf("expected first value to be %q, got %q", res, cast)
 			continue
 		}
 
@@ -119,7 +119,7 @@ func TestStringSlice(t *testing.T) {
 			continue
 		}
 		if cast != res {
-			t.Errorf("expected first value to be '%s', got '%s'", res, cast)
+			t.Errorf("expected first value to be %q, got %q", res, cast)
 			continue
 		}
 

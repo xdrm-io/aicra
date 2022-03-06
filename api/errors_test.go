@@ -59,7 +59,7 @@ func TestError_ErrorStatusFormat(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.err.Error() != tc.reason {
-				t.Fatalf("expected Error() = '%s', got '%s'", tc.reason, tc.err.Error())
+				t.Fatalf("expected Error() = %q, got %q", tc.reason, tc.err.Error())
 			}
 			if tc.err.Status() != tc.status {
 				t.Fatalf("expected Status() = %d, got %d", tc.status, tc.err.Status())
@@ -129,7 +129,7 @@ func TestError_CustomError(t *testing.T) {
 		t.Fatalf("unexpected status %d ; expected %d", err.Status(), status)
 	}
 	if err.Error() != reason {
-		t.Fatalf("unexpected reason '%s' ; expected '%s'", err.Error(), reason)
+		t.Fatalf("unexpected reason %q ; expected %q", err.Error(), reason)
 	}
 
 }

@@ -59,7 +59,7 @@ func (s Server) validate() error {
 	for _, service := range s.Services {
 		err := service.validate(s.Input, s.Output)
 		if err != nil {
-			return fmt.Errorf("%s '%s': %w", service.Method, service.Pattern, err)
+			return fmt.Errorf("%s %q: %w", service.Method, service.Pattern, err)
 		}
 	}
 
@@ -109,7 +109,7 @@ func (s *Server) collide() error {
 
 			err := checkURICollision(aURIParts, bURIParts, aService.Input, bService.Input)
 			if err != nil {
-				return fmt.Errorf("(%s '%s') vs (%s '%s'): %w", aService.Method, aService.Pattern, bService.Method, bService.Pattern, err)
+				return fmt.Errorf("(%s %q) vs (%s %q): %w", aService.Method, aService.Pattern, bService.Method, bService.Pattern, err)
 			}
 		}
 	}
@@ -138,7 +138,7 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 		// no capture -> check strict equality
 		if !aIsCapture && !bIsCapture {
 			if aPart == bPart {
-				errors = append(errors, fmt.Errorf("%w (same path '%s')", ErrPatternCollision, aPart))
+				errors = append(errors, fmt.Errorf("%w (same path %q)", ErrPatternCollision, aPart))
 				continue
 			}
 		}
@@ -155,7 +155,7 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 
 			// fail if not valid
 			if _, valid := input.Validator(bPart); valid {
-				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", ErrPatternCollision, aPart, bPart))
+				errors = append(errors, fmt.Errorf("%w (%s captures %q)", ErrPatternCollision, aPart, bPart))
 				continue
 			}
 
@@ -171,7 +171,7 @@ func checkURICollision(uriA, uriB []string, inputA, inputB map[string]*Parameter
 
 			// fail if not valid
 			if _, valid := input.Validator(aPart); valid {
-				errors = append(errors, fmt.Errorf("%w (%s captures '%s')", ErrPatternCollision, bPart, aPart))
+				errors = append(errors, fmt.Errorf("%w (%s captures %q)", ErrPatternCollision, bPart, aPart))
 				continue
 			}
 		}

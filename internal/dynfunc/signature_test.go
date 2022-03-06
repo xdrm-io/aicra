@@ -219,10 +219,10 @@ func TestInputValidation(t *testing.T) {
 
 			err := s.ValidateInput(reflect.TypeOf(tc.fn))
 			if err == nil && tc.err != nil {
-				t.Fatalf("expected an error: '%s'", tc.err.Error())
+				t.Fatalf("expected an error: %q", tc.err.Error())
 			}
 			if err != nil && tc.err == nil {
-				t.Fatalf("unexpected error: '%s'", err.Error())
+				t.Fatalf("unexpected error: %q", err.Error())
 			}
 
 			if err != nil && tc.err != nil {

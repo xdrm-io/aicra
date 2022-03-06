@@ -156,7 +156,7 @@ func TestStoreWithUri(t *testing.T) {
 					t.Fatalf("error should be of type *Err")
 				}
 				if cast.Field() != tc.errField {
-					t.Fatalf("error field is '%s' ; expected '%s'", cast.Field(), tc.errField)
+					t.Fatalf("error field is %q ; expected %q", cast.Field(), tc.errField)
 				}
 				return
 			}
@@ -354,7 +354,7 @@ func TestExtractQuery(t *testing.T) {
 					t.Fatalf("error should be of type *Err")
 				}
 				if cast.Field() != tc.errField {
-					t.Fatalf("error field is '%s' ; expected '%s'", cast.Field(), tc.errField)
+					t.Fatalf("error field is %q ; expected %q", cast.Field(), tc.errField)
 				}
 				return
 			}
@@ -388,7 +388,7 @@ func TestExtractQuery(t *testing.T) {
 							t.Fatalf("should return a string (got '%v')", cast)
 						}
 						if values[0] != cast {
-							t.Fatalf("should return '%s' (got '%s')", values[0], cast)
+							t.Fatalf("should return %q (got %q)", values[0], cast)
 						}
 						return
 					}
@@ -405,7 +405,7 @@ func TestExtractQuery(t *testing.T) {
 
 					for vi, value := range values {
 						if value != cast[vi] {
-							t.Fatalf("should return '%s' (got '%s')", value, cast[vi])
+							t.Fatalf("should return %q (got %q)", value, cast[vi])
 						}
 					}
 				})
@@ -621,7 +621,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 					t.Fatalf("error should be of type *Err")
 				}
 				if cast.Field() != tc.errField {
-					t.Fatalf("error field is '%s' ; expected '%s'", cast.Field(), tc.errField)
+					t.Fatalf("error field is %q ; expected %q", cast.Field(), tc.errField)
 				}
 				return
 			}
@@ -655,7 +655,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 							t.Fatalf("should return a string (got '%v')", cast)
 						}
 						if values[0] != cast {
-							t.Fatalf("should return '%s' (got '%s')", values[0], cast)
+							t.Fatalf("should return %q (got %q)", values[0], cast)
 						}
 						return
 					}
@@ -672,7 +672,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 
 					for vi, value := range values {
 						if value != cast[vi] {
-							t.Fatalf("should return '%s' (got '%s')", value, cast[vi])
+							t.Fatalf("should return %q (got %q)", value, cast[vi])
 						}
 					}
 				})
@@ -807,7 +807,7 @@ func TestJsonParameters(t *testing.T) {
 
 					param, isset := store.Data[key]
 					if !isset {
-						t.Fatalf("store should contain element with key '%s'", key)
+						t.Fatalf("store should contain element with key %q", key)
 						return
 					}
 
@@ -1005,7 +1005,7 @@ Content-Type: application/zip
 				t.Run(key, func(t *testing.T) {
 					param, exists := store.Data[key]
 					if !exists {
-						t.Fatalf("store should contain element with key '%s'", key)
+						t.Fatalf("store should contain element with key %q", key)
 						return
 					}
 

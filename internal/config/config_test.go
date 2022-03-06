@@ -120,17 +120,17 @@ func TestLegalServiceName(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: '%s'", test.Error.Error())
+				t.Errorf("expected an error: %q", test.Error.Error())
 				t.FailNow()
 			}
 			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
+				t.Errorf("unexpected error: %q", err.Error())
 				t.FailNow()
 			}
 
 			if err != nil && test.Error != nil {
 				if !errors.Is(err, test.Error) {
-					t.Errorf("expected the error '%s' (got '%s')", test.Error.Error(), err.Error())
+					t.Errorf("expected the error %q (got %q)", test.Error.Error(), err.Error())
 					t.FailNow()
 				}
 			}
@@ -175,7 +175,7 @@ func TestAvailableMethods(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if test.ValidMethod && err != nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
+				t.Errorf("unexpected error: %q", err.Error())
 				t.FailNow()
 			}
 
@@ -192,7 +192,7 @@ func TestParseEmpty(t *testing.T) {
 	srv := &Server{}
 	err := srv.Parse(r)
 	if err != nil {
-		t.Errorf("unexpected error (got '%s')", err)
+		t.Errorf("unexpected error (got %q)", err)
 		t.FailNow()
 	}
 }
@@ -249,7 +249,7 @@ func TestParseMissingMethodDescription(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if test.ValidDescription && err != nil {
-				t.Errorf("unexpected error: '%s'", err)
+				t.Errorf("unexpected error: %q", err)
 				t.FailNow()
 			}
 
@@ -278,7 +278,7 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 	srv.Input = append(srv.Input, validator.AnyType{})
 	err := srv.Parse(r)
 	if err != nil {
-		t.Errorf("unexpected error: '%s'", err)
+		t.Errorf("unexpected error: %q", err)
 		t.FailNow()
 	}
 
@@ -289,7 +289,7 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 
 	for _, param := range srv.Services[0].Input {
 		if param.Rename != "original" {
-			t.Errorf("expected the parameter 'original' not to be renamed to '%s'", param.Rename)
+			t.Errorf("expected the parameter 'original' not to be renamed to %q", param.Rename)
 			t.FailNow()
 		}
 	}
@@ -446,7 +446,7 @@ func TestOptionalParam(t *testing.T) {
 	srv.Input = append(srv.Input, validator.BoolType{})
 	err := srv.Parse(r)
 	if err != nil {
-		t.Errorf("unexpected error: '%s'", err)
+		t.Errorf("unexpected error: %q", err)
 		t.FailNow()
 	}
 
@@ -458,13 +458,13 @@ func TestOptionalParam(t *testing.T) {
 
 		if pName == "optional" || pName == "optional2" {
 			if !param.Optional {
-				t.Errorf("expected parameter '%s' to be optional", pName)
+				t.Errorf("expected parameter %q to be optional", pName)
 				t.Failed()
 			}
 		}
 		if pName == "required" || pName == "required2" {
 			if param.Optional {
-				t.Errorf("expected parameter '%s' to be required", pName)
+				t.Errorf("expected parameter %q to be required", pName)
 				t.Failed()
 			}
 		}
@@ -759,11 +759,11 @@ func TestParseParameters(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Raw))
 
 			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: '%s'", test.Error.Error())
+				t.Errorf("expected an error: %q", test.Error.Error())
 				t.FailNow()
 			}
 			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
+				t.Errorf("unexpected error: %q", err.Error())
 				t.FailNow()
 			}
 
@@ -1012,11 +1012,11 @@ func TestServiceCollision(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err == nil && test.Error != nil {
-				t.Errorf("expected an error: '%s'", test.Error.Error())
+				t.Errorf("expected an error: %q", test.Error.Error())
 				t.FailNow()
 			}
 			if err != nil && test.Error == nil {
-				t.Errorf("unexpected error: '%s'", err.Error())
+				t.Errorf("unexpected error: %q", err.Error())
 				t.FailNow()
 			}
 
@@ -1193,7 +1193,7 @@ func TestMatchSimple(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {
-				t.Errorf("unexpected error: '%s'", err)
+				t.Errorf("unexpected error: %q", err)
 				t.FailNow()
 			}
 
@@ -1206,11 +1206,11 @@ func TestMatchSimple(t *testing.T) {
 
 			match := srv.Services[0].Match(req)
 			if test.Match && !match {
-				t.Errorf("expected '%s' to match", test.URL)
+				t.Errorf("expected %q to match", test.URL)
 				t.FailNow()
 			}
 			if !test.Match && match {
-				t.Errorf("expected '%s' NOT to match", test.URL)
+				t.Errorf("expected %q NOT to match", test.URL)
 				t.FailNow()
 			}
 		})
@@ -1277,7 +1277,7 @@ func TestFindPriority(t *testing.T) {
 			err := srv.Parse(strings.NewReader(test.Config))
 
 			if err != nil {
-				t.Errorf("unexpected error: '%s'", err)
+				t.Errorf("unexpected error: %q", err)
 				t.FailNow()
 			}
 
@@ -1288,7 +1288,7 @@ func TestFindPriority(t *testing.T) {
 				t.FailNow()
 			}
 			if service.Description != test.MatchingDesc {
-				t.Errorf("expected description '%s', got '%s'", test.MatchingDesc, service.Description)
+				t.Errorf("expected description %q, got %q", test.MatchingDesc, service.Description)
 				t.FailNow()
 			}
 		})
