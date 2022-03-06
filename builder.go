@@ -75,25 +75,30 @@ func (b *Builder) Input(t validator.Type) error {
 	return nil
 }
 
-// Output adds an go type to use for output arguments
-func (b *Builder) Output(name string, goType reflect.Type) error {
+// Output adds an type available for output arguments as well as a value example.
+// Some examples:
+// - Output("uint",  uint(0))
+// - Output("user",  model.User{})
+// - Output("users", []model.User{})
+func (b *Builder) Output(name string, sample interface{}) error {
 	if b.conf == nil {
 		b.conf = &config.Server{}
 	}
 	if b.conf.Services != nil {
 		return errLateType
 	}
-	b.conf.AddOutputValidator(name, goType)
+	b.conf.AddOutputValidator(name, reflect.TypeOf(sample))
 	return nil
 }
 
 // RespondWith defines the server responder, i.e. how to write data and error
 // into the http response.
-func (b *Builder) RespondWith(responder Responder) {
+func (b *Builder) RespondWith(responder Responder) error {
 	if responder == nil {
-		return
+		return errNilResponder
 	}
 	b.respond = responder
+	return nil
 }
 
 // With adds an http middleware on top of the http connection

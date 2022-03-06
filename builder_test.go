@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -21,13 +20,13 @@ func addBuiltinTypes(b *Builder) error {
 		validator.StringType{},
 		validator.UintType{},
 	}
-	outputTypes := map[string]reflect.Type{
-		"any":    reflect.TypeOf(interface{}(nil)),
-		"bool":   reflect.TypeOf(true),
-		"float":  reflect.TypeOf(float64(2)),
-		"int":    reflect.TypeOf(int(0)),
-		"string": reflect.TypeOf(""),
-		"uint":   reflect.TypeOf(uint(0)),
+	outputTypes := map[string]interface{}{
+		"any":    interface{}(nil),
+		"bool":   true,
+		"float":  float64(2),
+		"int":    int(0),
+		"string": "",
+		"uint":   uint(0),
 	}
 
 	for _, t := range inputTypes {
@@ -64,7 +63,7 @@ func TestAddOutputType(t *testing.T) {
 	t.Parallel()
 
 	builder := &Builder{}
-	err := builder.Output("bool", reflect.TypeOf(true))
+	err := builder.Output("bool", true)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -72,9 +71,28 @@ func TestAddOutputType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	err = builder.Output("bool", reflect.TypeOf(true))
+	err = builder.Output("bool", true)
 	if err != errLateType {
 		t.Fatalf("expected <%v> got <%v>", errLateType, err)
+	}
+}
+
+func TestNilResponder(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.RespondWith(nil)
+	if !errors.Is(err, errNilResponder) {
+		t.Fatalf("expected %q, got %v", errNilResponder.Error(), err)
+	}
+}
+func TestNonNilResponder(t *testing.T) {
+	t.Parallel()
+
+	builder := &Builder{}
+	err := builder.RespondWith(DefaultResponder)
+	if !errors.Is(err, nil) {
+		t.Fatalf("unexpected error %s", err)
 	}
 }
 
@@ -87,6 +105,7 @@ func TestSetupNoType(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 }
+
 func TestSetupTwice(t *testing.T) {
 	t.Parallel()
 
@@ -126,6 +145,7 @@ func TestBindUnknownService(t *testing.T) {
 		t.Fatalf("expected error %v, got %v", errUnknownService, err)
 	}
 }
+
 func TestBindInvalidHandler(t *testing.T) {
 	t.Parallel()
 
@@ -153,7 +173,8 @@ func TestBindInvalidHandler(t *testing.T) {
 		t.Fatalf("expected a dynfunc.Err got %v", err)
 	}
 }
-func TestBindGet(t *testing.T) {
+
+func TestBindMethods(t *testing.T) {
 	t.Parallel()
 
 	builder := &Builder{}
