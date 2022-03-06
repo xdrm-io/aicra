@@ -111,10 +111,10 @@ func main() {
     builder.Input(validator.StringDataType{})
 
     // add output types
-    builder.Output("string", reflect.TypeOf(""))
-    builder.Output("bool", reflect.TypeOf(true))
-    builder.Output("user", reflect.TypeOf(UserStruct))
-    builder.Output("users", reflect.TypeOf([]UserStruct))
+    builder.Output("string", "")
+    builder.Output("bool", true)
+    builder.Output("user", UserStruct{})
+    builder.Output("users", []UserStruct{})
 
     // load your configuration
     config, err := os.Open("api.json")
