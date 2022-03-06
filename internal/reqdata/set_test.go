@@ -2,6 +2,7 @@ package reqdata
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -171,8 +172,50 @@ func TestStoreWithUri(t *testing.T) {
 
 }
 
-func TestExtractQuery(t *testing.T) {
+// checkExtracted checks extracted parameters against:
+// - names: expected parameter names
+// - kind: the common type kind for all parameters
+// - expected: values as a string list for each value
+func checkExtracted(t *testing.T, names []string, kind reflect.Kind, expected [][]string, extracted map[string]interface{}) {
+	for n, name := range names {
+		var (
+			expectList   = expected[n]
+			param, isset = extracted[name]
+		)
+		if !isset {
+			t.Fatalf("param does not exist")
+		}
 
+		// single value
+		if kind != reflect.Slice {
+			cast, canCast := param.(string)
+			if !canCast {
+				t.Fatalf("invalid type\nactual: %T\nexpect: string", param)
+			}
+			if cast != expectList[0] {
+				t.Fatalf("invalid value\nactual: %q\nexpect: %q", cast, expectList[0])
+			}
+			return
+		}
+
+		// multiple values, should be a slice
+		cast, canCast := param.([]interface{})
+		if !canCast {
+			t.Fatalf("invalid type\nactual: %T\nexpect: []string", param)
+		}
+		// compare every string
+		if len(cast) != len(expectList) {
+			t.Fatalf("invalid size\nactual: %d\nexpect: %d", len(cast), len(expected))
+		}
+		for e, expect := range expectList {
+			if expect != cast[e] {
+				t.Fatalf("invalid value\nactual: %s\nexpect: %s", cast[e], expect)
+			}
+		}
+	}
+}
+
+func TestExtractQuery(t *testing.T) {
 	tt := []struct {
 		name   string
 		params []string
@@ -372,45 +415,7 @@ func TestExtractQuery(t *testing.T) {
 				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, pName := range tc.paramNames {
-				values := tc.paramValues[pi]
-
-				t.Run(pName, func(t *testing.T) {
-					param, isset := store.Data[pName]
-					if !isset {
-						t.Fatalf("param does not exist")
-					}
-
-					// single value
-					if tc.paramTypes.Kind() != reflect.Slice {
-						cast, canCast := param.(string)
-						if !canCast {
-							t.Fatalf("should return a string (got '%v')", cast)
-						}
-						if values[0] != cast {
-							t.Fatalf("should return %q (got %q)", values[0], cast)
-						}
-						return
-					}
-
-					// multiple values, should be a slice
-					cast, canCast := param.([]interface{})
-					if !canCast {
-						t.Fatalf("should return a []string (got '%v')", cast)
-					}
-
-					if len(cast) != len(values) {
-						t.Fatalf("should return %d string(s) (got '%d')", len(values), len(cast))
-					}
-
-					for vi, value := range values {
-						if value != cast[vi] {
-							t.Fatalf("should return %q (got %q)", value, cast[vi])
-						}
-					}
-				})
-
-			}
+			checkExtracted(t, tc.paramNames, tc.paramTypes.Kind(), tc.paramValues, store.Data)
 		})
 	}
 
@@ -639,45 +644,7 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, key := range tc.paramNames {
-				values := tc.paramValues[pi]
-
-				t.Run(key, func(t *testing.T) {
-					param, isset := store.Data[key]
-					if !isset {
-						t.Fatalf("param does not exist")
-					}
-
-					// single value
-					if tc.paramTypes.Kind() != reflect.Slice {
-						cast, canCast := param.(string)
-						if !canCast {
-							t.Fatalf("should return a string (got '%v')", cast)
-						}
-						if values[0] != cast {
-							t.Fatalf("should return %q (got %q)", values[0], cast)
-						}
-						return
-					}
-
-					// multiple values, should be a slice
-					cast, canCast := param.([]interface{})
-					if !canCast {
-						t.Fatalf("should return a []string (got '%v')", cast)
-					}
-
-					if len(cast) != len(values) {
-						t.Fatalf("should return %d string(s) (got '%d')", len(values), len(cast))
-					}
-
-					for vi, value := range values {
-						if value != cast[vi] {
-							t.Fatalf("should return %q (got %q)", value, cast[vi])
-						}
-					}
-				})
-
-			}
+			checkExtracted(t, tc.paramNames, tc.paramTypes.Kind(), tc.paramValues, store.Data)
 		})
 	}
 
@@ -846,7 +813,7 @@ func TestMultipartParameters(t *testing.T) {
 		lastParamBytes bool
 
 		paramNames  []string
-		paramValues []interface{}
+		paramValues [][]string
 	}{
 		{
 			name:         "empty body",
@@ -854,7 +821,7 @@ func TestMultipartParameters(t *testing.T) {
 			rawMultipart: ``,
 			err:          nil,
 			paramNames:   []string{},
-			paramValues:  []interface{}{},
+			paramValues:  [][]string{},
 		},
 		{
 			name:   "only boundary",
@@ -863,7 +830,7 @@ func TestMultipartParameters(t *testing.T) {
 `,
 			err:         nil,
 			paramNames:  []string{},
-			paramValues: []interface{}{},
+			paramValues: [][]string{},
 		},
 		{
 			name:   "only boundaries",
@@ -872,7 +839,7 @@ func TestMultipartParameters(t *testing.T) {
 --xxx--`,
 			err:         ErrInvalidMultipart,
 			paramNames:  []string{},
-			paramValues: []interface{}{},
+			paramValues: [][]string{},
 		},
 		{
 			name:   "1 ignored part",
@@ -883,7 +850,7 @@ Content-Disposition: form-data; name="a"
 b
 --xxx--`,
 			paramNames:  []string{},
-			paramValues: []interface{}{},
+			paramValues: [][]string{},
 		},
 		{
 			name:   "1 part",
@@ -894,7 +861,7 @@ Content-Disposition: form-data; name="a"
 b
 --xxx--`,
 			paramNames:  []string{"a"},
-			paramValues: []interface{}{"b"},
+			paramValues: [][]string{{"b"}},
 		},
 		{
 			name:   "2 parts",
@@ -910,7 +877,7 @@ d
 --xxx--`,
 			err:         nil,
 			paramNames:  []string{"a", "c"},
-			paramValues: []interface{}{"b", "d"},
+			paramValues: [][]string{{"b"}, {"d"}},
 		},
 		{
 			name:   "1 part 1 ignored",
@@ -926,7 +893,7 @@ x
 --xxx--`,
 			err:         nil,
 			paramNames:  []string{"a"},
-			paramValues: []interface{}{"b"},
+			paramValues: [][]string{{"b"}},
 		},
 		{
 			name:           "1 param 1 file",
@@ -944,7 +911,7 @@ Content-Type: application/zip
 --xxx--`, fileContent),
 			err:         nil,
 			paramNames:  []string{"a", "file"},
-			paramValues: []interface{}{"a-content", fileContent},
+			paramValues: [][]string{{"a-content"}, {base64.StdEncoding.EncodeToString(fileContent)}},
 		},
 	}
 
@@ -989,7 +956,6 @@ Content-Type: application/zip
 				if len(store.Data) != 0 {
 					t.Fatalf("expected no JSON parameters and got %d", len(store.Data))
 				}
-
 				// no param to check
 				return
 			}
@@ -998,50 +964,35 @@ Content-Type: application/zip
 				t.Fatalf("invalid test: names and values differ in size (%d vs %d)", len(tc.paramNames), len(tc.paramValues))
 			}
 
-			for pi, key := range tc.paramNames {
-				isLast := (pi == len(tc.paramNames)-1)
-				expect := tc.paramValues[pi]
+			// check all but the last parameter
+			var (
+				names  = tc.paramNames
+				values = tc.paramValues
+			)
+			if tc.lastParamBytes {
+				names = names[:len(names)-1]
+				values = values[:len(values)-1]
+			}
 
-				t.Run(key, func(t *testing.T) {
-					param, exists := store.Data[key]
-					if !exists {
-						t.Fatalf("store should contain element with key %q", key)
-						return
-					}
+			checkExtracted(t, names, reflect.String, values, store.Data)
 
-					// expect a []byte
-					if isLast && tc.lastParamBytes {
-						expectVal, ok := expect.([]byte)
-						if !ok {
-							t.Fatalf("expected value is not a []byte")
-						}
-						actualVal, ok := param.([]byte)
-						if !ok {
-							t.Fatalf("actual value is not a []byte")
-						}
-
-						if bytes.Compare(actualVal, expectVal) != 0 {
-							t.Fatalf("invalid bytes\nactual: %v\nexpect: %v", actualVal, expectVal)
-						}
-						return
-					}
-
-					// expect a string
-					expectVal, ok := expect.(string)
-					if !ok {
-						t.Fatalf("expected value is not a string")
-					}
-					actualVal, ok := param.(string)
-					if !ok {
-						t.Fatalf("actual value is not a string")
-					}
-
-					if actualVal != expectVal {
-						t.Fatalf("invalid string\nactual: %s\nexpect: %s", actualVal, expectVal)
-					}
-
-				})
-
+			if !tc.lastParamBytes {
+				return
+			}
+			var (
+				name          = tc.paramNames[len(tc.paramNames)-1]
+				expect        = tc.paramValues[len(tc.paramValues)-1][0]
+				param, exists = store.Data[name]
+			)
+			if !exists {
+				t.Fatalf("store should contain element with key %q", name)
+				return
+			}
+			// expect a []byte
+			expectVal, _ := base64.StdEncoding.DecodeString(expect)
+			actualVal := param.([]byte)
+			if bytes.Compare(actualVal, expectVal) != 0 {
+				t.Fatalf("invalid bytes\nactual: %v\nexpect: %v", actualVal, expectVal)
 			}
 		})
 	}
