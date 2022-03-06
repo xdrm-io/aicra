@@ -52,7 +52,7 @@ func addDefaultTypes(b *aicra.Builder) error {
 	return nil
 }
 
-func TestHandler_With(t *testing.T) {
+func TestHandlerWith(t *testing.T) {
 	builder := &aicra.Builder{}
 	if err := addDefaultTypes(builder); err != nil {
 		t.Fatalf("unexpected error <%v>", err)
@@ -136,83 +136,83 @@ func TestHandler_With(t *testing.T) {
 
 }
 
-func TestHandler_WithAuth(t *testing.T) {
+func TestHandlerWithAuth(t *testing.T) {
 
 	tt := []struct {
 		name        string
-		manifest    string
+		config      string
 		permissions []string
 		granted     bool
 	}{
 		{
 			name:        "provide only requirement A",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A"},
 			granted:     true,
 		},
 		{
 			name:        "missing requirement",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{},
 			granted:     false,
 		},
 		{
 			name:        "missing requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{},
 			granted:     false,
 		},
 		{
 			name:        "missing some requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A"},
 			granted:     false,
 		},
 		{
 			name:        "provide requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A", "B"},
 			granted:     true,
 		},
 		{
 			name:        "missing OR requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"C"},
 			granted:     false,
 		},
 		{
 			name:        "provide 1 OR requirement",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A"},
 			granted:     true,
 		},
 		{
 			name:        "provide both OR requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"], ["B"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A", "B"},
 			granted:     true,
 		},
 		{
 			name:        "missing composite OR requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{},
 			granted:     false,
 		},
 		{
 			name:        "missing partial composite OR requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A", "C"},
 			granted:     false,
 		},
 		{
 			name:        "provide 1 composite OR requirement",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A", "B", "C"},
 			granted:     true,
 		},
 		{
 			name:        "provide both composite OR requirements",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A", "B"], ["C", "D"]], "info": "info", "in": {}, "out": {} } ]`,
 			permissions: []string{"A", "B", "C", "D"},
 			granted:     true,
 		},
@@ -257,7 +257,7 @@ func TestHandler_WithAuth(t *testing.T) {
 				})
 			})
 
-			err := builder.Setup(strings.NewReader(tc.manifest))
+			err := builder.Setup(strings.NewReader(tc.config))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
@@ -289,12 +289,12 @@ func TestHandler_WithAuth(t *testing.T) {
 
 }
 
-func TestHandler_PermissionError(t *testing.T) {
+func TestHandlerPermissionError(t *testing.T) {
 	tt := []struct {
 		name        string
 		path        string
 		uri, body   string
-		manifest    string
+		config      string
 		handler     interface{}
 		permissions []string
 		err         api.Err
@@ -303,7 +303,7 @@ func TestHandler_PermissionError(t *testing.T) {
 			name:        "permission fulfilled",
 			path:        "/path",
 			uri:         "/path",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
 			handler:     func(ctx context.Context) (*struct{}, error) { return nil, api.ErrNotImplemented },
 			permissions: []string{"A"},
 			err:         api.ErrNotImplemented,
@@ -312,7 +312,7 @@ func TestHandler_PermissionError(t *testing.T) {
 			name:        "missing permission",
 			path:        "/path",
 			uri:         "/path",
-			manifest:    `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
+			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
 			handler:     func(ctx context.Context) (*struct{}, error) { return nil, api.ErrNotImplemented },
 			permissions: []string{},
 			err:         api.ErrForbidden,
@@ -324,7 +324,7 @@ func TestHandler_PermissionError(t *testing.T) {
 			name: "permission with wrong uri param",
 			path: "/path/{uid}",
 			uri:  "/path/abc",
-			manifest: `[ {
+			config: `[ {
 				"method": "GET",
 				"path": "/path/{uid}",
 				"scope": [["missing"]],
@@ -344,7 +344,7 @@ func TestHandler_PermissionError(t *testing.T) {
 			name: "permission with wrong query param",
 			path: "/path",
 			uri:  "/path?uid=invalid-type",
-			manifest: `[ {
+			config: `[ {
 				"method": "GET",
 				"path": "/path",
 				"scope": [["missing"]],
@@ -365,7 +365,7 @@ func TestHandler_PermissionError(t *testing.T) {
 			path: "/path",
 			uri:  "/path",
 			body: "uid=invalid-type",
-			manifest: `[ {
+			config: `[ {
 				"method": "GET",
 				"path": "/path",
 				"scope": [["missing"]],
@@ -403,7 +403,7 @@ func TestHandler_PermissionError(t *testing.T) {
 				})
 			})
 
-			err := builder.Setup(strings.NewReader(tc.manifest))
+			err := builder.Setup(strings.NewReader(tc.config))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
@@ -439,10 +439,10 @@ func TestHandler_PermissionError(t *testing.T) {
 
 }
 
-func TestHandler_DynamicScope(t *testing.T) {
+func TestHandlerDynamicScope(t *testing.T) {
 	tt := []struct {
 		name        string
-		manifest    string
+		config      string
 		path        string
 		handler     interface{}
 		url         string
@@ -452,7 +452,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 	}{
 		{
 			name: "replace one granted",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/path/{id}",
@@ -473,7 +473,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 		},
 		{
 			name: "replace one mismatch",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/path/{id}",
@@ -494,7 +494,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 		},
 		{
 			name: "replace one valid dot separated",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/path/{id}",
@@ -515,7 +515,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 		},
 		{
 			name: "replace two valid dot separated",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/prefix/{pid}/user/{uid}",
@@ -542,7 +542,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 		},
 		{
 			name: "replace two invalid dot separated",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/prefix/{pid}/user/{uid}",
@@ -569,7 +569,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 		},
 		{
 			name: "replace three valid dot separated",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/prefix/{pid}/user/{uid}/suffix/{sid}",
@@ -598,7 +598,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 		},
 		{
 			name: "replace three invalid dot separated",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/prefix/{pid}/user/{uid}/suffix/{sid}",
@@ -665,7 +665,7 @@ func TestHandler_DynamicScope(t *testing.T) {
 				})
 			})
 
-			err := builder.Setup(strings.NewReader(tc.manifest))
+			err := builder.Setup(strings.NewReader(tc.config))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
@@ -694,10 +694,10 @@ func TestHandler_DynamicScope(t *testing.T) {
 
 }
 
-func TestHandler_ServiceErrors(t *testing.T) {
+func TestHandlerServiceErrors(t *testing.T) {
 	tt := []struct {
-		name     string
-		manifest string
+		name   string
+		config string
 		// handler
 		hmethod, huri string
 		hfn           interface{}
@@ -712,7 +712,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		// service match
 		{
 			name: "unknown service method",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -735,7 +735,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "unknown service path",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -758,7 +758,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "valid empty service",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -783,7 +783,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		// invalid uri param -> unknown service
 		{
 			name: "invalid uri param",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/a/{id}/b",
@@ -810,7 +810,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		// query param
 		{
 			name: "missing query param",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -836,7 +836,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "invalid query param",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/a",
@@ -862,7 +862,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "query unexpected slice param",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/a",
@@ -888,7 +888,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "valid query param",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/a",
@@ -915,7 +915,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		// json param
 		{
 			name: "missing json param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -942,7 +942,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "invalid json param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -969,7 +969,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "valid json param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -997,7 +997,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		// urlencoded param
 		{
 			name: "missing urlencoded param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -1024,7 +1024,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "invalid urlencoded param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -1051,7 +1051,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "valid urlencoded param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -1079,7 +1079,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		// formdata param
 		{
 			name: "missing multipart param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -1106,7 +1106,7 @@ func TestHandler_ServiceErrors(t *testing.T) {
 		},
 		{
 			name: "invalid multipart param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -1137,7 +1137,7 @@ abc
 		},
 		{
 			name: "valid multipart param",
-			manifest: `[
+			config: `[
 				{
 					"method": "POST",
 					"path": "/",
@@ -1174,7 +1174,7 @@ Content-Disposition: form-data; name="id"
 				t.Fatalf("unexpected error <%v>", err)
 			}
 
-			err := builder.Setup(strings.NewReader(tc.manifest))
+			err := builder.Setup(strings.NewReader(tc.config))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
@@ -1227,10 +1227,10 @@ Content-Disposition: form-data; name="id"
 	}
 }
 
-func TestHandler_Response(t *testing.T) {
+func TestHandlerResponse(t *testing.T) {
 	tt := []struct {
-		name     string
-		manifest string
+		name   string
+		config string
 
 		// handler
 		hmethod, huri string
@@ -1242,7 +1242,7 @@ func TestHandler_Response(t *testing.T) {
 	}{
 		{
 			name: "nil error",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -1263,7 +1263,7 @@ func TestHandler_Response(t *testing.T) {
 		},
 		{
 			name: "non-nil error",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -1285,7 +1285,7 @@ func TestHandler_Response(t *testing.T) {
 
 		{
 			name: "nil int output",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -1308,7 +1308,7 @@ func TestHandler_Response(t *testing.T) {
 		},
 		{
 			name: "non-nil int output",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -1331,7 +1331,7 @@ func TestHandler_Response(t *testing.T) {
 		},
 		{
 			name: "nil int outputs",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -1358,7 +1358,7 @@ func TestHandler_Response(t *testing.T) {
 		},
 		{
 			name: "int outputs surrounding error",
-			manifest: `[
+			config: `[
 				{
 					"method": "GET",
 					"path": "/",
@@ -1395,7 +1395,7 @@ func TestHandler_Response(t *testing.T) {
 				t.Fatalf("unexpected error <%v>", err)
 			}
 
-			err := builder.Setup(strings.NewReader(tc.manifest))
+			err := builder.Setup(strings.NewReader(tc.config))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
@@ -1429,7 +1429,7 @@ func TestHandler_Response(t *testing.T) {
 	}
 }
 
-func TestHandler_RequestTooLarge(t *testing.T) {
+func TestHandlerRequestTooLarge(t *testing.T) {
 	tt := []struct {
 		name              string
 		uriMax, uriSize   int
