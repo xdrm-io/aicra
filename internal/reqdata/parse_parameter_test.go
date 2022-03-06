@@ -11,13 +11,11 @@ func TestSimpleString(t *testing.T) {
 
 	cast, canCast := p.(string)
 	if !canCast {
-		t.Errorf("expected parameter to be a string")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a string")
 	}
 
 	if cast != "some-string" {
-		t.Errorf("expected parameter to equal 'some-string', got %q", cast)
-		t.FailNow()
+		t.Fatalf("expected parameter to equal 'some-string', got %q", cast)
 	}
 }
 
@@ -30,13 +28,11 @@ func TestSimpleFloat(t *testing.T) {
 
 			cast, canCast := p.(float64)
 			if !canCast {
-				t.Errorf("expected parameter to be a float64")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a float64")
 			}
 
 			if math.Abs(cast-tcase) > 0.00000001 {
-				t.Errorf("expected parameter to equal '%f', got '%f'", tcase, cast)
-				t.FailNow()
+				t.Fatalf("expected parameter to equal '%f', got '%f'", tcase, cast)
 			}
 		})
 	}
@@ -51,13 +47,11 @@ func TestSimpleBool(t *testing.T) {
 
 			cast, canCast := p.(bool)
 			if !canCast {
-				t.Errorf("expected parameter to be a bool")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a bool")
 			}
 
 			if cast != tcase {
-				t.Errorf("expected parameter to equal '%t', got '%t'", tcase, cast)
-				t.FailNow()
+				t.Fatalf("expected parameter to equal '%t', got '%t'", tcase, cast)
 			}
 		})
 	}
@@ -68,13 +62,11 @@ func TestJsonStringSlice(t *testing.T) {
 
 	slice, canCast := p.([]interface{})
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []interface{}")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []string{"str1", "str2"}
@@ -100,13 +92,11 @@ func TestStringSlice(t *testing.T) {
 
 	slice, canCast := p.([]interface{})
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []interface{}")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []string{"str1", "str2"}
@@ -142,13 +132,11 @@ func TestJsonPrimitiveBool(t *testing.T) {
 
 			cast, canCast := p.(bool)
 			if !canCast {
-				t.Errorf("expected parameter to be a bool")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a bool")
 			}
 
 			if cast != tcase.BoolValue {
-				t.Errorf("expected a value of %t, got %t", tcase.BoolValue, cast)
-				t.FailNow()
+				t.Fatalf("expected a value of %t, got %t", tcase.BoolValue, cast)
 			}
 		})
 	}
@@ -179,13 +167,11 @@ func TestJsonPrimitiveFloat(t *testing.T) {
 
 			cast, canCast := p.(float64)
 			if !canCast {
-				t.Errorf("expected parameter to be a float64")
-				t.FailNow()
+				t.Fatalf("expected parameter to be a float64")
 			}
 
 			if math.Abs(cast-tcase.FloatValue) > 0.00001 {
-				t.Errorf("expected a value of %f, got %f", tcase.FloatValue, cast)
-				t.FailNow()
+				t.Fatalf("expected a value of %f, got %f", tcase.FloatValue, cast)
 			}
 		})
 	}
@@ -197,13 +183,11 @@ func TestJsonBoolSlice(t *testing.T) {
 
 	slice, canCast := p.([]interface{})
 	if !canCast {
-		t.Errorf("expected parameter to be a []interface{}")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []interface{}")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []bool{true, false}
@@ -229,13 +213,11 @@ func TestBoolSlice(t *testing.T) {
 
 	slice, canCast := p.([]bool)
 	if !canCast {
-		t.Errorf("expected parameter to be a []bool")
-		t.FailNow()
+		t.Fatalf("expected parameter to be a []bool")
 	}
 
 	if len(slice) != 2 {
-		t.Errorf("expected 2 values, got %d", len(slice))
-		t.FailNow()
+		t.Fatalf("expected 2 values, got %d", len(slice))
 	}
 
 	results := []bool{true, false}
