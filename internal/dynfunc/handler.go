@@ -3,10 +3,8 @@ package dynfunc
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 
-	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
@@ -53,17 +51,17 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 // Handle binds input `data` into the dynamic function and returns an output map
 func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error) {
 	var (
-		fnv      = reflect.ValueOf(h.fn)
-		callArgs = make([]reflect.Value, 0)
+		fnv       = reflect.ValueOf(h.fn)
+		callArgs  = make([]reflect.Value, 0)
+		hasInput  = len(h.signature.Input) > 0
+		hasOutput = len(h.signature.Output) > 0
 	)
 
 	// bind context
 	callArgs = append(callArgs, reflect.ValueOf(ctx))
 
-	inputStructRequired := fnv.Type().NumIn() > 1
-
 	// bind input arguments
-	if inputStructRequired {
+	if hasInput {
 		// create zero value struct
 		var (
 			callStructPtr = reflect.New(fnv.Type().In(1))
@@ -74,7 +72,7 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 		for name := range h.signature.Input {
 			field := callStruct.FieldByName(name)
 			if !field.CanSet() {
-				continue
+				panic(fmt.Errorf("cannot set field %q", name))
 			}
 
 			// get value from @data
@@ -90,8 +88,7 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 				var ptrType = field.Type().Elem()
 
 				if !refvalue.Type().ConvertibleTo(ptrType) {
-					log.Printf("Cannot convert %v into *%v", refvalue.Type(), ptrType)
-					return nil, api.ErrUncallableService
+					panic(fmt.Errorf("cannot convert %v into *%v", refvalue.Type(), ptrType))
 				}
 
 				ptr := reflect.New(ptrType)
@@ -102,8 +99,7 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 			}
 
 			if !reflect.ValueOf(value).Type().ConvertibleTo(field.Type()) {
-				log.Printf("Cannot convert %v into %v", reflect.ValueOf(value).Type(), field.Type())
-				return nil, api.ErrUncallableService
+				panic(fmt.Errorf("cannot convert %v into %v", reflect.ValueOf(value).Type(), field.Type()))
 			}
 
 			field.Set(refvalue.Convert(field.Type()))
@@ -121,7 +117,7 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 
 	// no output OR pointer to output struct is nil
 	outdata := make(map[string]interface{})
-	if len(h.signature.Output) < 1 || output[0].IsNil() {
+	if !hasOutput || output[0].IsNil() {
 		return outdata, err
 	}
 
