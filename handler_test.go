@@ -96,7 +96,7 @@ func TestHandlerWith(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx context.Context) (*struct{}, error) {
+	pathHandler := func(ctx context.Context) error {
 		// write value from middlewares into response
 		value := ctx.Value(key)
 		if value == nil {
@@ -109,7 +109,7 @@ func TestHandlerWith(t *testing.T) {
 		// write to response
 		api.GetResponseWriter(ctx).Write([]byte(fmt.Sprintf("#%d#", cast)))
 
-		return nil, nil
+		return nil
 	}
 
 	if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
@@ -262,8 +262,8 @@ func TestHandlerWithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx context.Context) (*struct{}, error) {
-				return nil, api.ErrNotImplemented
+			pathHandler := func(ctx context.Context) error {
+				return api.ErrNotImplemented
 			}
 
 			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
@@ -304,7 +304,7 @@ func TestHandlerPermissionError(t *testing.T) {
 			path:        "/path",
 			uri:         "/path",
 			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
-			handler:     func(ctx context.Context) (*struct{}, error) { return nil, api.ErrNotImplemented },
+			handler:     func(ctx context.Context) error { return api.ErrNotImplemented },
 			permissions: []string{"A"},
 			err:         api.ErrNotImplemented,
 		},
@@ -313,7 +313,7 @@ func TestHandlerPermissionError(t *testing.T) {
 			path:        "/path",
 			uri:         "/path",
 			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
-			handler:     func(ctx context.Context) (*struct{}, error) { return nil, api.ErrNotImplemented },
+			handler:     func(ctx context.Context) error { return api.ErrNotImplemented },
 			permissions: []string{},
 			err:         api.ErrForbidden,
 		},
@@ -334,8 +334,8 @@ func TestHandlerPermissionError(t *testing.T) {
 				},
 				"out": {}
 			} ]`,
-			handler: func(ctx context.Context, in struct{ UserID uint }) (*struct{}, error) {
-				return nil, api.ErrNotImplemented
+			handler: func(ctx context.Context, in struct{ UserID uint }) error {
+				return api.ErrNotImplemented
 			},
 			permissions: []string{},
 			err:         api.ErrUnknownService,
@@ -354,8 +354,8 @@ func TestHandlerPermissionError(t *testing.T) {
 				},
 				"out": {}
 			} ]`,
-			handler: func(ctx context.Context, in struct{ UserID uint }) (*struct{}, error) {
-				return nil, api.ErrNotImplemented
+			handler: func(ctx context.Context, in struct{ UserID uint }) error {
+				return api.ErrNotImplemented
 			},
 			permissions: []string{},
 			err:         api.ErrForbidden,
@@ -375,8 +375,8 @@ func TestHandlerPermissionError(t *testing.T) {
 				},
 				"out": {}
 			} ]`,
-			handler: func(ctx context.Context, in struct{ UserID uint }) (*struct{}, error) {
-				return nil, api.ErrNotImplemented
+			handler: func(ctx context.Context, in struct{ UserID uint }) error {
+				return api.ErrNotImplemented
 			},
 			permissions: []string{},
 			err:         api.ErrForbidden,
@@ -465,7 +465,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, error) { return nil, nil },
+			handler:     func(context.Context, struct{ Input1 uint }) error { return nil },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -486,7 +486,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ Input1 uint }) (*struct{}, error) { return nil, nil },
+			handler:     func(context.Context, struct{ Input1 uint }) error { return nil },
 			url:         "/path/666",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -507,7 +507,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 				}
 			]`,
 			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ User uint }) (*struct{}, error) { return nil, nil },
+			handler:     func(context.Context, struct{ User uint }) error { return nil },
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"prefix.user[123].suffix"},
@@ -532,8 +532,8 @@ func TestHandlerDynamicScope(t *testing.T) {
 			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
-			}) (*struct{}, error) {
-				return nil, nil
+			}) error {
+				return nil
 			},
 			url:         "/prefix/123/user/456",
 			body:        ``,
@@ -559,8 +559,8 @@ func TestHandlerDynamicScope(t *testing.T) {
 			handler: func(context.Context, struct {
 				Prefix uint
 				User   uint
-			}) (*struct{}, error) {
-				return nil, nil
+			}) error {
+				return nil
 			},
 			url:         "/prefix/123/user/666",
 			body:        ``,
@@ -588,8 +588,8 @@ func TestHandlerDynamicScope(t *testing.T) {
 				Prefix uint
 				User   uint
 				Suffix uint
-			}) (*struct{}, error) {
-				return nil, nil
+			}) error {
+				return nil
 			},
 			url:         "/prefix/123/user/456/suffix/789",
 			body:        ``,
@@ -617,8 +617,8 @@ func TestHandlerDynamicScope(t *testing.T) {
 				Prefix uint
 				User   uint
 				Suffix uint
-			}) (*struct{}, error) {
-				return nil, nil
+			}) error {
+				return nil
 			},
 			url:         "/prefix/123/user/666/suffix/789",
 			body:        ``,

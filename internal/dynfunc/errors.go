@@ -26,6 +26,9 @@ const (
 	// ErrUnexpectedInput - input argument is not expected
 	ErrUnexpectedInput = Err("unexpected input struct")
 
+	// ErrUnexpectedOutput - output argument is not expected
+	ErrUnexpectedOutput = Err("unexpected output struct")
+
 	// ErrMissingHandlerOutputArgument - missing output for handler
 	ErrMissingHandlerOutputArgument = Err("missing handler first output argument: output struct")
 

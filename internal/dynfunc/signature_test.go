@@ -248,7 +248,7 @@ func TestOutputValidation(t *testing.T) {
 			name:   "1 output none required",
 			output: map[string]reflect.Type{},
 			fn:     func(context.Context) (*struct{}, error) { return nil, nil },
-			err:    nil,
+			err:    ErrUnexpectedOutput,
 		},
 		{
 			name: "no output 1 required",
@@ -499,6 +499,12 @@ func TestServiceValidation(t *testing.T) {
 			},
 			fn:  func(context.Context) (*struct{ Test1 int }, error) { return nil, nil },
 			err: nil,
+		},
+		{
+			name: "unexpected out",
+			out:  []*config.Parameter{},
+			fn:   func(context.Context) (*struct{ Test1 int }, error) { return nil, nil },
+			err:  ErrUnexpectedOutput,
 		},
 		{
 			name: "optional out not ptr",

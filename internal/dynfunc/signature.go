@@ -50,19 +50,18 @@ func BuildSignature(service config.Service) *Signature {
 func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 	ctxType := reflect.TypeOf((*context.Context)(nil)).Elem()
 
-	// missing or invalid first arg: context.Context
+	// context.Context first argument missing/invalid
 	if handlerType.NumIn() < 1 {
 		return ErrMissingHandlerContextArgument
 	}
 	firstArgType := handlerType.In(0)
-
 	if !firstArgType.Implements(ctxType) {
 		return ErrInvalidHandlerContextArgument
 	}
 
 	// no input required
 	if len(s.Input) == 0 {
-		// input struct provided
+		// fail when input struct is still provided
 		if handlerType.NumIn() > 1 {
 			return ErrUnexpectedInput
 		}
@@ -74,7 +73,7 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 		return ErrMissingHandlerInputArgument
 	}
 
-	// arg must be a struct
+	// must be a struct
 	inStruct := handlerType.In(1)
 	if inStruct.Kind() != reflect.Struct {
 		return ErrMissingParamArgument
@@ -95,7 +94,6 @@ func (s *Signature) ValidateInput(handlerType reflect.Type) error {
 			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, ptype)
 		}
 	}
-
 	return nil
 }
 
@@ -107,14 +105,18 @@ func (s Signature) ValidateOutput(handlerType reflect.Type) error {
 		return ErrMissingHandlerErrorArgument
 	}
 
-	// last output must be error
+	// last output must be an error
 	lastArgType := handlerType.Out(handlerType.NumOut() - 1)
 	if !lastArgType.AssignableTo(errType) {
 		return ErrInvalidHandlerErrorArgument
 	}
 
-	// no output required -> ok
+	// no output required
 	if len(s.Output) == 0 {
+		// fail when output struct is still provided
+		if handlerType.NumOut() > 1 {
+			return ErrUnexpectedOutput
+		}
 		return nil
 	}
 
