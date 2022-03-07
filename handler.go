@@ -18,11 +18,11 @@ type Handler Builder
 
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.maxURISize > 0 && len(r.URL.RequestURI()) > s.maxURISize {
+	if s.uriLimit > 0 && len(r.URL.RequestURI()) > s.uriLimit {
 		s.respond(w, nil, api.ErrURITooLong)
 		return
 	}
-	if s.maxBodySize > 0 && r.ContentLength > s.maxBodySize {
+	if s.bodyLimit > 0 && r.ContentLength > s.bodyLimit {
 		s.respond(w, nil, api.ErrBodyTooLarge)
 		return
 	}

@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	// DefaultMaxURISize defines the default URI size to accept
-	DefaultMaxURISize = 1024
-	// DefaultMaxBodySize defines the default body size to accept
-	DefaultMaxBodySize = 1024 * 1024 // 1MB
+	// DefaultURILimit defines the default URI size to accept
+	DefaultURILimit = 1024
+	// DefaultBodyLimit defines the default body size to accept
+	DefaultBodyLimit = 1024 * 1024 // 1MB
 )
 
 // Builder for an aicra server
@@ -34,14 +34,14 @@ type Builder struct {
 	// information (e.g. required permissions from the configuration)
 	ctxMiddlewares []func(http.Handler) http.Handler
 
-	// maxURISize is used to automatically reject requests that have a URI
-	// exceeding `maxURISize` (in bytes). Negative values means there is no
+	// uriLimit is used to automatically reject requests that have a URI
+	// exceeding `uriLimit` (in bytes). Negative values means there is no
 	// limit. The default value (0) falls back to the default aicra limit
-	maxURISize int
-	// maxBodySize is used to automatically reject requests that have a body
-	// exceeding `maxBodySize` (in bytes). Negative value means there is no
+	uriLimit int
+	// bodyLimit is used to automatically reject requests that have a body
+	// exceeding `bodyLimit` (in bytes). Negative value means there is no
 	// limit. The default value (0) falls back to the default aicra limit
-	maxBodySize int64
+	bodyLimit int64
 }
 
 // serviceHandler links a handler func to a service (method-path combination)
@@ -51,16 +51,16 @@ type serviceHandler struct {
 	dyn    *dynfunc.Handler
 }
 
-// SetMaxURISize defines the maximum size of request URIs that is accepted (in
+// SetURILimit defines the maximum size of request URIs that is accepted (in
 // bytes)
-func (b *Builder) SetMaxURISize(size int) {
-	b.maxURISize = size
+func (b *Builder) SetURILimit(size int) {
+	b.uriLimit = size
 }
 
-// SetMaxBodySize defines the maximum size of request bodies that is accepted
+// SetBodyLimit defines the maximum size of request bodies that is accepted
 // (in bytes)
-func (b *Builder) SetMaxBodySize(size int64) {
-	b.maxBodySize = size
+func (b *Builder) SetBodyLimit(size int64) {
+	b.bodyLimit = size
 }
 
 // Input adds an available validator for input arguments
@@ -174,11 +174,11 @@ func (b *Builder) Bind(method, path string, fn interface{}) error {
 
 // Build a fully-featured HTTP server
 func (b Builder) Build() (http.Handler, error) {
-	if b.maxURISize == 0 {
-		b.maxURISize = DefaultMaxURISize
+	if b.uriLimit == 0 {
+		b.uriLimit = DefaultURILimit
 	}
-	if b.maxBodySize == 0 {
-		b.maxBodySize = DefaultMaxBodySize
+	if b.bodyLimit == 0 {
+		b.bodyLimit = DefaultBodyLimit
 	}
 
 	if b.respond == nil {
