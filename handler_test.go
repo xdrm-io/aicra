@@ -1438,43 +1438,43 @@ func TestHandlerRequestTooLarge(t *testing.T) {
 	}{
 		{
 			name:     "defaults -1",
-			uriSize:  aicra.DefaultMaxURISize - 1,
-			bodySize: aicra.DefaultMaxBodySize - 1,
+			uriSize:  aicra.DefaultURILimit - 1,
+			bodySize: aicra.DefaultBodyLimit - 1,
 			err:      api.ErrUnknownService,
 		},
 		{
 			name:     "defaults eq",
-			uriSize:  aicra.DefaultMaxURISize,
-			bodySize: aicra.DefaultMaxBodySize,
+			uriSize:  aicra.DefaultURILimit,
+			bodySize: aicra.DefaultBodyLimit,
 			err:      api.ErrUnknownService,
 		},
 		{
 			name:    "defaults uri",
-			uriSize: aicra.DefaultMaxURISize + 1,
+			uriSize: aicra.DefaultURILimit + 1,
 			err:     api.ErrURITooLong,
 		},
 		{
 			name:     "defaults body",
-			bodySize: aicra.DefaultMaxBodySize + 1,
+			bodySize: aicra.DefaultBodyLimit + 1,
 			err:      api.ErrBodyTooLarge,
 		},
 		{
 			name:     "defaults both",
-			uriSize:  aicra.DefaultMaxURISize + 1,
-			bodySize: aicra.DefaultMaxBodySize + 1,
+			uriSize:  aicra.DefaultURILimit + 1,
+			bodySize: aicra.DefaultBodyLimit + 1,
 			err:      api.ErrURITooLong,
 		},
 
 		{
 			name:    "unlimited uri",
 			uriMax:  -1,
-			uriSize: aicra.DefaultMaxURISize + 1,
+			uriSize: aicra.DefaultURILimit + 1,
 			err:     api.ErrUnknownService,
 		},
 		{
 			name:     "unlimited body",
 			bodyMax:  -1,
-			bodySize: aicra.DefaultMaxBodySize + 1,
+			bodySize: aicra.DefaultBodyLimit + 1,
 			err:      api.ErrUnknownService,
 		},
 		{
@@ -1511,8 +1511,8 @@ func TestHandlerRequestTooLarge(t *testing.T) {
 				t.Fatalf("cannot setup builder: %s", err)
 			}
 
-			b.SetMaxURISize(tc.uriMax)
-			b.SetMaxBodySize(int64(tc.bodyMax))
+			b.SetURILimit(tc.uriMax)
+			b.SetBodyLimit(int64(tc.bodyMax))
 
 			handler, err := b.Build()
 			if err != nil {

@@ -210,6 +210,7 @@ func TestUnhandledService(t *testing.T) {
 		t.Fatalf("expected a %v error, got %v", errMissingHandler, err)
 	}
 }
+
 func TestBind(t *testing.T) {
 	t.Parallel()
 
