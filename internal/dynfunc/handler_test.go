@@ -8,26 +8,27 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 type testsignature Signature
 
 // builds a mock service with provided arguments as Input and matched as Output
 func (s *testsignature) withArgs(dtypes ...reflect.Type) *testsignature {
-	if s.Input == nil {
-		s.Input = make(map[string]reflect.Type)
+	if s.In == nil {
+		s.In = make(map[string]reflect.Type)
 	}
-	if s.Output == nil {
-		s.Output = make(map[string]reflect.Type)
+	if s.Out == nil {
+		s.Out = make(map[string]reflect.Type)
 	}
 
 	for i, dtype := range dtypes {
 		name := fmt.Sprintf("P%d", i+1)
-		s.Input[name] = dtype
+		s.In[name] = dtype
 		if dtype.Kind() == reflect.Ptr {
-			s.Output[name] = dtype.Elem()
+			s.Out[name] = dtype.Elem()
 		} else {
-			s.Output[name] = dtype
+			s.Out[name] = dtype
 		}
 	}
 	return s
@@ -143,7 +144,7 @@ func TestInput(t *testing.T) {
 			t.Parallel()
 
 			var handler = &Handler{
-				signature: &Signature{Input: tc.spec.Input, Output: tc.spec.Output},
+				signature: &Signature{In: tc.spec.In, Out: tc.spec.Out},
 				fn:        tc.fn,
 			}
 
@@ -186,4 +187,196 @@ func TestInput(t *testing.T) {
 		})
 	}
 
+}
+
+func TestUnexpectedErrors(t *testing.T) {
+	t.Parallel()
+
+	type Unsettable struct {
+		unexported bool
+	}
+	type IntPointer struct {
+		NotABoolPointer *int
+	}
+	type Int struct {
+		NotABool int
+	}
+
+	type Multi struct {
+		String string
+		IntPtr *int
+	}
+	type Big struct {
+		String    string
+		Int       int
+		StringPtr *string
+		IntPtr    *int
+	}
+
+	tt := []struct {
+		name     string
+		expected map[string]reflect.Type
+		input    map[string]interface{}
+		fn       interface{}
+
+		// do not expect a panic when empty
+		panicMsg string
+
+		// only checked when no panic happens
+		err error
+	}{
+		{
+			name:     "panic on unsettable input",
+			expected: map[string]reflect.Type{"unexported": reflect.TypeOf(true)},
+			input:    map[string]interface{}{"unexported": true},
+			fn:       func(context.Context, Unsettable) error { return nil },
+			panicMsg: `cannot set field "unexported"`,
+		},
+		{
+			name:     "panic on incompatible pointer",
+			expected: map[string]reflect.Type{"NotABoolPointer": reflect.PtrTo(reflect.TypeOf(true))},
+			input:    map[string]interface{}{"NotABoolPointer": true},
+			fn:       func(context.Context, IntPointer) error { return nil },
+			panicMsg: `cannot convert bool into *int`,
+		},
+		{
+			name:     "panic on incompatible type",
+			expected: map[string]reflect.Type{"NotABool": reflect.TypeOf(true)},
+			input:    map[string]interface{}{"NotABool": true},
+			fn:       func(context.Context, Int) error { return nil },
+			panicMsg: `cannot convert bool into int`,
+		},
+		{
+			name: "skip missing input data",
+			expected: map[string]reflect.Type{
+				"String": reflect.TypeOf(""),
+				"IntPtr": reflect.PtrTo(reflect.TypeOf(int(0))),
+			},
+			input: nil, // no input provided
+			fn: func(ctx context.Context, in Big) error {
+				if len(in.String) > 0 {
+					t.Fatalf("expected string param to be skipped")
+				}
+				if in.IntPtr != nil {
+					t.Fatalf("expected pointer param to be skipped")
+				}
+				return nil
+			},
+		},
+		{
+			name: "valid input",
+			expected: map[string]reflect.Type{
+				"String":    reflect.TypeOf(""),
+				"StringPtr": reflect.PtrTo(reflect.TypeOf("")),
+				"Int":       reflect.TypeOf(int(0)),
+				"IntPtr":    reflect.PtrTo(reflect.TypeOf(int(0))),
+			},
+			input: map[string]interface{}{
+				"String":    "Some string!",
+				"StringPtr": "Some other string!",
+				"Int":       24680,
+				"IntPtr":    -13579,
+			},
+			fn: func(ctx context.Context, in Big) error {
+				if in.String != "Some string!" {
+					t.Fatalf("invalid string\nactual: %q\nexpect: %q", in.String, "Some string!")
+				}
+				if in.Int != 24680 {
+					t.Fatalf("invalid int\nactual: %d\nexpect: %d", in.Int, 24680)
+				}
+				if in.IntPtr == nil {
+					t.Fatalf("unexpected nil pointer")
+				}
+				if *in.StringPtr != "Some other string!" {
+					t.Fatalf("invalid int\nactual: %q\nexpect: %q", *in.StringPtr, "Some other string!")
+				}
+				if in.StringPtr == nil {
+					t.Fatalf("unexpected nil pointer")
+				}
+				if *in.IntPtr != -13579 {
+					t.Fatalf("invalid int\nactual: %d\nexpect: %d", *in.IntPtr, -13579)
+				}
+				return api.ErrNotImplemented
+			},
+			err: api.ErrNotImplemented,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := Handler{
+				signature: &Signature{In: tc.expected, Out: nil},
+				fn:        tc.fn,
+			}
+
+			defer func() {
+				expectPanic := len(tc.panicMsg) > 0
+
+				r := recover()
+				if r == nil && expectPanic {
+					t.Fatalf("expected a panic: %q", tc.panicMsg)
+				}
+				if r != nil && !expectPanic {
+					t.Fatalf("unexected panic: %v", r)
+				}
+				if expectPanic && fmt.Sprintf("%v", r) != tc.panicMsg {
+					t.Fatalf("invalid panic message\nactual: %q\nexpect: %q", r, tc.panicMsg)
+				}
+			}()
+			_, err := handler.Handle(context.Background(), tc.input)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
+			}
+
+		})
+	}
+}
+
+func TestBuild(t *testing.T) {
+	t.Parallel()
+
+	var Int int = 1
+
+	tt := []struct {
+		name    string
+		service config.Service
+		fn      interface{}
+		err     error
+	}{
+		{
+			name:    "not a function",
+			service: config.Service{},
+			fn:      &Int, // int pointer
+			err:     ErrHandlerNotFunc,
+		},
+		{
+			// input already tested in signature.ValidateInput
+			name:    "unexpected input",
+			service: config.Service{},
+			fn:      func(context.Context, struct{}) error { return nil },
+			err:     ErrUnexpectedInput,
+		},
+		{
+			// output already tested in signature.ValidateOutput
+			name:    "unexpected output",
+			service: config.Service{},
+			fn:      func(context.Context) (*struct{}, error) { return nil, nil },
+			err:     ErrUnexpectedOutput,
+		},
+		{
+			name:    "valid empty service",
+			service: config.Service{},
+			fn:      func(context.Context) error { return nil },
+			err:     nil,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Build(tc.fn, tc.service)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
+			}
+		})
+	}
 }

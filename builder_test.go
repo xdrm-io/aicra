@@ -200,7 +200,7 @@ func TestUnhandledService(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	err = builder.Bind(http.MethodGet, "/path", func(context.Context) (*struct{}, error) { return nil, nil })
+	err = builder.Bind(http.MethodGet, "/path", func(context.Context) error { return nil })
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -329,7 +329,7 @@ func TestBind(t *testing.T) {
 			]`,
 			handlerMethod: http.MethodGet,
 			handlerPath:   "/path",
-			handler:       func(context.Context, struct{ Name int }) (*struct{}, error) { return nil, nil },
+			handler:       func(context.Context, struct{ Name int }) error { return nil },
 			bindErr:       nil,
 			buildErr:      nil,
 		},
@@ -349,7 +349,7 @@ func TestBind(t *testing.T) {
 			]`,
 			handlerMethod: http.MethodGet,
 			handlerPath:   "/path",
-			handler:       func(context.Context, struct{ Name uint }) (*struct{}, error) { return nil, nil },
+			handler:       func(context.Context, struct{ Name uint }) error { return nil },
 			bindErr:       nil,
 			buildErr:      nil,
 		},
@@ -369,7 +369,7 @@ func TestBind(t *testing.T) {
 			]`,
 			handlerMethod: http.MethodGet,
 			handlerPath:   "/path",
-			handler:       func(context.Context, struct{ Name string }) (*struct{}, error) { return nil, nil },
+			handler:       func(context.Context, struct{ Name string }) error { return nil },
 			bindErr:       nil,
 			buildErr:      nil,
 		},
@@ -389,7 +389,7 @@ func TestBind(t *testing.T) {
 			]`,
 			handlerMethod: http.MethodGet,
 			handlerPath:   "/path",
-			handler:       func(context.Context, struct{ Name bool }) (*struct{}, error) { return nil, nil },
+			handler:       func(context.Context, struct{ Name bool }) error { return nil },
 			bindErr:       nil,
 			buildErr:      nil,
 		},

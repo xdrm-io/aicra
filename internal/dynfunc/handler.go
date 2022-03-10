@@ -3,10 +3,8 @@ package dynfunc
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 
-	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
@@ -18,20 +16,28 @@ type Handler struct {
 	fn interface{}
 }
 
-// Build a handler from a dynamic function and checks its signature against a
-// service configuration
+// Build a dynamic handler from a generic function (interface{}). Fail when the
+// function does not match the expected service signature (input and output
+// arguments) according to the configuration.
 //
 // `fn` must have as a signature : `func(context.Context, in) (*out, api.Err)`
-//  - `in` is a struct{} containing a field for each service input (with valid reflect.Type)
-//  - `out` is a struct{} containing a field for each service output (with valid reflect.Type)
+//  - `in`  is a struct{} containing a field for each service input
+//  - `out` is a struct{} containing a field for each service output
+//
+// Struct field names must be literally the same as the "name" field from the
+// configuration, or the argument key if no "name" is provided.
+//
+// Input struct field types must match the associated validator GoType().
+// Optional input arguments must be pointers to the validator's GoType().
+// Output struct field types must match output types.
 //
 // Special cases:
-//  - it there is no input,  `in` MUST be omitted
-//  - it there is no output, `out` CAN be omitted
+//  - when no input is configured, the `in` struct MUST be dropped
+//  - when no output is configured, the `out` struct MUST be dropped
 func Build(fn interface{}, service config.Service) (*Handler, error) {
 	var (
 		h = &Handler{
-			signature: BuildSignature(service),
+			signature: FromConfig(service),
 			fn:        fn,
 		}
 		fnType = reflect.TypeOf(fn)
@@ -53,28 +59,30 @@ func Build(fn interface{}, service config.Service) (*Handler, error) {
 // Handle binds input `data` into the dynamic function and returns an output map
 func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error) {
 	var (
-		fnv      = reflect.ValueOf(h.fn)
-		callArgs = make([]reflect.Value, 0)
+		vFn   = reflect.ValueOf(h.fn)
+		tFn   = reflect.TypeOf(h.fn)
+		input = make([]reflect.Value, 0)
+
+		hasInput  = len(h.signature.In) > 0
+		hasOutput = len(h.signature.Out) > 0
 	)
 
 	// bind context
-	callArgs = append(callArgs, reflect.ValueOf(ctx))
-
-	inputStructRequired := fnv.Type().NumIn() > 1
+	input = append(input, reflect.ValueOf(ctx))
 
 	// bind input arguments
-	if inputStructRequired {
+	if hasInput {
 		// create zero value struct
 		var (
-			callStructPtr = reflect.New(fnv.Type().In(1))
-			callStruct    = callStructPtr.Elem()
+			inStructPtr = reflect.New(tFn.In(1))
+			inStruct    = inStructPtr.Elem()
 		)
 
 		// set each field
-		for name := range h.signature.Input {
-			field := callStruct.FieldByName(name)
+		for name := range h.signature.In {
+			field := inStruct.FieldByName(name)
 			if !field.CanSet() {
-				continue
+				panic(fmt.Errorf("cannot set field %q", name))
 			}
 
 			// get value from @data
@@ -83,36 +91,35 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 				continue
 			}
 
-			var refvalue = reflect.ValueOf(value)
+			vValue := reflect.ValueOf(value)
+			tValue := reflect.TypeOf(value)
 
-			// T to pointer of T
+			// convert T to pointer of T
 			if field.Kind() == reflect.Ptr {
-				var ptrType = field.Type().Elem()
-
-				if !refvalue.Type().ConvertibleTo(ptrType) {
-					log.Printf("Cannot convert %v into *%v", refvalue.Type(), ptrType)
-					return nil, api.ErrUncallableService
+				var tPtr = field.Type().Elem()
+				if !tValue.ConvertibleTo(tPtr) {
+					panic(fmt.Errorf("cannot convert %v into *%v", tValue, tPtr))
 				}
 
-				ptr := reflect.New(ptrType)
-				ptr.Elem().Set(reflect.ValueOf(value).Convert(ptrType))
-
+				ptr := reflect.New(tPtr)
+				ptr.Elem().Set(vValue.Convert(tPtr))
 				field.Set(ptr)
 				continue
 			}
 
-			if !reflect.ValueOf(value).Type().ConvertibleTo(field.Type()) {
-				log.Printf("Cannot convert %v into %v", reflect.ValueOf(value).Type(), field.Type())
-				return nil, api.ErrUncallableService
+			// not convertible
+			if !tValue.ConvertibleTo(field.Type()) {
+				panic(fmt.Errorf("cannot convert %v into %v", tValue, field.Type()))
 			}
 
-			field.Set(refvalue.Convert(field.Type()))
+			// non-pointer values
+			field.Set(vValue.Convert(field.Type()))
 		}
-		callArgs = append(callArgs, callStruct)
+		input = append(input, inStruct)
 	}
 
 	// call the handler
-	output := fnv.Call(callArgs)
+	output := vFn.Call(input)
 
 	var err error
 	if !output[len(output)-1].IsNil() {
@@ -121,18 +128,15 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 
 	// no output OR pointer to output struct is nil
 	outdata := make(map[string]interface{})
-	if len(h.signature.Output) < 1 || output[0].IsNil() {
+	if !hasOutput || output[0].IsNil() {
 		return outdata, err
 	}
 
 	// extract struct from pointer
-	returnStruct := output[0].Elem()
-
-	for name := range h.signature.Output {
-		field := returnStruct.FieldByName(name)
+	outStruct := output[0].Elem()
+	for name := range h.signature.Out {
+		field := outStruct.FieldByName(name)
 		outdata[name] = field.Interface()
 	}
-
-	// extract error
 	return outdata, err
 }
