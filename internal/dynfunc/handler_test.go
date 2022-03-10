@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 type testsignature Signature
@@ -327,6 +328,55 @@ func TestUnexpectedErrors(t *testing.T) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
 
+		})
+	}
+}
+
+func TestBuild(t *testing.T) {
+	t.Parallel()
+
+	var Int int = 1
+
+	tt := []struct {
+		name    string
+		service config.Service
+		fn      interface{}
+		err     error
+	}{
+		{
+			name:    "not a function",
+			service: config.Service{},
+			fn:      &Int, // int pointer
+			err:     ErrHandlerNotFunc,
+		},
+		{
+			// input already tested in signature.ValidateInput
+			name:    "unexpected input",
+			service: config.Service{},
+			fn:      func(context.Context, struct{}) error { return nil },
+			err:     ErrUnexpectedInput,
+		},
+		{
+			// output already tested in signature.ValidateOutput
+			name:    "unexpected output",
+			service: config.Service{},
+			fn:      func(context.Context) (*struct{}, error) { return nil, nil },
+			err:     ErrUnexpectedOutput,
+		},
+		{
+			name:    "valid empty service",
+			service: config.Service{},
+			fn:      func(context.Context) error { return nil },
+			err:     nil,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Build(tc.fn, tc.service)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
+			}
 		})
 	}
 }
