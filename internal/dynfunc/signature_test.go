@@ -213,8 +213,8 @@ func TestInputValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// mock spec
 			s := Signature{
-				Input:  tc.input,
-				Output: nil,
+				In:  tc.input,
+				Out: nil,
 			}
 
 			err := s.ValidateInput(reflect.TypeOf(tc.fn))
@@ -342,8 +342,8 @@ func TestOutputValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// mock spec
 			s := Signature{
-				Input:  nil,
-				Output: tc.output,
+				In:  nil,
+				Out: tc.output,
 			}
 			err := s.ValidateOutput(reflect.TypeOf(tc.fn))
 			if !errors.Is(err, tc.err) {
@@ -539,7 +539,7 @@ func TestServiceValidation(t *testing.T) {
 				}
 			}
 
-			s := BuildSignature(service)
+			s := FromConfig(service)
 
 			err := s.ValidateInput(reflect.TypeOf(tc.fn))
 			if err != nil {

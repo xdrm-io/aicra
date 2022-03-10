@@ -14,20 +14,20 @@ type testsignature Signature
 
 // builds a mock service with provided arguments as Input and matched as Output
 func (s *testsignature) withArgs(dtypes ...reflect.Type) *testsignature {
-	if s.Input == nil {
-		s.Input = make(map[string]reflect.Type)
+	if s.In == nil {
+		s.In = make(map[string]reflect.Type)
 	}
-	if s.Output == nil {
-		s.Output = make(map[string]reflect.Type)
+	if s.Out == nil {
+		s.Out = make(map[string]reflect.Type)
 	}
 
 	for i, dtype := range dtypes {
 		name := fmt.Sprintf("P%d", i+1)
-		s.Input[name] = dtype
+		s.In[name] = dtype
 		if dtype.Kind() == reflect.Ptr {
-			s.Output[name] = dtype.Elem()
+			s.Out[name] = dtype.Elem()
 		} else {
-			s.Output[name] = dtype
+			s.Out[name] = dtype
 		}
 	}
 	return s
@@ -143,7 +143,7 @@ func TestInput(t *testing.T) {
 			t.Parallel()
 
 			var handler = &Handler{
-				signature: &Signature{Input: tc.spec.Input, Output: tc.spec.Output},
+				signature: &Signature{In: tc.spec.In, Out: tc.spec.Out},
 				fn:        tc.fn,
 			}
 
