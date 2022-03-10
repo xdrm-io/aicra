@@ -63,8 +63,8 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// start building the input but only URI parameters for now.
 	// They might be required to build parametric authorization c.f. buildAuth()
 	// Only URI arguments can be used
-	var input = reqdata.New(service)
-	if err := input.GetURI(*r); err != nil {
+	var input = reqdata.NewRequest(*r, service)
+	if err := input.ExtractURI(); err != nil {
 		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
 		s.respond(w, nil, enrichInputError(err))
@@ -93,11 +93,11 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// extract remaining input parameters
-		if err := input.GetQuery(*r); err != nil {
+		if err := input.ExtractQuery(); err != nil {
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
-		if err := input.GetForm(*r); err != nil {
+		if err := input.ExtractForm(); err != nil {
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
@@ -117,7 +117,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 // handle the service request with the associated handler func and respond using
 // the handler func output
-func (s *Handler) handle(c context.Context, input *reqdata.T, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
+func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
 	// pass execution to the handler function
 	data, err := handler.dyn.Handle(c, input.Data)
 
