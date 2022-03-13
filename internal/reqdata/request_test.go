@@ -191,7 +191,7 @@ func checkExtracted(t *testing.T, names []string, kind reflect.Kind, expected []
 		}
 
 		// multiple values, should be a slice
-		cast, canCast := param.([]interface{})
+		cast, canCast := param.([]string)
 		if !canCast {
 			t.Fatalf("invalid type\nactual: %T\nexpect: []string", param)
 		}

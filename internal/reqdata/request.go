@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"mime"
 	"reflect"
-	"strconv"
 
 	"github.com/xdrm-io/aicra/internal/config"
 
@@ -54,7 +53,7 @@ func (r *Request) ExtractURI() error {
 			panic(fmt.Errorf("unknown uri part type: %q", capture.Name))
 		}
 
-		parsed := parseParameter(value)
+		parsed := value
 		cast, valid := capture.Ref.Validator(parsed)
 		if !valid {
 			return &Err{field: capture.Ref.Rename, err: ErrInvalidType}
@@ -82,14 +81,14 @@ func (r *Request) ExtractQuery() error {
 
 		// consider slice only if we expect a slice, otherwise, only take the first parameter
 		if param.GoType.Kind() == reflect.Slice {
-			parsed = parseParameter(values)
+			parsed = values
 		} else {
 			// should expect at most 1 value
 			if len(values) > 1 {
 				return &Err{field: param.Rename, err: ErrInvalidType}
 			}
 			if len(values) > 0 {
-				parsed = parseParameter(values[0])
+				parsed = values[0]
 			}
 		}
 
@@ -197,14 +196,14 @@ func (r *Request) parseUrlencoded() error {
 
 		// consider slice only if we expect a slice, otherwise, only take the first parameter
 		if param.GoType.Kind() == reflect.Slice {
-			parsed = parseParameter(values)
+			parsed = values
 		} else if len(values) > 0 {
 			// should expect at most 1 value
 			if len(values) > 1 {
 				return &Err{field: param.Rename, err: ErrInvalidType}
 			}
 			if len(values) > 0 {
-				parsed = parseParameter(values[0])
+				parsed = values[0]
 			}
 		}
 
@@ -267,7 +266,7 @@ func (r *Request) parseMultipart(boundary string) error {
 		if isFile {
 			parsed = part.data
 		} else {
-			parsed = parseParameter(string(part.data))
+			parsed = string(part.data)
 		}
 
 		cast, valid := param.Validator(parsed)
@@ -278,50 +277,4 @@ func (r *Request) parseMultipart(boundary string) error {
 	}
 
 	return nil
-}
-
-// parseParameter parses http URI/GET/POST data
-// - []string : return array of json elements
-// - string   : return json if valid, else return raw string
-// - other    : bypass
-func parseParameter(data interface{}) interface{} {
-	switch cast := data.(type) {
-
-	// []string -> recursive
-	case []string:
-		if len(cast) == 0 {
-			return cast
-		}
-		slice := make([]interface{}, len(cast))
-		for i, v := range cast {
-			slice[i] = parseParameter(v)
-		}
-		return slice
-
-	// string -> parse as json
-	case string:
-		// numeric
-		fval, err := strconv.ParseFloat(cast, 64)
-		if err == nil {
-			return fval
-		}
-		// bool
-		if cast == "true" || cast == "false" {
-			return cast == "true"
-		}
-		// json array
-		if len(cast) > 2 && cast[0] == '[' {
-			var list []interface{}
-			err := json.Unmarshal([]byte(cast), &list)
-			if err != nil {
-				return cast
-			}
-			return list
-		}
-		return cast
-
-	// other -> bypass
-	default:
-		return cast
-	}
 }
