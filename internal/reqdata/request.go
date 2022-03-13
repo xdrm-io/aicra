@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"reflect"
+	"strconv"
 
 	"github.com/xdrm-io/aicra/internal/config"
 
@@ -299,20 +300,25 @@ func parseParameter(data interface{}) interface{} {
 
 	// string -> parse as json
 	case string:
-		var (
-			receiver map[string]interface{}
-			wrapper  = fmt.Sprintf("{\"wrapped\":%s}", cast)
-			err      = json.Unmarshal([]byte(wrapper), &receiver)
-		)
-		if err != nil {
-			return cast
+		// numeric
+		fval, err := strconv.ParseFloat(cast, 64)
+		if err == nil {
+			return fval
 		}
-
-		wrapped, ok := receiver["wrapped"]
-		if !ok {
-			return cast
+		// bool
+		if cast == "true" || cast == "false" {
+			return cast == "true"
 		}
-		return wrapped
+		// json array
+		if len(cast) > 2 && cast[0] == '[' {
+			var list []interface{}
+			err := json.Unmarshal([]byte(cast), &list)
+			if err != nil {
+				return cast
+			}
+			return list
+		}
+		return cast
 
 	// other -> bypass
 	default:
