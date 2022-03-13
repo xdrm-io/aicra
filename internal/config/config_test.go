@@ -176,6 +176,11 @@ func TestLegalServicePath(t *testing.T) {
 			err:  ErrUndefinedBraceCapture,
 		},
 		{
+			name: "valid ending capture case",
+			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/{BrAcEs}" } ]`,
+			err:  ErrUndefinedBraceCapture,
+		},
+		{
 			name: "invalid middle capture before slash",
 			conf: `[ { "method": "GET", "info": "a", "path": "/invalid/s{braces}/abc" } ]`,
 			err:  ErrInvalidPatternBraceCapture,
@@ -764,6 +769,18 @@ func TestParseParameters(t *testing.T) {
 				"info": "info",
 				"in": {
 					"GET@abc": { "info": "valid", "type": "any", "name": "abc" }
+				}
+			} ]`,
+			err: nil,
+		},
+		{
+			name: "valid query case with rename",
+			conf: `[ {
+				"method": "GET",
+				"path": "/",
+				"info": "info",
+				"in": {
+					"GET@AbC": { "info": "valid", "type": "any", "name": "abc" }
 				}
 			} ]`,
 			err: nil,
