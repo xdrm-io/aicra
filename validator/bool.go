@@ -28,8 +28,8 @@ func (BoolType) Validator(typename string, avail ...Type) ValidateFunc {
 			return cast, true
 
 		case string:
-			strVal := string(cast)
-			return strVal == "true", strVal == "true" || strVal == "false"
+			return cast == "true", cast == "true" || cast == "false"
+
 		case []byte:
 			strVal := string(cast)
 			return strVal == "true", strVal == "true" || strVal == "false"
