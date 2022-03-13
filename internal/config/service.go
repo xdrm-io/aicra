@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	captureRegex         = regexp.MustCompile(`^{([a-z_-]+)}$`)
-	queryRegex           = regexp.MustCompile(`^GET@([a-z_-]+)$`)
+	captureRegex         = regexp.MustCompile(`^{([A-Za-z_-]+)}$`)
+	queryRegex           = regexp.MustCompile(`^GET@([A-Za-z_-]+)$`)
 	availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 )
 
