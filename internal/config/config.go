@@ -171,15 +171,20 @@ func validates(params map[string]*Parameter, checkerName, value string) bool {
 }
 
 // SplitURL without empty sets
-func SplitURL(url string) []string {
-	trimmed := strings.Trim(url, " /\t\r\n")
-	split := strings.Split(trimmed, "/")
-
-	// remove empty set when empty url
-	if len(split) == 1 && len(split[0]) == 0 {
+func SplitURL(uri string) []string {
+	if len(uri) == 0 || uri == "/" {
 		return []string{}
 	}
-	return split
+	if len(uri) > 0 && uri[0] == '/' {
+		uri = uri[1:]
+	}
+	if len(uri) > 0 && uri[len(uri)-1] == '/' {
+		uri = uri[:len(uri)-1]
+	}
+	for len(uri) > 0 && uri[len(uri)-1] == '/' {
+		uri = uri[:len(uri)-1]
+	}
+	return strings.Split(uri, "/")
 }
 
 // noOp defines a no-op validator used for output parameters
