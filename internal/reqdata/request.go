@@ -117,29 +117,29 @@ func (r *Request) ExtractForm() error {
 		return nil
 	}
 
-	var (
-		contentType            = r.req.Header.Get("Content-Type")
-		mediaType, params, err = mime.ParseMediaType(contentType)
-	)
-	if err == nil {
-		switch {
-		case strings.HasPrefix(mediaType, "application/json"):
-			err := r.parseJSON()
-			if err != nil {
-				return err
-			}
+	var contentType = r.req.Header.Get("Content-Type")
 
-		case strings.HasPrefix(mediaType, "application/x-www-form-urlencoded"):
-			err := r.parseUrlencoded()
-			if err != nil {
-				return err
-			}
+	switch {
+	case strings.HasPrefix(contentType, "application/json"):
+		err := r.parseJSON()
+		if err != nil {
+			return err
+		}
 
-		case strings.HasPrefix(mediaType, "multipart/form-data"):
-			err := r.parseMultipart(params["boundary"])
-			if err != nil {
-				return err
-			}
+	case strings.HasPrefix(contentType, "application/x-www-form-urlencoded"):
+		err := r.parseUrlencoded()
+		if err != nil {
+			return err
+		}
+
+	case strings.HasPrefix(contentType, "multipart/form-data"):
+		_, params, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			break
+		}
+		err = r.parseMultipart(params["boundary"])
+		if err != nil {
+			return err
 		}
 	}
 
