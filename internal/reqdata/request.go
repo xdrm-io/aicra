@@ -40,6 +40,9 @@ func NewRequest(req *http.Request, service *config.Service) *Request {
 
 // ExtractURI parameters
 func (r *Request) ExtractURI() error {
+	if len(r.service.Captures) < 1 {
+		return nil
+	}
 	uriparts := config.SplitURI(r.req.URL.Path)
 
 	for _, capture := range r.service.Captures {
