@@ -187,12 +187,19 @@ func (r *Request) parseJSON() error {
 // parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
 func (r *Request) parseUrlencoded() error {
-	if err := r.req.ParseForm(); err != nil {
+	body, err := io.ReadAll(r.req.Body)
+	if err != nil {
 		return err
 	}
 
+	form := make(Query)
+	if err := form.Parse(string(body)); err != nil {
+		return err
+	}
+	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", r.req.URL.RawQuery, form))
+
 	for name, param := range r.service.Form {
-		values, exist := r.req.PostForm[name]
+		values, exist := form[name]
 
 		if !exist {
 			continue
