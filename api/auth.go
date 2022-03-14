@@ -44,6 +44,9 @@ func (a *Auth) Granted() bool {
 
 // returns whether Auth.Active fulfills (contains) all @required roles
 func (a *Auth) fulfills(required []string) bool {
+	if a.Active == nil {
+		return false
+	}
 	for _, requiredRole := range required {
 		var found = false
 		for _, activeRole := range a.Active {

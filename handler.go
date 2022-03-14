@@ -181,6 +181,10 @@ func enrichInputError(err error) error {
 // name with its value.
 // Warning notice: only uri parameters are allowed
 func buildAuth(scope [][]string, in map[string]interface{}) *api.Auth {
+	if len(scope) < 1 || len(scope) == 1 && len(scope[0]) < 1 {
+		return &api.Auth{Required: scope}
+	}
+
 	updated := make([][]string, len(scope))
 
 	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
@@ -201,9 +205,5 @@ func buildAuth(scope [][]string, in map[string]interface{}) *api.Auth {
 			}
 		}
 	}
-
-	return &api.Auth{
-		Required: updated,
-		Active:   []string{},
-	}
+	return &api.Auth{Required: updated}
 }
