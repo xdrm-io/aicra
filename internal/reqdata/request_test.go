@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,11 +23,8 @@ func getServiceWithURI(capturingBraces ...string) *config.Service {
 		Input: make(map[string]*config.Parameter),
 	}
 
-	index := 0
-
-	for _, capture := range capturingBraces {
+	for i, capture := range capturingBraces {
 		if len(capture) == 0 {
-			index++
 			continue
 		}
 
@@ -37,15 +33,12 @@ func getServiceWithURI(capturingBraces ...string) *config.Service {
 			Rename:    capture,
 			Validator: func(value interface{}) (interface{}, bool) { return value, true },
 		}
-
 		service.Captures = append(service.Captures, &config.BraceCapture{
 			Name:  capture,
-			Index: index,
+			Index: i,
 			Ref:   service.Input[id],
 		})
-		index++
 	}
-
 	return service
 }
 func getServiceWithQuery(t reflect.Type, params ...string) *config.Service {
@@ -61,10 +54,8 @@ func getServiceWithQuery(t reflect.Type, params ...string) *config.Service {
 			GoType:    t,
 			Validator: func(value interface{}) (interface{}, bool) { return value, true },
 		}
-
 		service.Query[name] = service.Input[id]
 	}
-
 	return service
 }
 func getServiceWithForm(t reflect.Type, params ...string) *config.Service {
@@ -79,14 +70,12 @@ func getServiceWithForm(t reflect.Type, params ...string) *config.Service {
 			GoType:    t,
 			Validator: func(value interface{}) (interface{}, bool) { return value, true },
 		}
-
 		service.Form[name] = service.Input[name]
 	}
-
 	return service
 }
 
-func TestStoreWithUri(t *testing.T) {
+func TestRequestWithUri(t *testing.T) {
 	tt := []struct {
 		name   string
 		params []string
@@ -143,11 +132,13 @@ func TestStoreWithUri(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			service := getServiceWithURI(tc.params...)
-			store := New(service)
+			var (
+				service = getServiceWithURI(tc.params...)
+				req     = httptest.NewRequest(http.MethodGet, "http://host.com"+tc.uri, nil)
+				store   = NewRequest(req, service)
+			)
 
-			req := httptest.NewRequest(http.MethodGet, "http://host.com"+tc.uri, nil)
-			err := store.GetURI(*req)
+			err := store.ExtractURI()
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -199,7 +190,7 @@ func checkExtracted(t *testing.T, names []string, kind reflect.Kind, expected []
 		}
 
 		// multiple values, should be a slice
-		cast, canCast := param.([]interface{})
+		cast, canCast := param.([]string)
 		if !canCast {
 			t.Fatalf("invalid type\nactual: %T\nexpect: []string", param)
 		}
@@ -383,11 +374,12 @@ func TestExtractQuery(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			var (
+				req   = httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", tc.query), nil)
+				store = NewRequest(req, getServiceWithQuery(tc.paramTypes, tc.params...))
+				err   = store.ExtractQuery()
+			)
 
-			store := New(getServiceWithQuery(tc.paramTypes, tc.params...))
-
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", tc.query), nil)
-			err := store.GetQuery(*req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -420,28 +412,7 @@ func TestExtractQuery(t *testing.T) {
 	}
 
 }
-func TestStoreWithUrlEncodedFormParseError(t *testing.T) {
-	// http.Request.ParseForm() fails when:
-	// - http.Request.Method is one of [POST,PUT,PATCH]
-	// - http.Request.Form     is not nil (created manually)
-	// - http.Request.PostForm is nil (deleted manually)
-	// - http.Request.Body     is nil (deleted manually)
 
-	req := httptest.NewRequest(http.MethodPost, "http://host.com/", nil)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	// break everything
-	req.Body = nil
-	req.Form = make(url.Values)
-	req.PostForm = nil
-
-	// defer req.Body.Close()
-	store := New(nil)
-	err := store.GetForm(*req)
-	if err == nil {
-		t.Fatalf("expected malformed urlencoded to have FailNow being parsed (got %d elements)", len(store.Data))
-	}
-}
 func TestExtractFormUrlEncoded(t *testing.T) {
 	tt := []struct {
 		name   string
@@ -615,8 +586,8 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 			defer req.Body.Close()
 
-			store := New(getServiceWithForm(tc.paramTypes, tc.params...))
-			err := store.GetForm(*req)
+			store := NewRequest(req, getServiceWithForm(tc.paramTypes, tc.params...))
+			err := store.ExtractForm()
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -743,9 +714,9 @@ func TestJsonParameters(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/json")
 			defer req.Body.Close()
-			store := New(getServiceWithForm(tc.paramTypes, tc.params...))
+			store := NewRequest(req, getServiceWithForm(tc.paramTypes, tc.params...))
 
-			err := store.GetForm(*req)
+			err := store.ExtractForm()
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -942,9 +913,9 @@ Content-Type: application/zip
 				service.Form[name] = service.Input[name]
 			}
 
-			store := New(getServiceWithForm(reflect.TypeOf(""), tc.params...))
+			store := NewRequest(req, getServiceWithForm(reflect.TypeOf(""), tc.params...))
 
-			err := store.GetForm(*req)
+			err := store.ExtractForm()
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}

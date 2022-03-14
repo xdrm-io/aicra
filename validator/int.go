@@ -1,9 +1,9 @@
 package validator
 
 import (
-	"encoding/json"
 	"math"
 	"reflect"
+	"strconv"
 )
 
 // IntType makes the "int" type available in the aicra configuration
@@ -42,17 +42,15 @@ func (IntType) Validator(typename string, avail ...Type) ValidateFunc {
 			overflows := cast < float64(math.MinInt64) || cast > float64(math.MaxInt64)
 			return intVal, cast == float64(intVal) && !overflows
 
-			// serialized string -> try to convert to float
+			// serialized string -> try to convert to int
 		case string:
-			num := json.Number(cast)
-			intVal, err := num.Int64()
-			return int(intVal), err == nil
-			// serialized string -> try to convert to float
+			num, err := strconv.ParseInt(cast, 10, 64)
+			return int(num), err == nil
 
+			// serialized string -> try to convert to int
 		case []byte:
-			num := json.Number(cast)
-			intVal, err := num.Int64()
-			return int(intVal), err == nil
+			num, err := strconv.ParseInt(string(cast), 10, 64)
+			return int(num), err == nil
 
 			// unknown type
 		default:

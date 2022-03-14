@@ -63,8 +63,8 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// start building the input but only URI parameters for now.
 	// They might be required to build parametric authorization c.f. buildAuth()
 	// Only URI arguments can be used
-	var input = reqdata.New(service)
-	if err := input.GetURI(*r); err != nil {
+	var input = reqdata.NewRequest(r, service)
+	if err := input.ExtractURI(); err != nil {
 		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
 		s.respond(w, nil, enrichInputError(err))
@@ -75,7 +75,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	c := r.Context()
 	c = context.WithValue(c, ctx.Request, r)
 	c = context.WithValue(c, ctx.Response, w)
-	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, input.Data))
+	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, service.ScopeVars, input.Data))
 
 	// create http handler
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -93,11 +93,11 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// extract remaining input parameters
-		if err := input.GetQuery(*r); err != nil {
+		if err := input.ExtractQuery(); err != nil {
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
-		if err := input.GetForm(*r); err != nil {
+		if err := input.ExtractForm(); err != nil {
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
@@ -117,7 +117,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 // handle the service request with the associated handler func and respond using
 // the handler func output
-func (s *Handler) handle(c context.Context, input *reqdata.T, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
+func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
 	// pass execution to the handler function
 	data, err := handler.dyn.Handle(c, input.Data)
 
@@ -180,30 +180,33 @@ func enrichInputError(err error) error {
 // it replaces format '[a]' in scope where 'a' is an existing input argument's
 // name with its value.
 // Warning notice: only uri parameters are allowed
-func buildAuth(scope [][]string, in map[string]interface{}) *api.Auth {
-	updated := make([][]string, len(scope))
+func buildAuth(scope [][]string, scopeVars map[string][2]int, in map[string]interface{}) *api.Auth {
+	if len(scope) < 1 || len(scopeVars) < 1 {
+		return &api.Auth{Required: scope}
+	}
 
-	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
-	// name
+	// copy scope
+	updated := make([][]string, len(scope))
 	for a, list := range scope {
 		updated[a] = make([]string, len(list))
 		for b, perm := range list {
 			updated[a][b] = perm
-			for name, value := range in {
-				var (
-					token       = fmt.Sprintf("[%s]", name)
-					replacement = ""
-				)
-				if value != nil {
-					replacement = fmt.Sprintf("[%v]", value)
-				}
-				updated[a][b] = strings.ReplaceAll(updated[a][b], token, replacement)
-			}
 		}
 	}
 
-	return &api.Auth{
-		Required: updated,
-		Active:   []string{},
+	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
+	// name
+	for param, indexes := range scopeVars {
+		value, set := in[param]
+		if !set {
+			continue
+		}
+		a, b := indexes[0], indexes[1]
+		updated[a][b] = strings.ReplaceAll(
+			updated[a][b],
+			fmt.Sprintf("[%s]", param),
+			fmt.Sprintf("[%v]", value),
+		)
 	}
+	return &api.Auth{Required: updated}
 }

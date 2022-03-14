@@ -1,9 +1,9 @@
 package validator
 
 import (
-	"encoding/json"
 	"math"
 	"reflect"
+	"strconv"
 )
 
 // UintType makes the "uint" type available in the aicra configuration
@@ -42,22 +42,12 @@ func (UintType) Validator(other string, avail ...Type) ValidateFunc {
 
 			// serialized string -> try to convert to float
 		case string:
-			num := json.Number(cast)
-			floatVal, err := num.Float64()
-			if err != nil {
-				return 0, false
-			}
-			overflows := floatVal < 0 || floatVal > math.MaxUint64
-			return uint(floatVal), !overflows
+			num, err := strconv.ParseUint(cast, 10, 64)
+			return int(num), err == nil
 
 		case []byte:
-			num := json.Number(cast)
-			floatVal, err := num.Float64()
-			if err != nil {
-				return 0, false
-			}
-			overflows := floatVal < 0 || floatVal > math.MaxUint64
-			return uint(floatVal), !overflows
+			num, err := strconv.ParseUint(string(cast), 10, 64)
+			return int(num), err == nil
 
 			// unknown type
 		default:

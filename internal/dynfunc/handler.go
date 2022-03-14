@@ -61,14 +61,14 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 	var (
 		vFn   = reflect.ValueOf(h.fn)
 		tFn   = reflect.TypeOf(h.fn)
-		input = make([]reflect.Value, 0)
+		input = make([]reflect.Value, 1, 2)
 
 		hasInput  = len(h.signature.In) > 0
 		hasOutput = len(h.signature.Out) > 0
 	)
 
 	// bind context
-	input = append(input, reflect.ValueOf(ctx))
+	input[0] = reflect.ValueOf(ctx)
 
 	// bind input arguments
 	if hasInput {
@@ -127,7 +127,7 @@ func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[
 	}
 
 	// no output OR pointer to output struct is nil
-	outdata := make(map[string]interface{})
+	outdata := map[string]interface{}{}
 	if !hasOutput || output[0].IsNil() {
 		return outdata, err
 	}

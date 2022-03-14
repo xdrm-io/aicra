@@ -1,8 +1,8 @@
 package validator
 
 import (
-	"encoding/json"
 	"reflect"
+	"strconv"
 )
 
 // FloatType makes the "float" (or "float64") type available in the aicra configuration
@@ -38,14 +38,12 @@ func (FloatType) Validator(typename string, avail ...Type) ValidateFunc {
 
 			// serialized string -> try to convert to float
 		case []byte:
-			num := json.Number(cast)
-			floatVal, err := num.Float64()
-			return floatVal, err == nil
+			num, err := strconv.ParseFloat(string(cast), 64)
+			return float64(num), err == nil
 
 		case string:
-			num := json.Number(cast)
-			floatVal, err := num.Float64()
-			return floatVal, err == nil
+			num, err := strconv.ParseFloat(string(cast), 64)
+			return float64(num), err == nil
 
 			// unknown type
 		default:
