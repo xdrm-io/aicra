@@ -24,13 +24,13 @@ import (
 //   - 'application/x-www-form-urlencoded' => standard parameters as QUERY parameters
 //   - 'multipart/form-data'               => parse form-data format
 type Request struct {
-	req     http.Request
+	req     *http.Request
 	service *config.Service
 	Data    map[string]interface{}
 }
 
 // NewRequest creates a new empty store.
-func NewRequest(req http.Request, service *config.Service) *Request {
+func NewRequest(req *http.Request, service *config.Service) *Request {
 	return &Request{
 		req:     req,
 		service: service,

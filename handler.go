@@ -63,7 +63,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// start building the input but only URI parameters for now.
 	// They might be required to build parametric authorization c.f. buildAuth()
 	// Only URI arguments can be used
-	var input = reqdata.NewRequest(*r, service)
+	var input = reqdata.NewRequest(r, service)
 	if err := input.ExtractURI(); err != nil {
 		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
