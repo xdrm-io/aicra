@@ -101,8 +101,8 @@ func (s *Server) collide() error {
 				continue
 			}
 
-			aURIParts := SplitURL(aService.Pattern)
-			bURIParts := SplitURL(bService.Pattern)
+			aURIParts := SplitURI(aService.Pattern)
+			bURIParts := SplitURI(bService.Pattern)
 			if len(aURIParts) != len(bURIParts) {
 				continue
 			}
@@ -170,8 +170,8 @@ func validates(params map[string]*Parameter, checkerName, value string) bool {
 	return valid
 }
 
-// SplitURL without empty sets
-func SplitURL(uri string) []string {
+// SplitURI without empty sets
+func SplitURI(uri string) []string {
 	if len(uri) == 0 || uri == "/" {
 		return []string{}
 	}

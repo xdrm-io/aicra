@@ -55,7 +55,7 @@ func (svc *Service) Match(req *http.Request) bool {
 
 // checks if an uri matches the service's pattern
 func (svc *Service) matchPattern(uri string) bool {
-	var parts = SplitURL(uri)
+	var parts = SplitURI(uri)
 
 	if len(parts) != len(svc.parts) {
 		return false
@@ -165,7 +165,7 @@ func (svc *Service) checkPattern() error {
 	}
 
 	// for each slash-separated chunk
-	svc.parts = SplitURL(svc.Pattern)
+	svc.parts = SplitURI(svc.Pattern)
 	for i, part := range svc.parts {
 		if len(part) < 1 {
 			return ErrInvalidPattern
