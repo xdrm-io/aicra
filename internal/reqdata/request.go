@@ -68,6 +68,9 @@ func (r *Request) ExtractURI() error {
 
 // ExtractQuery data from the url query parameters
 func (r *Request) ExtractQuery() error {
+	if len(r.service.Query) < 1 {
+		return nil
+	}
 	query := r.req.URL.Query()
 
 	for name, param := range r.service.Query {
