@@ -47,17 +47,7 @@ type BraceCapture struct {
 
 // Match returns if this service would handle this HTTP request
 func (svc *Service) Match(req *http.Request) bool {
-	var (
-		uri        = req.RequestURI
-		queryIndex = strings.IndexByte(uri, '?')
-	)
-
-	// remove query part for matching the pattern
-	if queryIndex > -1 {
-		uri = uri[:queryIndex]
-	}
-
-	return req.Method == svc.Method && svc.matchPattern(uri)
+	return req.Method == svc.Method && svc.matchPattern(req.URL.Path)
 }
 
 // checks if an uri matches the service's pattern
