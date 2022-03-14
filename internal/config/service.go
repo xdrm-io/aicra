@@ -36,6 +36,9 @@ type Service struct {
 	// Form references form parameters from the `Input` map (all but Captures
 	// and Query).
 	Form map[string]*Parameter
+
+	// Pattern uri parts (c.f. SplitURL)
+	parts []string
 }
 
 // BraceCapture links to the related URI parameter
@@ -52,23 +55,20 @@ func (svc *Service) Match(req *http.Request) bool {
 
 // checks if an uri matches the service's pattern
 func (svc *Service) matchPattern(uri string) bool {
-	var (
-		uriparts = SplitURL(uri)
-		parts    = SplitURL(svc.Pattern)
-	)
+	var parts = SplitURL(uri)
 
-	if len(uriparts) != len(parts) {
+	if len(parts) != len(svc.parts) {
 		return false
 	}
 
 	// root url '/'
-	if len(parts) == 0 && len(uriparts) == 0 {
+	if len(svc.parts) == 0 && len(parts) == 0 {
 		return true
 	}
 
 	// check part by part
-	for i, part := range parts {
-		uripart := uriparts[i]
+	for i, part := range svc.parts {
+		uripart := parts[i]
 
 		isCapture := len(part) > 0 && part[0] == '{'
 
@@ -165,8 +165,8 @@ func (svc *Service) checkPattern() error {
 	}
 
 	// for each slash-separated chunk
-	parts := SplitURL(svc.Pattern)
-	for i, part := range parts {
+	svc.parts = SplitURL(svc.Pattern)
+	for i, part := range svc.parts {
 		if len(part) < 1 {
 			return ErrInvalidPattern
 		}
