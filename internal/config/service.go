@@ -39,6 +39,10 @@ type Service struct {
 
 	// Pattern uri parts (c.f. SplitURL)
 	parts []string
+
+	// lists scope variables to be replaced
+	// 'varName' -> [index, subindex]
+	ScopeVars map[string][2]int
 }
 
 // BraceCapture links to the related URI parameter
@@ -130,6 +134,8 @@ func (svc *Service) validate(input []validator.Type, output []validator.Type) er
 		return fmt.Errorf("field 'out': %w", err)
 	}
 
+	svc.cleanScope()
+
 	return nil
 }
 
@@ -140,6 +146,31 @@ func (svc *Service) checkMethod() error {
 		}
 	}
 	return ErrUnknownMethod
+}
+
+// cleanScope simplifies empty scopes and marks
+func (svc *Service) cleanScope() {
+	// transform [[]] into []
+	if len(svc.Scope) == 1 && len(svc.Scope[0]) < 1 {
+		svc.Scope = [][]string{}
+	}
+
+	if len(svc.Captures) < 1 {
+		return
+	}
+
+	// check if dynamic variables are used in the scope
+	svc.ScopeVars = map[string][2]int{}
+	for a, list := range svc.Scope {
+		for b, perm := range list {
+			for _, capture := range svc.Captures {
+				token := fmt.Sprintf("[%s]", capture.Ref.Rename)
+				if strings.Contains(perm, token) {
+					svc.ScopeVars[capture.Ref.Rename] = [2]int{a, b}
+				}
+			}
+		}
+	}
 }
 
 // checkPattern checks for the validity of the pattern definition (i.e. the uri)

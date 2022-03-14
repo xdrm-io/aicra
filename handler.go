@@ -75,7 +75,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	c := r.Context()
 	c = context.WithValue(c, ctx.Request, r)
 	c = context.WithValue(c, ctx.Response, w)
-	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, input.Data))
+	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, service.ScopeVars, input.Data))
 
 	// create http handler
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -180,30 +180,33 @@ func enrichInputError(err error) error {
 // it replaces format '[a]' in scope where 'a' is an existing input argument's
 // name with its value.
 // Warning notice: only uri parameters are allowed
-func buildAuth(scope [][]string, in map[string]interface{}) *api.Auth {
-	if len(scope) < 1 || len(scope) == 1 && len(scope[0]) < 1 {
+func buildAuth(scope [][]string, scopeVars map[string][2]int, in map[string]interface{}) *api.Auth {
+	if len(scope) < 1 || len(scopeVars) < 1 {
 		return &api.Auth{Required: scope}
 	}
 
+	// copy scope
 	updated := make([][]string, len(scope))
-
-	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
-	// name
 	for a, list := range scope {
 		updated[a] = make([]string, len(list))
 		for b, perm := range list {
 			updated[a][b] = perm
-			for name, value := range in {
-				var (
-					token       = fmt.Sprintf("[%s]", name)
-					replacement = ""
-				)
-				if value != nil {
-					replacement = fmt.Sprintf("[%v]", value)
-				}
-				updated[a][b] = strings.ReplaceAll(updated[a][b], token, replacement)
-			}
 		}
+	}
+
+	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
+	// name
+	for param, indexes := range scopeVars {
+		value, set := in[param]
+		if !set {
+			continue
+		}
+		a, b := indexes[0], indexes[1]
+		updated[a][b] = strings.ReplaceAll(
+			updated[a][b],
+			fmt.Sprintf("[%s]", param),
+			fmt.Sprintf("[%v]", value),
+		)
 	}
 	return &api.Auth{Required: updated}
 }
