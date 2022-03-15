@@ -13,6 +13,7 @@ import (
 
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -89,8 +90,8 @@ func (r *Request) ExtractQuery(req *http.Request) error {
 	if len(r.service.Query) < 1 {
 		return nil
 	}
-	query := make(Query)
-	if err := query.Parse(req.URL.RawQuery); err != nil {
+	query, err := url.ParseQuery(req.URL.RawQuery)
+	if err != nil {
 		return err
 	}
 
@@ -213,14 +214,17 @@ func (r *Request) parseUrlencoded(reader io.Reader) error {
 		return err
 	}
 
-	form := make(Query)
-	if err := form.Parse(string(body)); err != nil {
+	query, err := url.ParseQuery(string(body))
+	if err != nil {
+		return err
+	}
+	if err != nil {
 		return err
 	}
 	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", req.URL.RawQuery, form))
 
 	for name, param := range r.service.Form {
-		values, exist := form[name]
+		values, exist := query[name]
 
 		if !exist {
 			continue
