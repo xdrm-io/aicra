@@ -135,10 +135,10 @@ func TestRequestWithUri(t *testing.T) {
 			var (
 				service = getServiceWithURI(tc.params...)
 				req     = httptest.NewRequest(http.MethodGet, "http://host.com"+tc.uri, nil)
-				store   = NewRequest(req, service)
+				store   = NewRequest(service)
 			)
 
-			err := store.ExtractURI()
+			err := store.ExtractURI(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -376,8 +376,8 @@ func TestExtractQuery(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var (
 				req   = httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", tc.query), nil)
-				store = NewRequest(req, getServiceWithQuery(tc.paramTypes, tc.params...))
-				err   = store.ExtractQuery()
+				store = NewRequest(getServiceWithQuery(tc.paramTypes, tc.params...))
+				err   = store.ExtractQuery(req)
 			)
 
 			if !errors.Is(err, tc.err) {
@@ -586,8 +586,8 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 			defer req.Body.Close()
 
-			store := NewRequest(req, getServiceWithForm(tc.paramTypes, tc.params...))
-			err := store.ExtractForm()
+			store := NewRequest(getServiceWithForm(tc.paramTypes, tc.params...))
+			err := store.ExtractForm(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -714,9 +714,9 @@ func TestJsonParameters(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/json")
 			defer req.Body.Close()
-			store := NewRequest(req, getServiceWithForm(tc.paramTypes, tc.params...))
+			store := NewRequest(getServiceWithForm(tc.paramTypes, tc.params...))
 
-			err := store.ExtractForm()
+			err := store.ExtractForm(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -913,9 +913,9 @@ Content-Type: application/zip
 				service.Form[name] = service.Input[name]
 			}
 
-			store := NewRequest(req, getServiceWithForm(reflect.TypeOf(""), tc.params...))
+			store := NewRequest(getServiceWithForm(reflect.TypeOf(""), tc.params...))
 
-			err := store.ExtractForm()
+			err := store.ExtractForm(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}

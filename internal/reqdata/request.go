@@ -24,26 +24,24 @@ import (
 //   - 'application/x-www-form-urlencoded' => standard parameters as QUERY parameters
 //   - 'multipart/form-data'               => parse form-data format
 type Request struct {
-	req     *http.Request
 	service *config.Service
 	Data    map[string]interface{}
 }
 
 // NewRequest creates a new empty store.
-func NewRequest(req *http.Request, service *config.Service) *Request {
+func NewRequest(service *config.Service) *Request {
 	return &Request{
-		req:     req,
 		service: service,
 		Data:    map[string]interface{}{},
 	}
 }
 
 // ExtractURI parameters
-func (r *Request) ExtractURI() error {
+func (r *Request) ExtractURI(req *http.Request) error {
 	if len(r.service.Captures) < 1 {
 		return nil
 	}
-	uriparts := config.SplitURI(r.req.URL.Path)
+	uriparts := config.SplitURI(req.URL.Path)
 
 	for _, capture := range r.service.Captures {
 		// out of range
@@ -67,11 +65,11 @@ func (r *Request) ExtractURI() error {
 }
 
 // ExtractQuery data from the url query parameters
-func (r *Request) ExtractQuery() error {
+func (r *Request) ExtractQuery(req *http.Request) error {
 	if len(r.service.Query) < 1 {
 		return nil
 	}
-	query := r.req.URL.Query()
+	query := req.URL.Query()
 
 	for name, param := range r.service.Query {
 		values, exist := query[name]
@@ -112,22 +110,22 @@ func (r *Request) ExtractQuery() error {
 // - 'multipart/form-data'
 // - 'x-www-form-urlencoded'
 // - 'application/json'
-func (r *Request) ExtractForm() error {
-	if r.req.Method == http.MethodGet {
+func (r *Request) ExtractForm(req *http.Request) error {
+	if req.Method == http.MethodGet {
 		return nil
 	}
 
-	var contentType = r.req.Header.Get("Content-Type")
+	var contentType = req.Header.Get("Content-Type")
 
 	switch {
 	case strings.HasPrefix(contentType, "application/json"):
-		err := r.parseJSON()
+		err := r.parseJSON(req.Body)
 		if err != nil {
 			return err
 		}
 
 	case strings.HasPrefix(contentType, "application/x-www-form-urlencoded"):
-		err := r.parseUrlencoded()
+		err := r.parseUrlencoded(req.Body)
 		if err != nil {
 			return err
 		}
@@ -137,7 +135,7 @@ func (r *Request) ExtractForm() error {
 		if err != nil {
 			break
 		}
-		err = r.parseMultipart(params["boundary"])
+		err = r.parseMultipart(req.Body, params["boundary"])
 		if err != nil {
 			return err
 		}
@@ -155,10 +153,10 @@ func (r *Request) ExtractForm() error {
 
 // parseJSON parses JSON from the request body inside 'Form'
 // and 'Set'
-func (r *Request) parseJSON() error {
+func (r *Request) parseJSON(reader io.Reader) error {
 	var parsed map[string]interface{}
 
-	decoder := json.NewDecoder(r.req.Body)
+	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&parsed)
 	if err == io.EOF {
 		return nil
@@ -186,8 +184,8 @@ func (r *Request) parseJSON() error {
 
 // parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
-func (r *Request) parseUrlencoded() error {
-	body, err := io.ReadAll(r.req.Body)
+func (r *Request) parseUrlencoded(reader io.Reader) error {
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return err
 	}
@@ -196,7 +194,7 @@ func (r *Request) parseUrlencoded() error {
 	if err := form.Parse(string(body)); err != nil {
 		return err
 	}
-	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", r.req.URL.RawQuery, form))
+	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", req.URL.RawQuery, form))
 
 	for name, param := range r.service.Form {
 		values, exist := form[name]
@@ -232,7 +230,7 @@ func (r *Request) parseUrlencoded() error {
 
 // parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func (r *Request) parseMultipart(boundary string) error {
+func (r *Request) parseMultipart(reader io.Reader, boundary string) error {
 	type Part struct {
 		contentType string
 		data        []byte
@@ -240,7 +238,7 @@ func (r *Request) parseMultipart(boundary string) error {
 
 	var (
 		parts = map[string]Part{}
-		mr    = multipart.NewReader(r.req.Body, boundary)
+		mr    = multipart.NewReader(reader, boundary)
 	)
 	var firstPart = true
 	for {
