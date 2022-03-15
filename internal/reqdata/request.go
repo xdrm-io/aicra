@@ -89,7 +89,10 @@ func (r *Request) ExtractQuery(req *http.Request) error {
 	if len(r.service.Query) < 1 {
 		return nil
 	}
-	query := req.URL.Query()
+	query := make(Query)
+	if err := query.Parse(req.URL.RawQuery); err != nil {
+		return err
+	}
 
 	for name, param := range r.service.Query {
 		values, exist := query[name]
