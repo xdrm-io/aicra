@@ -260,7 +260,7 @@ func (r *Request) parseMultipart(reader io.Reader, boundary string) error {
 	}
 
 	var (
-		parts = map[string]Part{}
+		parts = make(map[string]Part, len(r.service.Form))
 		mr    = multipart.NewReader(reader, boundary)
 	)
 	var firstPart = true
