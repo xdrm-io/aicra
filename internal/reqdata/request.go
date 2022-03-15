@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"reflect"
+	"sync"
 
 	"github.com/xdrm-io/aicra/internal/config"
 
@@ -14,6 +15,15 @@ import (
 	"net/http"
 	"strings"
 )
+
+// default size when allocating maps
+var mapDefaultSize = 8
+
+var mapPool = sync.Pool{
+	New: func() interface{} {
+		return make(map[string]interface{}, mapDefaultSize)
+	},
+}
 
 // Request represents all data that can be extracted from an http request for a
 // specific configuration service; it features:
@@ -32,8 +42,18 @@ type Request struct {
 func NewRequest(service *config.Service) *Request {
 	return &Request{
 		service: service,
-		Data:    map[string]interface{}{},
+		Data:    mapPool.Get().(map[string]interface{}),
 	}
+
+}
+
+// Release the request ; no method or attribut shall be used after this call on
+// the same request
+func (r *Request) Release() {
+	for k := range r.Data { // clear previous map
+		delete(r.Data, k)
+	}
+	mapPool.Put(r.Data)
 }
 
 // ExtractURI parameters
