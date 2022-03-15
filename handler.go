@@ -63,8 +63,8 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// start building the input but only URI parameters for now.
 	// They might be required to build parametric authorization c.f. buildAuth()
 	// Only URI arguments can be used
-	var input = reqdata.NewRequest(r, service)
-	if err := input.ExtractURI(); err != nil {
+	var input = reqdata.NewRequest(service)
+	if err := input.ExtractURI(r); err != nil {
 		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
 		s.respond(w, nil, enrichInputError(err))
@@ -93,11 +93,11 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// extract remaining input parameters
-		if err := input.ExtractQuery(); err != nil {
+		if err := input.ExtractQuery(r); err != nil {
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
-		if err := input.ExtractForm(); err != nil {
+		if err := input.ExtractForm(r); err != nil {
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
