@@ -160,7 +160,7 @@ func (svc *Service) cleanScope() {
 	}
 
 	// check if dynamic variables are used in the scope
-	svc.ScopeVars = map[string][2]int{}
+	svc.ScopeVars = make(map[string][2]int, len(svc.Captures))
 	for a, list := range svc.Scope {
 		for b, perm := range list {
 			for _, capture := range svc.Captures {

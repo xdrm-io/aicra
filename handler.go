@@ -129,7 +129,7 @@ func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *ser
 	data, err := handler.dyn.Handle(c, input.Data)
 
 	// rename data
-	renamed := map[string]interface{}{}
+	renamed := make(map[string]interface{}, len(service.Output))
 	for key, value := range data {
 		// find original name from 'rename' field
 		for name, param := range service.Output {
