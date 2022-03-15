@@ -67,6 +67,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	if err := input.ExtractURI(r); err != nil {
 		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
+		input.Release()
 		s.respond(w, nil, enrichInputError(err))
 		return
 	}
@@ -83,28 +84,33 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		ctx := api.Extract(r.Context())
 		if ctx == nil || ctx.Auth == nil {
 			// should never happen
+			input.Release()
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 
 		// reject non granted requests
 		if !ctx.Auth.Granted() {
+			input.Release()
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 
 		// extract remaining input parameters
 		if err := input.ExtractQuery(r); err != nil {
+			input.Release()
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
 		if err := input.ExtractForm(r); err != nil {
+			input.Release()
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
 
 		// execute the service handler
 		s.handle(r.Context(), input, handler, service, w, r)
+		input.Release()
 	})
 
 	// run contextual middlewares
