@@ -72,22 +72,23 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add info into context
-	c := r.Context()
-	c = context.WithValue(c, ctx.Request, r)
-	c = context.WithValue(c, ctx.Response, w)
-	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, service.ScopeVars, input.Data))
+	c := context.WithValue(r.Context(), ctx.Key, &api.Context{
+		Request:        r,
+		ResponseWriter: w,
+		Auth:           buildAuth(service.Scope, service.ScopeVars, input.Data),
+	})
 
 	// create http handler
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := api.GetAuth(r.Context())
-		if auth == nil {
+		ctx := api.Extract(r.Context())
+		if ctx == nil || ctx.Auth == nil {
 			// should never happen
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 
 		// reject non granted requests
-		if !auth.Granted() {
+		if !ctx.Auth.Granted() {
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
