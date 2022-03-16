@@ -17,12 +17,9 @@ import (
 	"strings"
 )
 
-// default size when allocating maps
-var mapDefaultSize = 8
-
 var mapPool = sync.Pool{
 	New: func() interface{} {
-		return make(map[string]interface{}, mapDefaultSize)
+		return make(map[string]interface{}, 8)
 	},
 }
 
@@ -41,19 +38,20 @@ type Request struct {
 
 // NewRequest creates a new empty store.
 func NewRequest(service *config.Service) *Request {
-	return &Request{
+	r := &Request{
 		service: service,
 		Data:    mapPool.Get().(map[string]interface{}),
 	}
-
+	// clear previous map
+	for k := range r.Data {
+		delete(r.Data, k)
+	}
+	return r
 }
 
 // Release the request ; no method or attribut shall be used after this call on
 // the same request
 func (r *Request) Release() {
-	for k := range r.Data { // clear previous map
-		delete(r.Data, k)
-	}
 	mapPool.Put(r.Data)
 }
 
