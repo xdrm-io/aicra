@@ -35,6 +35,8 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.ServeHTTP(w, r)
 }
 
+var zeroRequest http.Request
+
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// match service from config
@@ -97,19 +99,19 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// extract remaining input parameters
-		if err := input.ExtractQuery(r); err != nil {
+		if err := input.ExtractQuery(ctx.Request); err != nil {
 			input.Release()
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
-		if err := input.ExtractForm(r); err != nil {
+		if err := input.ExtractForm(ctx.Request); err != nil {
 			input.Release()
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
 
 		// execute the service handler
-		s.handle(r.Context(), input, handler, service, w, r)
+		s.handle(r.Context(), input, handler, service, w)
 		input.Release()
 	})
 
@@ -119,12 +121,12 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// serve using the pre-filled context
-	h.ServeHTTP(w, r.WithContext(c))
+	h.ServeHTTP(w, zeroRequest.WithContext(c))
 }
 
 // handle the service request with the associated handler func and respond using
 // the handler func output
-func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
+func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter) {
 	// pass execution to the handler function
 	data, err := handler.callable(c, input.Data)
 
