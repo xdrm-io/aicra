@@ -112,3 +112,13 @@ func TestCombination(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthNilActive(t *testing.T) {
+	auth := Auth{
+		Required: [][]string{{"a"}},
+		Active:   nil,
+	}
+	if auth.Granted() {
+		t.Fatalf("should not be granted as auth.Active is nil")
+	}
+}
