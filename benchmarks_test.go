@@ -218,11 +218,11 @@ const formMultiConfig = `[
 	}
 ]`
 
-func noOpHandler(context.Context) error {
-	return nil
+func noOpHandler(context.Context, struct{}) (*struct{}, error) {
+	return nil, nil
 }
-func noOpIntHandler(context.Context, struct{ ID int }) error {
-	return nil
+func noOpIntHandler(context.Context, struct{ ID int }) (*struct{}, error) {
+	return nil, nil
 }
 
 func Benchmark1StaticRouteMatch(b *testing.B) {
@@ -236,7 +236,7 @@ func Benchmark1StaticRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = builder.Bind("GET", "/users/123", noOpHandler)
+	err = aicra.Bind(builder, "GET", "/users/123", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -273,7 +273,7 @@ func Benchmark1OverNStaticRouteMatch(b *testing.B) {
 		{"POST", "/users/456"},
 	}
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
+		if err := aicra.Bind(builder, route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -306,7 +306,7 @@ func Benchmark1UriRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = builder.Bind("GET", "/users/{id}", noOpIntHandler)
+	err = aicra.Bind(builder, "GET", "/users/{id}", noOpIntHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -346,7 +346,7 @@ func Benchmark1OverNUriRouteMatch(b *testing.B) {
 		{"POST", "/articles/{id}"},
 	}
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpIntHandler); err != nil {
+		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -379,7 +379,7 @@ func Benchmark1GetRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = builder.Bind("GET", "/users", noOpIntHandler)
+	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -418,7 +418,7 @@ func Benchmark1OverNGetRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpIntHandler); err != nil {
+		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -451,7 +451,7 @@ func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = builder.Bind("GET", "/users", noOpIntHandler)
+	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -492,7 +492,7 @@ func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpIntHandler); err != nil {
+		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -527,7 +527,7 @@ func Benchmark1JsonRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = builder.Bind("GET", "/users", noOpIntHandler)
+	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -568,7 +568,7 @@ func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpIntHandler); err != nil {
+		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -603,7 +603,7 @@ func Benchmark1MultipartRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = builder.Bind("GET", "/users", noOpIntHandler)
+	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -648,7 +648,7 @@ func Benchmark1OverNMultipartRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpIntHandler); err != nil {
+		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
