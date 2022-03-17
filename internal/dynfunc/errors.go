@@ -8,48 +8,18 @@ func (err Err) Error() string {
 }
 
 const (
-	// ErrHandlerNotFunc - handler is not a func
-	ErrHandlerNotFunc = Err("handler must be a func")
+	// ErrNotAStruct - request/response is not a struct
+	ErrNotAStruct = Err("must be a struct")
 
-	// ErrNoServiceForHandler - no service matching this handler
-	ErrNoServiceForHandler = Err("no service found for this handler")
+	// ErrUnexpectedFields - request/response fields are unexpected
+	ErrUnexpectedFields = Err("unexpected struct fields")
 
-	// ErrMissingHandlerContextArgument - missing params arguments for handler
-	ErrMissingHandlerContextArgument = Err("missing handler first argument of type context.Context")
+	// ErrUnexportedField - struct field is unexported
+	ErrUnexportedField = Err("unexported field name")
 
-	// ErrInvalidHandlerContextArgument - missing handler output error
-	ErrInvalidHandlerContextArgument = Err("first input argument should be of type context.Context")
+	// ErrMissingField - missing request/response field
+	ErrMissingField = Err("missing struct field from the configuration")
 
-	// ErrMissingHandlerInputArgument - missing params arguments for handler
-	ErrMissingHandlerInputArgument = Err("missing handler argument: input struct")
-
-	// ErrUnexpectedInput - input argument is not expected
-	ErrUnexpectedInput = Err("unexpected input struct")
-
-	// ErrUnexpectedOutput - output argument is not expected
-	ErrUnexpectedOutput = Err("unexpected output struct")
-
-	// ErrMissingHandlerOutputArgument - missing output for handler
-	ErrMissingHandlerOutputArgument = Err("missing handler first output argument: output struct")
-
-	// ErrMissingHandlerErrorArgument - missing error output for handler
-	ErrMissingHandlerErrorArgument = Err("missing handler last output argument of type error")
-
-	// ErrInvalidHandlerErrorArgument - missing handler output error
-	ErrInvalidHandlerErrorArgument = Err("last output must be of type error")
-
-	// ErrMissingParamArgument - missing parameters argument for handler
-	ErrMissingParamArgument = Err("handler second argument must be a struct")
-
-	// ErrUnexportedName - argument is unexported in struct
-	ErrUnexportedName = Err("unexported name")
-
-	// ErrWrongOutputArgumentType - wrong type for output first argument
-	ErrWrongOutputArgumentType = Err("handler first output argument must be a *struct")
-
-	// ErrMissingConfigArgument - missing an input/output argument in handler struct
-	ErrMissingConfigArgument = Err("missing an argument from the configuration")
-
-	// ErrWrongParamTypeFromConfig - a configuration parameter type is invalid in the handler param struct
-	ErrWrongParamTypeFromConfig = Err("invalid struct field type")
+	// ErrInvalidType - invalid struct field type
+	ErrInvalidType = Err("invalid struct field type")
 )
