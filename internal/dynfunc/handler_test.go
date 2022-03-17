@@ -263,21 +263,21 @@ func TestUnexpectedErrors(t *testing.T) {
 			name:     "panic on unsettable input",
 			expected: map[string]reflect.Type{"unexported": reflect.TypeOf(true)},
 			input:    map[string]interface{}{"unexported": true},
-			builder:  wrap[Unsettable, struct{}](func(context.Context, Unsettable) (*struct{}, error) { return nil, nil }),
+			builder:  wrap(func(context.Context, Unsettable) (*struct{}, error) { return nil, nil }),
 			panicMsg: `cannot set field "unexported"`,
 		},
 		{
 			name:     "panic on incompatible pointer",
 			expected: map[string]reflect.Type{"NotABoolPointer": reflect.PtrTo(reflect.TypeOf(true))},
 			input:    map[string]interface{}{"NotABoolPointer": true},
-			builder:  wrap[IntPointer, struct{}](func(context.Context, IntPointer) (*struct{}, error) { return nil, nil }),
+			builder:  wrap(func(context.Context, IntPointer) (*struct{}, error) { return nil, nil }),
 			panicMsg: `cannot convert bool into *int`,
 		},
 		{
 			name:     "panic on incompatible type",
 			expected: map[string]reflect.Type{"NotABool": reflect.TypeOf(true)},
 			input:    map[string]interface{}{"NotABool": true},
-			builder:  wrap[Int, struct{}](func(context.Context, Int) (*struct{}, error) { return nil, nil }),
+			builder:  wrap(func(context.Context, Int) (*struct{}, error) { return nil, nil }),
 			panicMsg: `cannot convert bool into int`,
 		},
 		{
@@ -287,7 +287,7 @@ func TestUnexpectedErrors(t *testing.T) {
 				"IntPtr": reflect.PtrTo(reflect.TypeOf(int(0))),
 			},
 			input: nil, // no input provided
-			builder: wrap[Big, struct{}](func(ctx context.Context, in Big) (*struct{}, error) {
+			builder: wrap(func(ctx context.Context, in Big) (*struct{}, error) {
 				if len(in.String) > 0 {
 					t.Fatalf("expected string param to be skipped")
 				}
@@ -311,7 +311,7 @@ func TestUnexpectedErrors(t *testing.T) {
 				"Int":       24680,
 				"IntPtr":    -13579,
 			},
-			builder: wrap[Big, struct{}](func(ctx context.Context, in Big) (*struct{}, error) {
+			builder: wrap(func(ctx context.Context, in Big) (*struct{}, error) {
 				if in.String != "Some string!" {
 					t.Fatalf("invalid string\nactual: %q\nexpect: %q", in.String, "Some string!")
 				}
