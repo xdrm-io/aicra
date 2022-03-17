@@ -1,3 +1,3 @@
 module github.com/xdrm-io/aicra
 
-go 1.16
+go 1.18

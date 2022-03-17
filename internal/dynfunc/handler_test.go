@@ -11,30 +11,61 @@ import (
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
-type testsignature Signature
+type fakeConfig config.Service
 
 // builds a mock service with provided arguments as Input and matched as Output
-func (s *testsignature) withArgs(dtypes ...reflect.Type) *testsignature {
-	if s.In == nil {
-		s.In = make(map[string]reflect.Type)
-	}
-	if s.Out == nil {
-		s.Out = make(map[string]reflect.Type)
-	}
+func (s *fakeConfig) withArgs(dtypes ...reflect.Type) *fakeConfig {
+	s.Input = make(map[string]*config.Parameter, len(dtypes))
+	s.Output = make(map[string]*config.Parameter, len(dtypes))
 
 	for i, dtype := range dtypes {
 		name := fmt.Sprintf("P%d", i+1)
-		s.In[name] = dtype
+		s.Input[name] = &config.Parameter{
+			Rename: name,
+			GoType: dtype,
+		}
+		s.Output[name] = &config.Parameter{
+			Rename: name,
+			GoType: dtype,
+		}
 		if dtype.Kind() == reflect.Ptr {
-			s.Out[name] = dtype.Elem()
-		} else {
-			s.Out[name] = dtype
+			s.Output[name].GoType = dtype.Elem()
 		}
 	}
 	return s
 }
 
+type fakeSign Signature
+
+// builds a mock service with provided arguments as Input and matched as Output
+func (s *fakeSign) withArgs(dtypes ...reflect.Type) *fakeSign {
+	s.In = make(map[string]reflect.Type, len(dtypes))
+	s.Out = make(map[string]reflect.Type, len(dtypes))
+
+	for i, dtype := range dtypes {
+		name := fmt.Sprintf("P%d", i+1)
+		s.In[name] = dtype
+		s.Out[name] = dtype
+		if dtype.Kind() == reflect.Ptr {
+			s.Out[name] = dtype.Elem()
+		}
+	}
+	return s
+}
+
+func build[Req, Res any](fn HandlerFunc[Req, Res]) func(svc *config.Service) (Callable, error) {
+	return func(svc *config.Service) (Callable, error) {
+		return Build(svc, fn)
+	}
+}
+func wrap[Req, Res any](fn HandlerFunc[Req, Res]) func(s *Signature) Callable {
+	return func(s *Signature) Callable {
+		return Wrap(s, fn)
+	}
+}
+
 func TestInput(t *testing.T) {
+	t.Parallel()
 
 	type intstruct struct {
 		P1 int
@@ -44,28 +75,31 @@ func TestInput(t *testing.T) {
 	}
 
 	tt := []struct {
-		name   string
-		spec   *testsignature
-		hasCtx bool
-		fn     interface{}
-		in     []interface{}
-
-		out []interface{}
-		err error
+		name    string
+		conf    *fakeConfig // warps config.Service
+		hasCtx  bool
+		builder func(svc *config.Service) (Callable, error)
+		in      []interface{}
+		out     []interface{}
+		err     error
 	}{
 		{
-			name:   "none required none provided",
-			spec:   (&testsignature{}).withArgs(),
-			fn:     func(context.Context) (*struct{}, error) { return nil, nil },
+			name: "none required none provided",
+			conf: (&fakeConfig{}).withArgs(),
+			builder: build(func(_ context.Context, r struct{}) (*struct{}, error) {
+				return nil, nil
+			}),
 			hasCtx: false,
 			in:     []interface{}{},
 			out:    []interface{}{},
 			err:    nil,
 		},
 		{
-			name:   "no input with error",
-			spec:   (&testsignature{}).withArgs(),
-			fn:     func(context.Context) (*struct{}, error) { return nil, api.ErrForbidden },
+			name: "no input with error",
+			conf: (&fakeConfig{}).withArgs(),
+			builder: build(func(_ context.Context, r struct{}) (*struct{}, error) {
+				return nil, api.ErrForbidden
+			}),
 			hasCtx: false,
 			in:     []interface{}{},
 			out:    []interface{}{},
@@ -73,10 +107,10 @@ func TestInput(t *testing.T) {
 		},
 		{
 			name: "int proxy (0)",
-			spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+			conf: (&fakeConfig{}).withArgs(reflect.TypeOf(int(0))),
+			builder: build(func(_ context.Context, in intstruct) (*intstruct, error) {
 				return &intstruct{P1: in.P1}, nil
-			},
+			}),
 			hasCtx: false,
 			in:     []interface{}{int(0)},
 			out:    []interface{}{int(0)},
@@ -84,10 +118,10 @@ func TestInput(t *testing.T) {
 		},
 		{
 			name: "int proxy with error",
-			spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+			conf: (&fakeConfig{}).withArgs(reflect.TypeOf(int(0))),
+			builder: build(func(ctx context.Context, in intstruct) (*intstruct, error) {
 				return &intstruct{P1: in.P1}, api.ErrNotImplemented
-			},
+			}),
 			hasCtx: false,
 			in:     []interface{}{int(0)},
 			out:    []interface{}{int(0)},
@@ -95,10 +129,10 @@ func TestInput(t *testing.T) {
 		},
 		{
 			name: "int proxy (11)",
-			spec: (&testsignature{}).withArgs(reflect.TypeOf(int(0))),
-			fn: func(ctx context.Context, in intstruct) (*intstruct, error) {
+			conf: (&fakeConfig{}).withArgs(reflect.TypeOf(int(0))),
+			builder: build(func(ctx context.Context, in intstruct) (*intstruct, error) {
 				return &intstruct{P1: in.P1}, nil
-			},
+			}),
 			hasCtx: false,
 			in:     []interface{}{int(11)},
 			out:    []interface{}{int(11)},
@@ -106,10 +140,10 @@ func TestInput(t *testing.T) {
 		},
 		{
 			name: "*int proxy (nil)",
-			spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			fn: func(ctx context.Context, in intptrstruct) (*intptrstruct, error) {
+			conf: (&fakeConfig{}).withArgs(reflect.TypeOf(new(int))),
+			builder: build(func(ctx context.Context, in intptrstruct) (*intptrstruct, error) {
 				return &intptrstruct{P1: in.P1}, nil
-			},
+			}),
 			hasCtx: false,
 			in:     []interface{}{},
 			out:    []interface{}{nil},
@@ -117,10 +151,10 @@ func TestInput(t *testing.T) {
 		},
 		{
 			name: "*int proxy (28)",
-			spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
+			conf: (&fakeConfig{}).withArgs(reflect.TypeOf(new(int))),
+			builder: build(func(ctx context.Context, in intptrstruct) (*intstruct, error) {
 				return &intstruct{P1: *in.P1}, nil
-			},
+			}),
 			hasCtx: false,
 			in:     []interface{}{28},
 			out:    []interface{}{28},
@@ -128,10 +162,10 @@ func TestInput(t *testing.T) {
 		},
 		{
 			name: "*int proxy (13)",
-			spec: (&testsignature{}).withArgs(reflect.TypeOf(new(int))),
-			fn: func(ctx context.Context, in intptrstruct) (*intstruct, error) {
+			conf: (&fakeConfig{}).withArgs(reflect.TypeOf(new(int))),
+			builder: build(func(ctx context.Context, in intptrstruct) (*intstruct, error) {
 				return &intstruct{P1: *in.P1}, nil
-			},
+			}),
 			hasCtx: false,
 			in:     []interface{}{13},
 			out:    []interface{}{13},
@@ -143,9 +177,9 @@ func TestInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			var handler = &Handler{
-				signature: &Signature{In: tc.spec.In, Out: tc.spec.Out},
-				fn:        tc.fn,
+			callable, err := tc.builder((*config.Service)(tc.conf))
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
 			}
 
 			// build input
@@ -155,7 +189,7 @@ func TestInput(t *testing.T) {
 				input[key] = val
 			}
 
-			var output, err = handler.Handle(context.Background(), input)
+			output, err := callable(context.Background(), input)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -217,7 +251,7 @@ func TestUnexpectedErrors(t *testing.T) {
 		name     string
 		expected map[string]reflect.Type
 		input    map[string]interface{}
-		fn       interface{}
+		builder  func(*Signature) Callable
 
 		// do not expect a panic when empty
 		panicMsg string
@@ -229,21 +263,21 @@ func TestUnexpectedErrors(t *testing.T) {
 			name:     "panic on unsettable input",
 			expected: map[string]reflect.Type{"unexported": reflect.TypeOf(true)},
 			input:    map[string]interface{}{"unexported": true},
-			fn:       func(context.Context, Unsettable) error { return nil },
+			builder:  wrap(func(context.Context, Unsettable) (*struct{}, error) { return nil, nil }),
 			panicMsg: `cannot set field "unexported"`,
 		},
 		{
 			name:     "panic on incompatible pointer",
 			expected: map[string]reflect.Type{"NotABoolPointer": reflect.PtrTo(reflect.TypeOf(true))},
 			input:    map[string]interface{}{"NotABoolPointer": true},
-			fn:       func(context.Context, IntPointer) error { return nil },
+			builder:  wrap(func(context.Context, IntPointer) (*struct{}, error) { return nil, nil }),
 			panicMsg: `cannot convert bool into *int`,
 		},
 		{
 			name:     "panic on incompatible type",
 			expected: map[string]reflect.Type{"NotABool": reflect.TypeOf(true)},
 			input:    map[string]interface{}{"NotABool": true},
-			fn:       func(context.Context, Int) error { return nil },
+			builder:  wrap(func(context.Context, Int) (*struct{}, error) { return nil, nil }),
 			panicMsg: `cannot convert bool into int`,
 		},
 		{
@@ -253,15 +287,15 @@ func TestUnexpectedErrors(t *testing.T) {
 				"IntPtr": reflect.PtrTo(reflect.TypeOf(int(0))),
 			},
 			input: nil, // no input provided
-			fn: func(ctx context.Context, in Big) error {
+			builder: wrap(func(ctx context.Context, in Big) (*struct{}, error) {
 				if len(in.String) > 0 {
 					t.Fatalf("expected string param to be skipped")
 				}
 				if in.IntPtr != nil {
 					t.Fatalf("expected pointer param to be skipped")
 				}
-				return nil
-			},
+				return nil, nil
+			}),
 		},
 		{
 			name: "valid input",
@@ -277,7 +311,7 @@ func TestUnexpectedErrors(t *testing.T) {
 				"Int":       24680,
 				"IntPtr":    -13579,
 			},
-			fn: func(ctx context.Context, in Big) error {
+			builder: wrap(func(ctx context.Context, in Big) (*struct{}, error) {
 				if in.String != "Some string!" {
 					t.Fatalf("invalid string\nactual: %q\nexpect: %q", in.String, "Some string!")
 				}
@@ -296,18 +330,18 @@ func TestUnexpectedErrors(t *testing.T) {
 				if *in.IntPtr != -13579 {
 					t.Fatalf("invalid int\nactual: %d\nexpect: %d", *in.IntPtr, -13579)
 				}
-				return api.ErrNotImplemented
-			},
+				return nil, api.ErrNotImplemented
+			}),
 			err: api.ErrNotImplemented,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := Handler{
-				signature: &Signature{In: tc.expected, Out: nil},
-				fn:        tc.fn,
-			}
+			var (
+				s        = &Signature{In: tc.expected}
+				callable = tc.builder(s)
+			)
 
 			defer func() {
 				expectPanic := len(tc.panicMsg) > 0
@@ -323,7 +357,7 @@ func TestUnexpectedErrors(t *testing.T) {
 					t.Fatalf("invalid panic message\nactual: %q\nexpect: %q", r, tc.panicMsg)
 				}
 			}()
-			_, err := handler.Handle(context.Background(), tc.input)
+			_, err := callable(context.Background(), tc.input)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -335,45 +369,37 @@ func TestUnexpectedErrors(t *testing.T) {
 func TestBuild(t *testing.T) {
 	t.Parallel()
 
-	var Int int = 1
-
 	tt := []struct {
 		name    string
 		service config.Service
-		fn      interface{}
+		builder func(s *config.Service) (Callable, error)
 		err     error
 	}{
-		{
-			name:    "not a function",
-			service: config.Service{},
-			fn:      &Int, // int pointer
-			err:     ErrHandlerNotFunc,
-		},
 		{
 			// input already tested in signature.ValidateInput
 			name:    "unexpected input",
 			service: config.Service{},
-			fn:      func(context.Context, struct{}) error { return nil },
-			err:     ErrUnexpectedInput,
+			builder: build(func(context.Context, struct{ Int int }) (*struct{}, error) { return nil, nil }),
+			err:     ErrUnexpectedFields,
 		},
 		{
 			// output already tested in signature.ValidateOutput
 			name:    "unexpected output",
 			service: config.Service{},
-			fn:      func(context.Context) (*struct{}, error) { return nil, nil },
-			err:     ErrUnexpectedOutput,
+			builder: build(func(context.Context, struct{}) (*struct{ Int int }, error) { return nil, nil }),
+			err:     ErrUnexpectedFields,
 		},
 		{
 			name:    "valid empty service",
 			service: config.Service{},
-			fn:      func(context.Context) error { return nil },
+			builder: build(func(context.Context, struct{}) (*struct{}, error) { return nil, nil }),
 			err:     nil,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := Build(tc.fn, tc.service)
+			_, err := tc.builder(&tc.service)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}

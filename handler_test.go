@@ -52,6 +52,12 @@ func addDefaultTypes(b *aicra.Builder) error {
 	return nil
 }
 
+func bind[Req, Res any](method, path string, fn aicra.HandlerFunc[Req, Res]) func(*aicra.Builder) error {
+	return func(b *aicra.Builder) error {
+		return aicra.Bind(b, method, path, fn)
+	}
+}
+
 func TestHandlerWith(t *testing.T) {
 	builder := &aicra.Builder{}
 	if err := addDefaultTypes(builder); err != nil {
@@ -96,7 +102,7 @@ func TestHandlerWith(t *testing.T) {
 		t.Fatalf("setup: unexpected error <%v>", err)
 	}
 
-	pathHandler := func(ctx context.Context) error {
+	pathHandler := func(ctx context.Context, _ struct{}) (*struct{}, error) {
 		// write value from middlewares into response
 		value := ctx.Value(key)
 		if value == nil {
@@ -109,10 +115,10 @@ func TestHandlerWith(t *testing.T) {
 		// write to response
 		api.GetResponseWriter(ctx).Write([]byte(fmt.Sprintf("#%d#", cast)))
 
-		return nil
+		return nil, nil
 	}
 
-	if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
+	if err := aicra.Bind(builder, http.MethodGet, "/path", pathHandler); err != nil {
 		t.Fatalf("bind: unexpected error <%v>", err)
 	}
 
@@ -262,11 +268,11 @@ func TestHandlerWithAuth(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			pathHandler := func(ctx context.Context) error {
-				return api.ErrNotImplemented
+			pathHandler := func(ctx context.Context, _ struct{}) (*struct{}, error) {
+				return nil, api.ErrNotImplemented
 			}
 
-			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
+			if err := aicra.Bind(builder, http.MethodGet, "/path", pathHandler); err != nil {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
@@ -292,28 +298,25 @@ func TestHandlerWithAuth(t *testing.T) {
 func TestHandlerPermissionError(t *testing.T) {
 	tt := []struct {
 		name        string
-		path        string
 		uri, body   string
 		config      string
-		handler     interface{}
+		binder      func(*aicra.Builder) error
 		permissions []string
 		err         api.Err
 	}{
 		{
 			name:        "permission fulfilled",
-			path:        "/path",
 			uri:         "/path",
 			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
-			handler:     func(ctx context.Context) error { return api.ErrNotImplemented },
+			binder:      bind("GET", "/path", func(context.Context, struct{}) (*struct{}, error) { return nil, api.ErrNotImplemented }),
 			permissions: []string{"A"},
 			err:         api.ErrNotImplemented,
 		},
 		{
 			name:        "missing permission",
-			path:        "/path",
 			uri:         "/path",
 			config:      `[ { "method": "GET", "path": "/path", "scope": [["A"]], "info": "info", "in": {}, "out": {} } ]`,
-			handler:     func(ctx context.Context) error { return api.ErrNotImplemented },
+			binder:      bind("GET", "/path", func(context.Context, struct{}) (*struct{}, error) { return nil, api.ErrNotImplemented }),
 			permissions: []string{},
 			err:         api.ErrForbidden,
 		},
@@ -322,7 +325,6 @@ func TestHandlerPermissionError(t *testing.T) {
 		// BEFORE query and body params
 		{
 			name: "permission with wrong uri param",
-			path: "/path/{uid}",
 			uri:  "/path/abc",
 			config: `[ {
 				"method": "GET",
@@ -334,15 +336,12 @@ func TestHandlerPermissionError(t *testing.T) {
 				},
 				"out": {}
 			} ]`,
-			handler: func(ctx context.Context, in struct{ UserID uint }) error {
-				return api.ErrNotImplemented
-			},
+			binder:      bind("GET", "/path/{uid}", func(context.Context, struct{ UserID uint }) (*struct{}, error) { return nil, api.ErrNotImplemented }),
 			permissions: []string{},
 			err:         api.ErrUnknownService,
 		},
 		{
 			name: "permission with wrong query param",
-			path: "/path",
 			uri:  "/path?uid=invalid-type",
 			config: `[ {
 				"method": "GET",
@@ -354,15 +353,12 @@ func TestHandlerPermissionError(t *testing.T) {
 				},
 				"out": {}
 			} ]`,
-			handler: func(ctx context.Context, in struct{ UserID uint }) error {
-				return api.ErrNotImplemented
-			},
+			binder:      bind("GET", "/path", func(context.Context, struct{ UserID uint }) (*struct{}, error) { return nil, api.ErrNotImplemented }),
 			permissions: []string{},
 			err:         api.ErrForbidden,
 		},
 		{
 			name: "permission with wrong body param",
-			path: "/path",
 			uri:  "/path",
 			body: "uid=invalid-type",
 			config: `[ {
@@ -375,9 +371,7 @@ func TestHandlerPermissionError(t *testing.T) {
 				},
 				"out": {}
 			} ]`,
-			handler: func(ctx context.Context, in struct{ UserID uint }) error {
-				return api.ErrNotImplemented
-			},
+			binder:      bind("GET", "/path", func(context.Context, struct{ UserID uint }) (*struct{}, error) { return nil, api.ErrNotImplemented }),
 			permissions: []string{},
 			err:         api.ErrForbidden,
 		},
@@ -408,7 +402,7 @@ func TestHandlerPermissionError(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			if err := builder.Bind(http.MethodGet, tc.path, tc.handler); err != nil {
+			if err := tc.binder(builder); err != nil {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
@@ -443,8 +437,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 	tt := []struct {
 		name        string
 		config      string
-		path        string
-		handler     interface{}
+		binder      func(*aicra.Builder) error
 		url         string
 		body        string
 		permissions []string
@@ -464,8 +457,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ Input1 uint }) error { return nil },
+			binder:      bind("POST", "/path/{id}", func(context.Context, struct{ Input1 uint }) (*struct{}, error) { return nil, nil }),
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -485,8 +477,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ Input1 uint }) error { return nil },
+			binder:      bind("POST", "/path/{id}", func(context.Context, struct{ Input1 uint }) (*struct{}, error) { return nil, nil }),
 			url:         "/path/666",
 			body:        ``,
 			permissions: []string{"user[123]"},
@@ -506,8 +497,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			path:        "/path/{id}",
-			handler:     func(context.Context, struct{ User uint }) error { return nil },
+			binder:      bind("POST", "/path/{id}", func(context.Context, struct{ User uint }) (*struct{}, error) { return nil, nil }),
 			url:         "/path/123",
 			body:        ``,
 			permissions: []string{"prefix.user[123].suffix"},
@@ -527,14 +517,12 @@ func TestHandlerDynamicScope(t *testing.T) {
 					},
 					"out": {}
 				}
-			]`,
-			path: "/prefix/{pid}/user/{uid}",
-			handler: func(context.Context, struct {
+			]`, binder: bind("POST", "/prefix/{pid}/user/{uid}", func(context.Context, struct {
 				Prefix uint
 				User   uint
-			}) error {
-				return nil
-			},
+			}) (*struct{}, error) {
+				return nil, nil
+			}),
 			url:         "/prefix/123/user/456",
 			body:        ``,
 			permissions: []string{"prefix[123].user[456].suffix"},
@@ -555,13 +543,12 @@ func TestHandlerDynamicScope(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			path: "/prefix/{pid}/user/{uid}",
-			handler: func(context.Context, struct {
+			binder: bind("POST", "/prefix/{pid}/user/{uid}", func(context.Context, struct {
 				Prefix uint
 				User   uint
-			}) error {
-				return nil
-			},
+			}) (*struct{}, error) {
+				return nil, nil
+			}),
 			url:         "/prefix/123/user/666",
 			body:        ``,
 			permissions: []string{"prefix[123].user[456].suffix"},
@@ -583,14 +570,13 @@ func TestHandlerDynamicScope(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(context.Context, struct {
+			binder: bind("POST", "/prefix/{pid}/user/{uid}/suffix/{sid}", func(context.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
-			}) error {
-				return nil
-			},
+			}) (*struct{}, error) {
+				return nil, nil
+			}),
 			url:         "/prefix/123/user/456/suffix/789",
 			body:        ``,
 			permissions: []string{"prefix[123].user[456].suffix[789]"},
@@ -612,14 +598,13 @@ func TestHandlerDynamicScope(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			path: "/prefix/{pid}/user/{uid}/suffix/{sid}",
-			handler: func(context.Context, struct {
+			binder: bind("POST", "/prefix/{pid}/user/{uid}/suffix/{sid}", func(context.Context, struct {
 				Prefix uint
 				User   uint
 				Suffix uint
-			}) error {
-				return nil
-			},
+			}) (*struct{}, error) {
+				return nil, nil
+			}),
 			url:         "/prefix/123/user/666/suffix/789",
 			body:        ``,
 			permissions: []string{"prefix[123].user[456].suffix[789]"},
@@ -670,7 +655,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			if err := builder.Bind(http.MethodPost, tc.path, tc.handler); err != nil {
+			if err := tc.binder(builder); err != nil {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
@@ -699,8 +684,7 @@ func TestHandlerServiceErrors(t *testing.T) {
 		name   string
 		config string
 		// handler
-		hmethod, huri string
-		hfn           interface{}
+		binder func(*aicra.Builder) error
 		// request
 		method, url string
 		contentType string
@@ -722,11 +706,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) error {
-				return nil
-			},
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodPost,
 			url:         "/",
 			body:        ``,
@@ -745,11 +727,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) error {
-				return nil
-			},
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/invalid",
 			body:        ``,
@@ -768,11 +748,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) error {
-				return nil
-			},
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/",
 			body:        ``,
@@ -795,11 +773,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/a/{id}/b",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("GET", "/a/{id}/b", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/a/invalid/b",
 			body:        ``,
@@ -822,11 +798,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("GET", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/",
 			body:        ``,
@@ -848,11 +822,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/a",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("GET", "/a", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/a?id=abc",
 			body:        ``,
@@ -874,11 +846,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/a",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("GET", "/a", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/a?id=123&id=456",
 			body:        ``,
@@ -900,11 +870,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/a",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("GET", "/a", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:      http.MethodGet,
 			url:         "/a?id=123",
 			body:        ``,
@@ -927,11 +895,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "application/json",
 			method:      http.MethodPost,
 			url:         "/",
@@ -954,11 +920,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "application/json",
 			method:      http.MethodPost,
 			url:         "/",
@@ -981,11 +945,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "application/json",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1009,11 +971,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "application/x-www-form-urlencoded",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1036,11 +996,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "application/x-www-form-urlencoded",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1063,11 +1021,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "application/x-www-form-urlencoded",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1091,11 +1047,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "multipart/form-data; boundary=xxx",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1118,11 +1072,9 @@ func TestHandlerServiceErrors(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "multipart/form-data; boundary=xxx",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1149,11 +1101,9 @@ abc
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodPost,
-			huri:    "/",
-			hfn: func(context.Context, struct{ ID int }) error {
-				return nil
-			},
+			binder: bind("POST", "/", func(context.Context, struct{ ID int }) (*struct{}, error) {
+				return nil, nil
+			}),
 			contentType: "multipart/form-data; boundary=xxx",
 			method:      http.MethodPost,
 			url:         "/",
@@ -1179,7 +1129,7 @@ Content-Disposition: form-data; name="id"
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			if err := builder.Bind(tc.hmethod, tc.huri, tc.hfn); err != nil {
+			if err := tc.binder(builder); err != nil {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
@@ -1233,8 +1183,7 @@ func TestHandlerResponse(t *testing.T) {
 		config string
 
 		// handler
-		hmethod, huri string
-		hfn           interface{}
+		binder func(*aicra.Builder) error
 		// request
 		method, uri, body string
 
@@ -1252,11 +1201,9 @@ func TestHandlerResponse(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) error {
-				return nil
-			},
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{}, error) {
+				return nil, nil
+			}),
 			method:   http.MethodGet,
 			uri:      "/",
 			response: `{"status":"all right"}`,
@@ -1273,11 +1220,9 @@ func TestHandlerResponse(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) error {
-				return api.ErrNotImplemented
-			},
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{}, error) {
+				return nil, api.ErrNotImplemented
+			}),
 			method:   http.MethodGet,
 			uri:      "/",
 			response: `{"status":"not implemented"}`,
@@ -1297,11 +1242,9 @@ func TestHandlerResponse(t *testing.T) {
 					}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) (*struct{ ID uint }, error) {
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{ ID uint }, error) {
 				return nil, nil
-			},
+			}),
 			method:   http.MethodGet,
 			uri:      "/",
 			response: `{"status":"all right"}`,
@@ -1320,11 +1263,9 @@ func TestHandlerResponse(t *testing.T) {
 					}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) (*struct{ ID uint }, error) {
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{ ID uint }, error) {
 				return &struct{ ID uint }{ID: 123}, nil
-			},
+			}),
 			method:   http.MethodGet,
 			uri:      "/",
 			response: `{"id":123,"status":"all right"}`,
@@ -1344,14 +1285,9 @@ func TestHandlerResponse(t *testing.T) {
 					}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) (*struct {
-				A uint
-				Z uint
-			}, error) {
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{ A, Z uint }, error) {
 				return nil, api.ErrForbidden
-			},
+			}),
 			method:   http.MethodGet,
 			uri:      "/",
 			response: `{"status":"forbidden"}`,
@@ -1371,17 +1307,12 @@ func TestHandlerResponse(t *testing.T) {
 					}
 				}
 			]`,
-			hmethod: http.MethodGet,
-			huri:    "/",
-			hfn: func(context.Context) (*struct {
-				A uint
-				Z uint
-			}, error) {
+			binder: bind("GET", "/", func(context.Context, struct{}) (*struct{ A, Z uint }, error) {
 				return &struct {
 					A uint
 					Z uint
 				}{A: 123, Z: 456}, nil
-			},
+			}),
 			method:   http.MethodGet,
 			uri:      "/",
 			response: `{"a":123,"status":"all right","z":456}`,
@@ -1400,7 +1331,7 @@ func TestHandlerResponse(t *testing.T) {
 				t.Fatalf("setup: unexpected error <%v>", err)
 			}
 
-			if err := builder.Bind(tc.hmethod, tc.huri, tc.hfn); err != nil {
+			if err := tc.binder(builder); err != nil {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 

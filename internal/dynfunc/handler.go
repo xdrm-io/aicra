@@ -8,17 +8,15 @@ import (
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
-// Handler represents a dynamic aicra service handler
-type Handler struct {
-	// signature defined from the service configuration
-	signature *Signature
-	// fn provided function that will be the service's handler
-	fn interface{}
-}
+// HandlerFunc represents an user-provdided generic handler
+type HandlerFunc[Req, Res any] func(context.Context, Req) (*Res, error)
 
-// Build a dynamic handler from a generic function (interface{}). Fail when the
-// function does not match the expected service signature (input and output
-// arguments) according to the configuration.
+// Callable usually wraps a HandlerFn but has a common signature
+type Callable func(context.Context, map[string]interface{}) (map[string]interface{}, error)
+
+// Build a dynamic handler from a generic HandlerFn . Fails when the function
+// does not match the expected service signature (input and output arguments)
+// according to the configuration.
 //
 // `fn` must have as a signature : `func(context.Context, in) (*out, api.Err)`
 //  - `in`  is a struct{} containing a field for each service input
@@ -32,111 +30,96 @@ type Handler struct {
 // Output struct field types must match output types.
 //
 // Special cases:
-//  - when no input is configured, the `in` struct MUST be dropped
-//  - when no output is configured, the `out` struct MUST be dropped
-func Build(fn interface{}, service config.Service) (*Handler, error) {
+//  - when no input is configured, the `in` struct MUST be empty
+//  - when no output is configured, the `out` struct MUST be empty
+func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Callable, error) {
+	var signature = FromConfig(service)
+
 	var (
-		h = &Handler{
-			signature: FromConfig(service),
-			fn:        fn,
-		}
-		fnType = reflect.TypeOf(fn)
+		treq = reflect.TypeOf((*Req)(nil)).Elem()
+		tres = reflect.TypeOf((*Res)(nil)).Elem()
 	)
 
-	if fnType.Kind() != reflect.Func {
-		return nil, ErrHandlerNotFunc
+	if err := signature.ValidateRequest(treq); err != nil {
+		return nil, fmt.Errorf("request: %w", err)
 	}
-	if err := h.signature.ValidateInput(fnType); err != nil {
-		return nil, fmt.Errorf("input: %w", err)
-	}
-	if err := h.signature.ValidateOutput(fnType); err != nil {
-		return nil, fmt.Errorf("output: %w", err)
+	if err := signature.ValidateResponse(tres); err != nil {
+		return nil, fmt.Errorf("response: %w", err)
 	}
 
-	return h, nil
+	return Wrap(signature, fn), nil
 }
 
-// Handle binds input `data` into the dynamic function and returns an output map
-func (h *Handler) Handle(ctx context.Context, data map[string]interface{}) (map[string]interface{}, error) {
-	var (
-		vFn   = reflect.ValueOf(h.fn)
-		tFn   = reflect.TypeOf(h.fn)
-		input = make([]reflect.Value, 1, 2)
+// Wrap a generic handler into a callable function
+func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable {
+	return func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
+		var (
+			tfn       = reflect.TypeOf(fn)
+			hasOutput = len(signature.Out) > 0
+		)
 
-		hasInput  = len(h.signature.In) > 0
-		hasOutput = len(h.signature.Out) > 0
-	)
-
-	// bind context
-	input[0] = reflect.ValueOf(ctx)
-
-	// bind input arguments
-	if hasInput {
 		// create zero value struct
 		var (
-			inStructPtr = reflect.New(tFn.In(1))
+			inStructPtr = reflect.New(tfn.In(1))
 			inStruct    = inStructPtr.Elem()
 		)
 
-		// set each field
-		for name := range h.signature.In {
+		// convert map[string]interface{} into Req
+		for name := range signature.In {
 			field := inStruct.FieldByName(name)
 			if !field.CanSet() {
 				panic(fmt.Errorf("cannot set field %q", name))
 			}
 
 			// get value from @data
-			value, provided := data[name]
+			value, provided := in[name]
 			if !provided {
 				continue
 			}
 
-			vValue := reflect.ValueOf(value)
-			tValue := reflect.TypeOf(value)
+			vvalue := reflect.ValueOf(value)
+			tvalue := reflect.TypeOf(value)
 
 			// convert T to pointer of T
 			if field.Kind() == reflect.Ptr {
 				var tPtr = field.Type().Elem()
-				if !tValue.ConvertibleTo(tPtr) {
-					panic(fmt.Errorf("cannot convert %v into *%v", tValue, tPtr))
+				if !tvalue.ConvertibleTo(tPtr) {
+					panic(fmt.Errorf("cannot convert %v into *%v", tvalue, tPtr))
 				}
 
 				ptr := reflect.New(tPtr)
-				ptr.Elem().Set(vValue.Convert(tPtr))
+				ptr.Elem().Set(vvalue.Convert(tPtr))
 				field.Set(ptr)
 				continue
 			}
 
 			// not convertible
-			if !tValue.ConvertibleTo(field.Type()) {
-				panic(fmt.Errorf("cannot convert %v into %v", tValue, field.Type()))
+			if !tvalue.ConvertibleTo(field.Type()) {
+				panic(fmt.Errorf("cannot convert %v into %v", tvalue, field.Type()))
 			}
 
 			// non-pointer values
-			field.Set(vValue.Convert(field.Type()))
+			field.Set(vvalue.Convert(field.Type()))
 		}
-		input = append(input, inStruct)
-	}
 
-	// call the handler
-	output := vFn.Call(input)
+		// call the handler
+		var (
+			req      = inStruct.Interface().(Req)
+			res, err = fn(ctx, req)
+			vres     = reflect.ValueOf(res).Elem()
+		)
 
-	var err error
-	if !output[len(output)-1].IsNil() {
-		err = output[len(output)-1].Interface().(error)
-	}
+		// no output OR pointer to output struct is nil
+		if !hasOutput || res == nil {
+			return map[string]interface{}{}, err
+		}
 
-	// no output OR pointer to output struct is nil
-	outdata := map[string]interface{}{}
-	if !hasOutput || output[0].IsNil() {
-		return outdata, err
+		// convert Res to map[string]interface{}
+		out := make(map[string]interface{}, len(signature.Out))
+		for name := range signature.Out {
+			field := vres.FieldByName(name)
+			out[name] = field.Interface()
+		}
+		return out, err
 	}
-
-	// extract struct from pointer
-	outStruct := output[0].Elem()
-	for name := range h.signature.Out {
-		field := outStruct.FieldByName(name)
-		outdata[name] = field.Interface()
-	}
-	return outdata, err
 }
