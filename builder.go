@@ -1,6 +1,7 @@
 package aicra
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,9 @@ import (
 	"github.com/xdrm-io/aicra/internal/dynfunc"
 	"github.com/xdrm-io/aicra/validator"
 )
+
+// HandlerFunc defines the generic handler interface for services
+type HandlerFunc[Req, Res any] func(context.Context, Req) (*Res, error)
 
 const (
 	// DefaultURILimit defines the default URI size to accept
@@ -46,9 +50,9 @@ type Builder struct {
 
 // serviceHandler links a handler func to a service (method-path combination)
 type serviceHandler struct {
-	Method string
-	Path   string
-	dyn    *dynfunc.Handler
+	Method   string
+	Path     string
+	callable dynfunc.Callable
 }
 
 // SetURILimit defines the maximum size of request URIs that is accepted (in
@@ -140,7 +144,7 @@ func (b *Builder) Setup(r io.Reader) error {
 }
 
 // Bind a dynamic handler to a REST service (method and pattern)
-func (b *Builder) Bind(method, path string, fn interface{}) error {
+func Bind[Req, Res any](b *Builder, method, path string, fn HandlerFunc[Req, Res]) error {
 	if b.conf == nil || b.conf.Services == nil {
 		return errNotSetup
 	}
@@ -158,15 +162,15 @@ func (b *Builder) Bind(method, path string, fn interface{}) error {
 		return fmt.Errorf("%s %q: %w", method, path, errUnknownService)
 	}
 
-	var dyn, err = dynfunc.Build(fn, *service)
+	var callable, err = dynfunc.Build(service, dynfunc.HandlerFunc[Req, Res](fn))
 	if err != nil {
 		return fmt.Errorf("%s %q handler: %w", method, path, err)
 	}
 
 	b.handlers = append(b.handlers, &serviceHandler{
-		Path:   path,
-		Method: method,
-		dyn:    dyn,
+		Path:     path,
+		Method:   method,
+		callable: callable,
 	})
 
 	return nil
