@@ -110,7 +110,7 @@ func Wrap[Req, Res any](signature *Signature, fn HandlerFn[Req, Res]) Callable {
 		)
 
 		// no output OR pointer to output struct is nil
-		if !hasOutput || vres.IsNil() {
+		if !hasOutput || res == nil {
 			return map[string]interface{}{}, err
 		}
 
