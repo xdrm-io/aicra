@@ -111,7 +111,7 @@ func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable
 
 		// no output OR pointer to output struct is nil
 		if !hasOutput || res == nil {
-			return map[string]interface{}{}, err
+			return nil, err
 		}
 
 		// convert Res to map[string]interface{}

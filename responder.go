@@ -16,7 +16,7 @@ func DefaultResponder(w http.ResponseWriter, data map[string]interface{}, e erro
 	w.WriteHeader(api.GetErrorStatus(e))
 
 	if data == nil {
-		data = map[string]interface{}{}
+		data = make(map[string]interface{}, 1)
 	}
 
 	data["status"] = "all right"
