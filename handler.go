@@ -128,7 +128,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 // the handler func output
 func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter) {
 	// pass execution to the handler function
-	data, err := handler.dyn.Handle(c, input.Data)
+	data, err := handler.callable(c, input.Data)
 
 	// rename data
 	renamed := make(map[string]interface{}, len(service.Output))

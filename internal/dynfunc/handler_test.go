@@ -53,12 +53,12 @@ func (s *fakeSign) withArgs(dtypes ...reflect.Type) *fakeSign {
 	return s
 }
 
-func build[Req, Res any](fn HandlerFn[Req, Res]) func(svc *config.Service) (Callable, error) {
+func build[Req, Res any](fn HandlerFunc[Req, Res]) func(svc *config.Service) (Callable, error) {
 	return func(svc *config.Service) (Callable, error) {
 		return Build(svc, fn)
 	}
 }
-func wrap[Req, Res any](fn HandlerFn[Req, Res]) func(s *Signature) Callable {
+func wrap[Req, Res any](fn HandlerFunc[Req, Res]) func(s *Signature) Callable {
 	return func(s *Signature) Callable {
 		return Wrap(s, fn)
 	}

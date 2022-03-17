@@ -9,16 +9,16 @@ import (
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
-func getReqType[Req, Res any](HandlerFn[Req, Res]) reflect.Type {
+func getReqType[Req, Res any](HandlerFunc[Req, Res]) reflect.Type {
 	return reflect.TypeOf((*Req)(nil)).Elem()
 }
-func getResType[Req, Res any](HandlerFn[Req, Res]) reflect.Type {
+func getResType[Req, Res any](HandlerFunc[Req, Res]) reflect.Type {
 	return reflect.TypeOf((*Res)(nil)).Elem()
 }
 
 func testIn[Req any]() func(s *Signature) error {
 	return func(s *Signature) error {
-		var fn HandlerFn[Req, struct{}] = func(context.Context, Req) (*struct{}, error) {
+		var fn HandlerFunc[Req, struct{}] = func(context.Context, Req) (*struct{}, error) {
 			return nil, nil
 		}
 		return s.ValidateRequest(getReqType(fn))
@@ -243,7 +243,7 @@ func TestRequestValidation(t *testing.T) {
 
 func testOut[Res any]() func(s *Signature) error {
 	return func(s *Signature) error {
-		var fn HandlerFn[struct{}, Res] = func(context.Context, struct{}) (*Res, error) {
+		var fn HandlerFunc[struct{}, Res] = func(context.Context, struct{}) (*Res, error) {
 			return nil, nil
 		}
 		return s.ValidateResponse(getResType(fn))

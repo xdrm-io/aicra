@@ -8,15 +8,15 @@ import (
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
-// HandlerFn represents an user-provdided generic handler
-type HandlerFn[Req, Res any] func(context.Context, Req) (*Res, error)
+// HandlerFunc represents an user-provdided generic handler
+type HandlerFunc[Req, Res any] func(context.Context, Req) (*Res, error)
 
 // Callable usually wraps a HandlerFn but has a common signature
 type Callable func(context.Context, map[string]interface{}) (map[string]interface{}, error)
 
-// Build a dynamic handler from a generic function (interface{}). Fail when the
-// function does not match the expected service signature (input and output
-// arguments) according to the configuration.
+// Build a dynamic handler from a generic HandlerFn . Fails when the function
+// does not match the expected service signature (input and output arguments)
+// according to the configuration.
 //
 // `fn` must have as a signature : `func(context.Context, in) (*out, api.Err)`
 //  - `in`  is a struct{} containing a field for each service input
@@ -30,9 +30,9 @@ type Callable func(context.Context, map[string]interface{}) (map[string]interfac
 // Output struct field types must match output types.
 //
 // Special cases:
-//  - when no input is configured, the `in` struct MUST be dropped
-//  - when no output is configured, the `out` struct MUST be dropped
-func Build[Req, Res any](service *config.Service, fn HandlerFn[Req, Res]) (Callable, error) {
+//  - when no input is configured, the `in` struct MUST be empty
+//  - when no output is configured, the `out` struct MUST be empty
+func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Callable, error) {
 	var signature = FromConfig(service)
 
 	var (
@@ -51,7 +51,7 @@ func Build[Req, Res any](service *config.Service, fn HandlerFn[Req, Res]) (Calla
 }
 
 // Wrap a generic handler into a callable function
-func Wrap[Req, Res any](signature *Signature, fn HandlerFn[Req, Res]) Callable {
+func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable {
 	return func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 		var (
 			tfn       = reflect.TypeOf(fn)
