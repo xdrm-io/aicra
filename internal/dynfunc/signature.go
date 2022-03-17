@@ -1,7 +1,6 @@
 package dynfunc
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -17,7 +16,7 @@ type Signature struct {
 }
 
 // FromConfig builds the handler signature type from a service's configuration
-func FromConfig(service config.Service) *Signature {
+func FromConfig(service *config.Service) *Signature {
 	s := &Signature{
 		In:  make(map[string]reflect.Type),
 		Out: make(map[string]reflect.Type),
@@ -44,115 +43,68 @@ func FromConfig(service config.Service) *Signature {
 	return s
 }
 
-// ValidateInput arguments of a handler against the signature
-func (s *Signature) ValidateInput(tHandler reflect.Type) error {
-	tContext := reflect.TypeOf((*context.Context)(nil)).Elem()
-
-	// context.Context first argument missing/invalid
-	if tHandler.NumIn() < 1 {
-		return ErrMissingHandlerContextArgument
-	}
-	tFirst := tHandler.In(0)
-	if !tFirst.Implements(tContext) {
-		return ErrInvalidHandlerContextArgument
+// ValidateRequest type of a handler against the service signature
+func (s *Signature) ValidateRequest(treq reflect.Type) error {
+	if treq.Kind() != reflect.Struct {
+		return ErrNotAStruct
 	}
 
 	// no input required
 	if len(s.In) == 0 {
-		// fail when input struct is still provided
-		if tHandler.NumIn() > 1 {
-			return ErrUnexpectedInput
+		// fail on unexpected fields
+		if treq.NumField() > 0 {
+			return ErrUnexpectedFields
 		}
 		return nil
 	}
 
-	// too much arguments
-	if tHandler.NumIn() != 2 {
-		return ErrMissingHandlerInputArgument
-	}
-
-	// must be a struct
-	tInStruct := tHandler.In(1)
-	if tInStruct.Kind() != reflect.Struct {
-		return ErrMissingParamArgument
-	}
-
 	// check for invalid param
-	for name, tParam := range s.In {
+	for name, tparam := range s.In {
 		if name[0] == strings.ToLower(name)[0] {
-			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+			return fmt.Errorf("%s: %w", name, ErrUnexportedField)
 		}
 
-		field, exists := tInStruct.FieldByName(name)
+		field, exists := treq.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, ErrMissingConfigArgument)
+			return fmt.Errorf("%s: %w", name, ErrMissingField)
 		}
 
-		if !tParam.AssignableTo(field.Type) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, tParam)
+		if !tparam.AssignableTo(field.Type) {
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrInvalidType, field.Type, tparam)
 		}
 	}
 	return nil
 }
 
-// ValidateOutput arguments of a handler against the signature
-func (s Signature) ValidateOutput(tHandler reflect.Type) error {
-	tError := reflect.TypeOf((*error)(nil)).Elem()
-
-	if tHandler.NumOut() < 1 {
-		return ErrMissingHandlerErrorArgument
-	}
-
-	// last argument must be an error
-	tLast := tHandler.Out(tHandler.NumOut() - 1)
-	if !tLast.AssignableTo(tError) {
-		return ErrInvalidHandlerErrorArgument
+// ValidateResponse type of a handler against the service signature
+func (s Signature) ValidateResponse(tres reflect.Type) error {
+	if tres.Kind() != reflect.Struct {
+		return ErrNotAStruct
 	}
 
 	// no output required
 	if len(s.Out) == 0 {
 		// fail when output struct is still provided
-		if tHandler.NumOut() > 1 {
-			return ErrUnexpectedOutput
+		if tres.NumField() > 0 {
+			return ErrUnexpectedFields
 		}
 		return nil
 	}
 
-	if tHandler.NumOut() < 2 {
-		return ErrMissingHandlerOutputArgument
-	}
-
-	// fail if first output is not a pointer to struct
-	tOutStructPtr := tHandler.Out(0)
-	if tOutStructPtr.Kind() != reflect.Ptr {
-		return ErrWrongOutputArgumentType
-	}
-
-	tOutStruct := tOutStructPtr.Elem()
-	if tOutStruct.Kind() != reflect.Struct {
-		return ErrWrongOutputArgumentType
-	}
-
-	// fail on invalid output
-	for name, tParam := range s.Out {
+	// fail on invalid param
+	for name, tparam := range s.Out {
 		if name[0] == strings.ToLower(name)[0] {
-			return fmt.Errorf("%s: %w", name, ErrUnexportedName)
+			return fmt.Errorf("%s: %w", name, ErrUnexportedField)
 		}
 
-		field, exists := tOutStruct.FieldByName(name)
+		field, exists := tres.FieldByName(name)
 		if !exists {
-			return fmt.Errorf("%s: %w", name, ErrMissingConfigArgument)
+			return fmt.Errorf("%s: %w", name, ErrMissingField)
 		}
 
-		// ignore types evalutating to nil
-		if tParam == nil {
-			continue
-		}
-
-		if !field.Type.ConvertibleTo(tParam) {
-			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrWrongParamTypeFromConfig, field.Type, tParam)
+		if !field.Type.ConvertibleTo(tparam) {
+			return fmt.Errorf("%s: %w (%s instead of %s)", name, ErrInvalidType, field.Type, tparam)
 		}
 	}
-
 	return nil
 }
