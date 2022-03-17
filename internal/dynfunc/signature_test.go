@@ -5,6 +5,8 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 func getReqType[Req, Res any](HandlerFn[Req, Res]) reflect.Type {
@@ -24,6 +26,7 @@ func testIn[Req any]() func(s *Signature) error {
 }
 
 func TestRequestValidation(t *testing.T) {
+	t.Parallel()
 
 	type CustomInt int
 	type CustomFloat float64
@@ -248,6 +251,8 @@ func testOut[Res any]() func(s *Signature) error {
 }
 
 func TestResponseValidation(t *testing.T) {
+	t.Parallel()
+
 	type CustomInt int
 	type CustomFloat float64
 	type CustomString string
@@ -460,4 +465,92 @@ func TestResponseValidation(t *testing.T) {
 		})
 	}
 
+}
+
+func TestFromConfig(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name string
+		conf *config.Service
+
+		expect Signature
+	}{
+		{
+			name: "ignore input without rename",
+			conf: &config.Service{
+				Input: map[string]*config.Parameter{
+					"Ignored": {GoType: reflect.TypeOf(int(0))},
+					"Used":    {GoType: reflect.TypeOf(""), Rename: "Renamed"},
+				},
+			},
+			expect: Signature{
+				In: map[string]reflect.Type{
+					"Renamed": reflect.TypeOf(""),
+				},
+			},
+		},
+		{
+			name: "ignore output without rename",
+			conf: &config.Service{
+				Output: map[string]*config.Parameter{
+					"Ignored": {GoType: reflect.TypeOf(int(0))},
+					"Used":    {GoType: reflect.TypeOf(""), Rename: "Renamed"},
+				},
+			},
+			expect: Signature{
+				Out: map[string]reflect.Type{
+					"Renamed": reflect.TypeOf(""),
+				},
+			},
+		},
+		{
+			name: "optional input pointers",
+			conf: &config.Service{
+				Input: map[string]*config.Parameter{
+					"Int":       {GoType: reflect.TypeOf(int(0)), Rename: "Int"},
+					"OptInt":    {GoType: reflect.TypeOf(int(0)), Rename: "OptInt", Optional: true},
+					"String":    {GoType: reflect.TypeOf(""), Rename: "String"},
+					"OptString": {GoType: reflect.TypeOf(""), Rename: "OptString", Optional: true},
+				},
+			},
+			expect: Signature{
+				In: map[string]reflect.Type{
+					"Int":       reflect.TypeOf(int(0)),
+					"OptInt":    reflect.PointerTo(reflect.TypeOf(int(0))),
+					"String":    reflect.TypeOf(""),
+					"OptString": reflect.PointerTo(reflect.TypeOf("")),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		s := FromConfig(tc.conf)
+
+		if len(s.In) != len(tc.expect.In) {
+			t.Fatalf("invalid input count\nactual: %d\nexpect: %d", len(s.In), len(tc.expect.In))
+		}
+		for key, expect := range tc.expect.In {
+			val, found := s.In[key]
+			if !found {
+				t.Fatalf("%q input missing", val)
+			}
+			if val.Kind() != expect.Kind() {
+				t.Fatalf("invalid %1 input\nactual: %s\nexpect: %s", val, val.Kind(), expect.Kind())
+			}
+		}
+		if len(s.Out) != len(tc.expect.Out) {
+			t.Fatalf("invalid output count\nactual: %d\nexpect: %d", len(s.Out), len(tc.expect.Out))
+		}
+		for key, expect := range tc.expect.Out {
+			val, found := s.Out[key]
+			if !found {
+				t.Fatalf("%q output missing", val)
+			}
+			if val.Kind() != expect.Kind() {
+				t.Fatalf("invalid %1 output\nactual: %s\nexpect: %s", val, val.Kind(), expect.Kind())
+			}
+		}
+	}
 }
