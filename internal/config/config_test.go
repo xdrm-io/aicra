@@ -1129,7 +1129,7 @@ func TestServiceCollisionPanic(t *testing.T) {
 
 			// remove param validators
 			for _, svc := range srv.Services {
-				for i, _ := range svc.Input {
+				for i := range svc.Input {
 					svc.Input[i].Validator = nil
 				}
 			}
