@@ -21,6 +21,18 @@ const staticConfig = `[
 		"out": {}
 	}
 ]`
+const staticOutConfig = `[
+	{
+		"method": "GET",
+		"path": "/users/123",
+		"scope": [],
+		"info": "info",
+		"in": {},
+		"out": {
+			"id": {"info":"info","name":"ID","type":"int"}
+		}
+	}
+]`
 const uriConfig = `[
 	{
 		"method": "GET",
@@ -224,6 +236,12 @@ func noOpHandler(context.Context, struct{}) (*struct{}, error) {
 func noOpIntHandler(context.Context, struct{ ID int }) (*struct{}, error) {
 	return nil, nil
 }
+func outHandler(context.Context, struct{}) (*struct{ ID int }, error) {
+	return &struct{ ID int }{ID: 123}, nil
+}
+func outIntHandler(context.Context, struct{ ID int }) (*struct{}, error) {
+	return nil, nil
+}
 
 func Benchmark1StaticRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
@@ -237,6 +255,37 @@ func Benchmark1StaticRouteMatch(b *testing.B) {
 		b.Fatalf("cannot setup: %s", err)
 	}
 	err = aicra.Bind(builder, "GET", "/users/123", noOpHandler)
+	if err != nil {
+		b.Fatalf("cannot bind: %s", err)
+	}
+	srv, err := builder.Build()
+	if err != nil {
+		b.Fatalf("cannot build: %s", err)
+	}
+
+	req, _ := http.NewRequest("GET", "/users/123", nil)
+	res := httptest.NewRecorder()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		srv.ServeHTTP(res, req)
+	}
+}
+func Benchmark1StaticOutRouteMatch(b *testing.B) {
+	builder := &aicra.Builder{}
+
+	if err := builder.Output("int", int(0)); err != nil {
+		b.Fatalf("cannot set output type: %s", err)
+	}
+	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
+	if err != nil {
+		b.Fatalf("cannot set responder: %s", err)
+	}
+	err = builder.Setup(strings.NewReader(staticOutConfig))
+	if err != nil {
+		b.Fatalf("cannot setup: %s", err)
+	}
+	err = aicra.Bind(builder, "GET", "/users/123", outHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
