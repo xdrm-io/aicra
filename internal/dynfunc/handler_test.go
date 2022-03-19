@@ -1,4 +1,4 @@
-package dynfunc
+package dynfunc_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/internal/dynfunc"
 )
 
 type fakeConfig config.Service
@@ -35,7 +36,7 @@ func (s *fakeConfig) withArgs(dtypes ...reflect.Type) *fakeConfig {
 	return s
 }
 
-type fakeSign Signature
+type fakeSign dynfunc.Signature
 
 // builds a mock service with provided arguments as Input and matched as Output
 func (s *fakeSign) withArgs(dtypes ...reflect.Type) *fakeSign {
@@ -53,14 +54,14 @@ func (s *fakeSign) withArgs(dtypes ...reflect.Type) *fakeSign {
 	return s
 }
 
-func build[Req, Res any](fn HandlerFunc[Req, Res]) func(svc *config.Service) (Callable, error) {
-	return func(svc *config.Service) (Callable, error) {
-		return Build(svc, fn)
+func build[Req, Res any](fn dynfunc.HandlerFunc[Req, Res]) func(svc *config.Service) (dynfunc.Callable, error) {
+	return func(svc *config.Service) (dynfunc.Callable, error) {
+		return dynfunc.Build(svc, fn)
 	}
 }
-func wrap[Req, Res any](fn HandlerFunc[Req, Res]) func(s *Signature) Callable {
-	return func(s *Signature) Callable {
-		return Wrap(s, fn)
+func wrap[Req, Res any](fn dynfunc.HandlerFunc[Req, Res]) func(s *dynfunc.Signature) dynfunc.Callable {
+	return func(s *dynfunc.Signature) dynfunc.Callable {
+		return dynfunc.Wrap(s, fn)
 	}
 }
 
@@ -78,7 +79,7 @@ func TestInput(t *testing.T) {
 		name    string
 		conf    *fakeConfig // warps config.Service
 		hasCtx  bool
-		builder func(svc *config.Service) (Callable, error)
+		builder func(svc *config.Service) (dynfunc.Callable, error)
 		in      []interface{}
 		out     []interface{}
 		err     error
@@ -251,7 +252,7 @@ func TestUnexpectedErrors(t *testing.T) {
 		name     string
 		expected map[string]reflect.Type
 		input    map[string]interface{}
-		builder  func(*Signature) Callable
+		builder  func(*dynfunc.Signature) dynfunc.Callable
 
 		// do not expect a panic when empty
 		panicMsg string
@@ -339,7 +340,7 @@ func TestUnexpectedErrors(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			var (
-				s        = &Signature{In: tc.expected}
+				s        = &dynfunc.Signature{In: tc.expected}
 				callable = tc.builder(s)
 			)
 
@@ -372,7 +373,7 @@ func TestBuild(t *testing.T) {
 	tt := []struct {
 		name    string
 		service config.Service
-		builder func(s *config.Service) (Callable, error)
+		builder func(s *config.Service) (dynfunc.Callable, error)
 		err     error
 	}{
 		{
@@ -380,14 +381,14 @@ func TestBuild(t *testing.T) {
 			name:    "unexpected input",
 			service: config.Service{},
 			builder: build(func(context.Context, struct{ Int int }) (*struct{}, error) { return nil, nil }),
-			err:     ErrUnexpectedFields,
+			err:     dynfunc.ErrUnexpectedFields,
 		},
 		{
 			// output already tested in signature.ValidateOutput
 			name:    "unexpected output",
 			service: config.Service{},
 			builder: build(func(context.Context, struct{}) (*struct{ Int int }, error) { return nil, nil }),
-			err:     ErrUnexpectedFields,
+			err:     dynfunc.ErrUnexpectedFields,
 		},
 		{
 			name:    "valid empty service",

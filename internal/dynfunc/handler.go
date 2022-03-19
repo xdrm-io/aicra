@@ -33,7 +33,7 @@ type Callable func(context.Context, map[string]interface{}) (map[string]interfac
 //  - when no input is configured, the `in` struct MUST be empty
 //  - when no output is configured, the `out` struct MUST be empty
 func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Callable, error) {
-	var signature = FromConfig(service)
+	var signature = NewSignature(service)
 
 	var (
 		treq = reflect.TypeOf((*Req)(nil)).Elem()
