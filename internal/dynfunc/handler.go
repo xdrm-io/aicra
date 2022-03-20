@@ -51,11 +51,33 @@ func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Cal
 }
 
 // Wrap a generic handler into a callable function
-func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable {
+func Wrap[Req, Res any](s *Signature, fn HandlerFunc[Req, Res]) Callable {
+	// preprocess indexes to avoid using FieldByName()
+	var (
+		treq = reflect.TypeOf((*Req)(nil)).Elem()
+		tres = reflect.TypeOf((*Res)(nil)).Elem()
+	)
+
+	var reqIndex = make(map[string][]int, len(s.In))
+	for name := range s.In {
+		if field, ok := treq.FieldByName(name); ok {
+			reqIndex[name] = make([]int, len(field.Index))
+			copy(reqIndex[name], field.Index)
+		}
+	}
+
+	var resIndex = make(map[string][]int, len(s.Out))
+	for name := range s.Out {
+		if field, ok := tres.FieldByName(name); ok {
+			resIndex[name] = make([]int, len(field.Index))
+			copy(resIndex[name], field.Index)
+		}
+	}
+
 	return func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 		var (
 			tfn       = reflect.TypeOf(fn)
-			hasOutput = len(signature.Out) > 0
+			hasOutput = len(s.Out) > 0
 		)
 
 		// create zero value struct
@@ -65,11 +87,8 @@ func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable
 		)
 
 		// convert map[string]interface{} into Req
-		for name := range signature.In {
-			field := inStruct.FieldByName(name)
-			if !field.CanSet() {
-				panic(fmt.Errorf("cannot set field %q", name))
-			}
+		for name := range s.In {
+			field := inStruct.FieldByIndex(reqIndex[name])
 
 			// get value from @data
 			value, provided := in[name]
@@ -115,9 +134,9 @@ func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable
 		}
 
 		// convert Res to map[string]interface{}
-		out := make(map[string]interface{}, len(signature.Out))
-		for name := range signature.Out {
-			field := vres.FieldByName(name)
+		out := make(map[string]interface{}, len(s.Out))
+		for name := range s.Out {
+			field := vres.FieldByIndex(resIndex[name])
 			out[name] = field.Interface()
 		}
 		return out, err

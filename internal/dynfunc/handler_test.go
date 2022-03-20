@@ -261,13 +261,6 @@ func TestUnexpectedErrors(t *testing.T) {
 		err error
 	}{
 		{
-			name:     "panic on unsettable input",
-			expected: map[string]reflect.Type{"unexported": reflect.TypeOf(true)},
-			input:    map[string]interface{}{"unexported": true},
-			builder:  wrap(func(context.Context, Unsettable) (*struct{}, error) { return nil, nil }),
-			panicMsg: `cannot set field "unexported"`,
-		},
-		{
 			name:     "panic on incompatible pointer",
 			expected: map[string]reflect.Type{"NotABoolPointer": reflect.PtrTo(reflect.TypeOf(true))},
 			input:    map[string]interface{}{"NotABoolPointer": true},
