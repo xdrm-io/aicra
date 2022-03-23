@@ -189,7 +189,6 @@ func (r *Request) parseJSON(reader io.Reader) error {
 
 	for name, param := range r.service.Form {
 		value, exist := parsed[name]
-
 		if !exist {
 			continue
 		}
@@ -216,10 +215,6 @@ func (r *Request) parseUrlencoded(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
-	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", req.URL.RawQuery, form))
 
 	for name, param := range r.service.Form {
 		values, exist := query[name]

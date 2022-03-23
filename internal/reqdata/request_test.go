@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/xdrm-io/aicra/internal/config"
@@ -73,6 +75,36 @@ func getServiceWithForm(t reflect.Type, params ...string) *config.Service {
 		service.Form[name] = service.Input[name]
 	}
 	return service
+}
+
+func TestRequestPoolReUse(t *testing.T) {
+	// replace the map pool with our custom code
+	var oldPool = mapPool
+	defer func() { mapPool = oldPool }()
+
+	var i uint32
+	mapPool = sync.Pool{
+		New: func() interface{} {
+			atomic.AddUint32(&i, 1)
+			return make(map[string]interface{}, 8)
+		},
+	}
+
+	req1 := NewRequest(&config.Service{})
+	if atomic.AddUint32(&i, 0) != 1 {
+		t.Fatalf("NewRequest shall have allocated 1 map")
+	}
+	req1.Data["test"] = "value"
+	req1.Release()
+
+	req2 := NewRequest(&config.Service{})
+	if atomic.AddUint32(&i, 0) != 1 {
+		t.Fatalf("NewRequest shall reused the previously allocated map")
+	}
+	if _, exists := req2.Data["test"]; exists {
+		t.Fatalf("NewRequest shall have reset the reused map")
+	}
+	req2.Release()
 }
 
 func TestRequestWithUri(t *testing.T) {
