@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/xdrm-io/aicra/internal/config"
@@ -75,6 +77,36 @@ func getServiceWithForm(t reflect.Type, params ...string) *config.Service {
 	return service
 }
 
+func TestRequestPoolReUse(t *testing.T) {
+	// replace the map pool with our custom code
+	var oldPool = mapPool
+	defer func() { mapPool = oldPool }()
+
+	var i uint32
+	mapPool = sync.Pool{
+		New: func() interface{} {
+			atomic.AddUint32(&i, 1)
+			return make(map[string]interface{}, 8)
+		},
+	}
+
+	req1 := NewRequest(&config.Service{})
+	if atomic.AddUint32(&i, 0) != 1 {
+		t.Fatalf("NewRequest shall have allocated 1 map")
+	}
+	req1.Data["test"] = "value"
+	req1.Release()
+
+	req2 := NewRequest(&config.Service{})
+	if atomic.AddUint32(&i, 0) != 1 {
+		t.Fatalf("NewRequest shall reused the previously allocated map")
+	}
+	if _, exists := req2.Data["test"]; exists {
+		t.Fatalf("NewRequest shall have reset the reused map")
+	}
+	req2.Release()
+}
+
 func TestRequestWithUri(t *testing.T) {
 	tt := []struct {
 		name   string
@@ -135,10 +167,10 @@ func TestRequestWithUri(t *testing.T) {
 			var (
 				service = getServiceWithURI(tc.params...)
 				req     = httptest.NewRequest(http.MethodGet, "http://host.com"+tc.uri, nil)
-				store   = NewRequest(req, service)
+				store   = NewRequest(service)
 			)
 
-			err := store.ExtractURI()
+			err := store.ExtractURI(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -376,8 +408,8 @@ func TestExtractQuery(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var (
 				req   = httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://host.com?%s", tc.query), nil)
-				store = NewRequest(req, getServiceWithQuery(tc.paramTypes, tc.params...))
-				err   = store.ExtractQuery()
+				store = NewRequest(getServiceWithQuery(tc.paramTypes, tc.params...))
+				err   = store.ExtractQuery(req)
 			)
 
 			if !errors.Is(err, tc.err) {
@@ -586,8 +618,8 @@ func TestExtractFormUrlEncoded(t *testing.T) {
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 			defer req.Body.Close()
 
-			store := NewRequest(req, getServiceWithForm(tc.paramTypes, tc.params...))
-			err := store.ExtractForm()
+			store := NewRequest(getServiceWithForm(tc.paramTypes, tc.params...))
+			err := store.ExtractForm(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -714,9 +746,9 @@ func TestJsonParameters(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "http://host.com", body)
 			req.Header.Add("Content-Type", "application/json")
 			defer req.Body.Close()
-			store := NewRequest(req, getServiceWithForm(tc.paramTypes, tc.params...))
+			store := NewRequest(getServiceWithForm(tc.paramTypes, tc.params...))
 
-			err := store.ExtractForm()
+			err := store.ExtractForm(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}
@@ -913,9 +945,9 @@ Content-Type: application/zip
 				service.Form[name] = service.Input[name]
 			}
 
-			store := NewRequest(req, getServiceWithForm(reflect.TypeOf(""), tc.params...))
+			store := NewRequest(getServiceWithForm(reflect.TypeOf(""), tc.params...))
 
-			err := store.ExtractForm()
+			err := store.ExtractForm(req)
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
 			}

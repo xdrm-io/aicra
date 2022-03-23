@@ -15,6 +15,12 @@ var (
 	availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 )
 
+// ScopeVar lists all scope positions that need to be replaced with an uri input
+type ScopeVar struct {
+	CaptureName string
+	Position    [2]int
+}
+
 // Service definition
 type Service struct {
 	Method      string                `json:"method"`
@@ -42,7 +48,7 @@ type Service struct {
 
 	// lists scope variables to be replaced
 	// 'varName' -> [index, subindex]
-	ScopeVars map[string][2]int
+	ScopeVars []ScopeVar
 }
 
 // BraceCapture links to the related URI parameter
@@ -160,13 +166,16 @@ func (svc *Service) cleanScope() {
 	}
 
 	// check if dynamic variables are used in the scope
-	svc.ScopeVars = map[string][2]int{}
+	svc.ScopeVars = make([]ScopeVar, 0, len(svc.Captures))
 	for a, list := range svc.Scope {
 		for b, perm := range list {
 			for _, capture := range svc.Captures {
 				token := fmt.Sprintf("[%s]", capture.Ref.Rename)
 				if strings.Contains(perm, token) {
-					svc.ScopeVars[capture.Ref.Rename] = [2]int{a, b}
+					svc.ScopeVars = append(svc.ScopeVars, ScopeVar{
+						CaptureName: capture.Ref.Rename,
+						Position:    [2]int{a, b},
+					})
 				}
 			}
 		}

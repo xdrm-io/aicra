@@ -15,11 +15,11 @@ type Signature struct {
 	Out map[string]reflect.Type
 }
 
-// FromConfig builds the handler signature type from a service's configuration
-func FromConfig(service *config.Service) *Signature {
+// NewSignature builds the handler signature type from a service's configuration
+func NewSignature(service *config.Service) *Signature {
 	s := &Signature{
-		In:  make(map[string]reflect.Type),
-		Out: make(map[string]reflect.Type),
+		In:  make(map[string]reflect.Type, len(service.Input)),
+		Out: make(map[string]reflect.Type, len(service.Output)),
 	}
 
 	for _, param := range service.Input {

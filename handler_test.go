@@ -113,7 +113,7 @@ func TestHandlerWith(t *testing.T) {
 			t.Fatalf("cannot cast context data to int")
 		}
 		// write to response
-		api.GetResponseWriter(ctx).Write([]byte(fmt.Sprintf("#%d#", cast)))
+		api.Extract(ctx).ResponseWriter.Write([]byte(fmt.Sprintf("#%d#", cast)))
 
 		return nil, nil
 	}
@@ -234,7 +234,7 @@ func TestHandlerWithAuth(t *testing.T) {
 			// tester middleware (last executed)
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.GetAuth(r.Context())
+					a := api.Extract(r.Context()).Auth
 					if a == nil {
 						t.Fatalf("cannot access api.Auth form request context")
 					}
@@ -253,7 +253,7 @@ func TestHandlerWithAuth(t *testing.T) {
 
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.GetAuth(r.Context())
+					a := api.Extract(r.Context()).Auth
 					if a == nil {
 						t.Fatalf("cannot access api.Auth form request context")
 					}
@@ -387,7 +387,7 @@ func TestHandlerPermissionError(t *testing.T) {
 			// add active permissions
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.GetAuth(r.Context())
+					a := api.Extract(r.Context()).Auth
 					if a == nil {
 						t.Fatalf("cannot access api.Auth form request context")
 					}
@@ -622,7 +622,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 			// tester middleware (last executed)
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.GetAuth(r.Context())
+					a := api.Extract(r.Context()).Auth
 					if a == nil {
 						t.Fatalf("cannot access api.Auth form request context")
 					}
@@ -641,7 +641,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 			// update permissions
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.GetAuth(r.Context())
+					a := api.Extract(r.Context()).Auth
 					if a == nil {
 						t.Fatalf("cannot access api.Auth form request context")
 					}
