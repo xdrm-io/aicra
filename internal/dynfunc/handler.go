@@ -76,19 +76,20 @@ func Wrap[Req, Res any](s *Signature, fn HandlerFunc[Req, Res]) Callable {
 
 	return func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 		var (
-			tfn       = reflect.TypeOf(fn)
+			hasInput  = len(s.In) > 0
 			hasOutput = len(s.Out) > 0
 		)
 
 		// create zero value struct
-		var (
-			inStructPtr = reflect.New(tfn.In(1))
-			inStruct    = inStructPtr.Elem()
-		)
+		var req Req
+		var vreq reflect.Value
+		if hasInput {
+			vreq = reflect.ValueOf(&req).Elem()
+		}
 
 		// convert map[string]interface{} into Req
 		for name := range s.In {
-			field := inStruct.FieldByIndex(reqIndex[name])
+			field := vreq.FieldByIndex(reqIndex[name])
 
 			// get value from @data
 			value, provided := in[name]
@@ -123,7 +124,6 @@ func Wrap[Req, Res any](s *Signature, fn HandlerFunc[Req, Res]) Callable {
 
 		// call the handler
 		var (
-			req      = inStruct.Interface().(Req)
 			res, err = fn(ctx, req)
 			vres     = reflect.ValueOf(res).Elem()
 		)
