@@ -49,7 +49,7 @@ func NewRequest(service *config.Service) *Request {
 	return r
 }
 
-// Release the request ; no method or attribut shall be used after this call on
+// Release the request ; no method or attribute shall be used after this call on
 // the same request
 func (r *Request) Release() {
 	mapPool.Put(r.Data)
@@ -189,7 +189,6 @@ func (r *Request) parseJSON(reader io.Reader) error {
 
 	for name, param := range r.service.Form {
 		value, exist := parsed[name]
-
 		if !exist {
 			continue
 		}
@@ -216,10 +215,6 @@ func (r *Request) parseUrlencoded(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
-	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", req.URL.RawQuery, form))
 
 	for name, param := range r.service.Form {
 		values, exist := query[name]
