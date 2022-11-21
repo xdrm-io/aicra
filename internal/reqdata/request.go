@@ -7,13 +7,21 @@ import (
 	"io/ioutil"
 	"mime"
 	"reflect"
+	"sync"
 
 	"github.com/xdrm-io/aicra/internal/config"
 
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strings"
 )
+
+var mapPool = sync.Pool{
+	New: func() interface{} {
+		return make(map[string]interface{}, 8)
+	},
+}
 
 // Request represents all data that can be extracted from an http request for a
 // specific configuration service; it features:
@@ -24,26 +32,35 @@ import (
 //   - 'application/x-www-form-urlencoded' => standard parameters as QUERY parameters
 //   - 'multipart/form-data'               => parse form-data format
 type Request struct {
-	req     *http.Request
 	service *config.Service
 	Data    map[string]interface{}
 }
 
 // NewRequest creates a new empty store.
-func NewRequest(req *http.Request, service *config.Service) *Request {
-	return &Request{
-		req:     req,
+func NewRequest(service *config.Service) *Request {
+	r := &Request{
 		service: service,
-		Data:    map[string]interface{}{},
+		Data:    mapPool.Get().(map[string]interface{}),
 	}
+	// clear previous map
+	for k := range r.Data {
+		delete(r.Data, k)
+	}
+	return r
+}
+
+// Release the request ; no method or attribute shall be used after this call on
+// the same request
+func (r *Request) Release() {
+	mapPool.Put(r.Data)
 }
 
 // ExtractURI parameters
-func (r *Request) ExtractURI() error {
+func (r *Request) ExtractURI(req *http.Request) error {
 	if len(r.service.Captures) < 1 {
 		return nil
 	}
-	uriparts := config.SplitURI(r.req.URL.Path)
+	uriparts := config.SplitURI(req.URL.Path)
 
 	for _, capture := range r.service.Captures {
 		// out of range
@@ -67,11 +84,14 @@ func (r *Request) ExtractURI() error {
 }
 
 // ExtractQuery data from the url query parameters
-func (r *Request) ExtractQuery() error {
+func (r *Request) ExtractQuery(req *http.Request) error {
 	if len(r.service.Query) < 1 {
 		return nil
 	}
-	query := r.req.URL.Query()
+	query, err := url.ParseQuery(req.URL.RawQuery)
+	if err != nil {
+		return err
+	}
 
 	for name, param := range r.service.Query {
 		values, exist := query[name]
@@ -112,22 +132,22 @@ func (r *Request) ExtractQuery() error {
 // - 'multipart/form-data'
 // - 'x-www-form-urlencoded'
 // - 'application/json'
-func (r *Request) ExtractForm() error {
-	if r.req.Method == http.MethodGet {
+func (r *Request) ExtractForm(req *http.Request) error {
+	if req.Method == http.MethodGet {
 		return nil
 	}
 
-	var contentType = r.req.Header.Get("Content-Type")
+	var contentType = req.Header.Get("Content-Type")
 
 	switch {
 	case strings.HasPrefix(contentType, "application/json"):
-		err := r.parseJSON()
+		err := r.parseJSON(req.Body)
 		if err != nil {
 			return err
 		}
 
 	case strings.HasPrefix(contentType, "application/x-www-form-urlencoded"):
-		err := r.parseUrlencoded()
+		err := r.parseUrlencoded(req.Body)
 		if err != nil {
 			return err
 		}
@@ -137,7 +157,7 @@ func (r *Request) ExtractForm() error {
 		if err != nil {
 			break
 		}
-		err = r.parseMultipart(params["boundary"])
+		err = r.parseMultipart(req.Body, params["boundary"])
 		if err != nil {
 			return err
 		}
@@ -155,10 +175,10 @@ func (r *Request) ExtractForm() error {
 
 // parseJSON parses JSON from the request body inside 'Form'
 // and 'Set'
-func (r *Request) parseJSON() error {
+func (r *Request) parseJSON(reader io.Reader) error {
 	var parsed map[string]interface{}
 
-	decoder := json.NewDecoder(r.req.Body)
+	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&parsed)
 	if err == io.EOF {
 		return nil
@@ -169,7 +189,6 @@ func (r *Request) parseJSON() error {
 
 	for name, param := range r.service.Form {
 		value, exist := parsed[name]
-
 		if !exist {
 			continue
 		}
@@ -186,20 +205,19 @@ func (r *Request) parseJSON() error {
 
 // parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
-func (r *Request) parseUrlencoded() error {
-	body, err := io.ReadAll(r.req.Body)
+func (r *Request) parseUrlencoded(reader io.Reader) error {
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return err
 	}
 
-	form := make(Query)
-	if err := form.Parse(string(body)); err != nil {
+	query, err := url.ParseQuery(string(body))
+	if err != nil {
 		return err
 	}
-	// io.WriteString(os.Stdout, fmt.Sprintf("query(%s) -> %v\n", r.req.URL.RawQuery, form))
 
 	for name, param := range r.service.Form {
-		values, exist := form[name]
+		values, exist := query[name]
 
 		if !exist {
 			continue
@@ -232,15 +250,15 @@ func (r *Request) parseUrlencoded() error {
 
 // parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func (r *Request) parseMultipart(boundary string) error {
+func (r *Request) parseMultipart(reader io.Reader, boundary string) error {
 	type Part struct {
 		contentType string
 		data        []byte
 	}
 
 	var (
-		parts = map[string]Part{}
-		mr    = multipart.NewReader(r.req.Body, boundary)
+		parts = make(map[string]Part, len(r.service.Form))
+		mr    = multipart.NewReader(reader, boundary)
 	)
 	var firstPart = true
 	for {

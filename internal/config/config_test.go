@@ -1129,7 +1129,7 @@ func TestServiceCollisionPanic(t *testing.T) {
 
 			// remove param validators
 			for _, svc := range srv.Services {
-				for i, _ := range svc.Input {
+				for i := range svc.Input {
 					svc.Input[i].Validator = nil
 				}
 			}
@@ -1401,6 +1401,125 @@ func TestFindPriority(t *testing.T) {
 			if svc.Description != tc.info {
 				t.Fatalf("invalid description\nactual: %q\nexpect: %q", svc.Description, tc.info)
 			}
+		})
+	}
+}
+
+func TestScopeVars(t *testing.T) {
+	t.Parallel()
+
+	tt := []struct {
+		name string
+
+		scope [][]string
+		vars  map[string]string
+
+		// expected scopes according to the vars
+		expect [][]string
+	}{
+		{
+			name:   "convert empty first to empty",
+			scope:  [][]string{{}},
+			expect: [][]string{},
+		},
+		{
+			name:  "missing brace syntax",
+			scope: [][]string{{"a", "b"}, {"c", "d"}},
+			vars: map[string]string{
+				"a": "x1",
+				"b": "x2",
+			},
+			expect: [][]string{{"a", "b"}, {"c", "d"}},
+		},
+		{
+			name:  "brace syntax no matching var",
+			scope: [][]string{{"[a]", "b"}, {"c", "d"}},
+			vars: map[string]string{
+				"b": "x1",
+			},
+			expect: [][]string{{"[a]", "b"}, {"c", "d"}},
+		},
+		{
+			name:  "replace same level",
+			scope: [][]string{{"[a]", "[b]"}, {"c", "d"}},
+			vars: map[string]string{
+				"a": "x1",
+				"b": "x2",
+			},
+			expect: [][]string{{"[x1]", "[x2]"}, {"c", "d"}},
+		},
+		{
+			name:  "replace different levels",
+			scope: [][]string{{"[a]", "b"}, {"[c]", "d"}},
+			vars: map[string]string{
+				"a": "x1",
+				"c": "x2",
+			},
+			expect: [][]string{{"[x1]", "b"}, {"[x2]", "d"}},
+		},
+		{
+			name:  "replace multiple per scope",
+			scope: [][]string{{"a", "a[b]c[d]e"}, {"f", "g[h][d][b]"}},
+			vars: map[string]string{
+				"b": "x1",
+				"d": "x2",
+				"h": "x3",
+			},
+			expect: [][]string{{"a", "a[x1]c[x2]e"}, {"f", "g[x3][x2][x1]"}},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := &Service{
+				Scope:    tc.scope,
+				Captures: make([]*BraceCapture, 0, len(tc.vars)),
+			}
+
+			for name := range tc.vars {
+				svc.Captures = append(svc.Captures, &BraceCapture{
+					Ref: &Parameter{Rename: name},
+				})
+			}
+
+			svc.cleanScope()
+
+			// copy scope
+			updated := make([][]string, len(svc.Scope))
+			for a, list := range svc.Scope {
+				updated[a] = make([]string, len(list))
+				for b, perm := range list {
+					updated[a][b] = perm
+				}
+			}
+
+			// update using ScopeVars
+			for _, sv := range svc.ScopeVars {
+				value := tc.vars[sv.CaptureName]
+				a, b := sv.Position[0], sv.Position[1]
+				updated[a][b] = strings.ReplaceAll(
+					updated[a][b],
+					fmt.Sprintf("[%s]", sv.CaptureName),
+					fmt.Sprintf("[%v]", value),
+				)
+			}
+
+			// compare
+			if len(updated) != len(tc.expect) {
+				t.Fatalf("invalid size\nactual: %d\nexpect: %d", len(updated), len(tc.expect))
+			}
+
+			for a, expectList := range tc.expect {
+				if len(updated[a]) != len(expectList) {
+					t.Fatalf("invalid [%d] size\nactual: %d\nexpect: %d", a, len(updated[a]), len(expectList))
+				}
+				for b, expect := range expectList {
+					if updated[a][b] != expect {
+						t.Fatalf("invalid [%d][%d]\nactual: %q\nexpect: %q", a, b, updated[a][b], expect)
+					}
+				}
+			}
+
 		})
 	}
 }

@@ -35,6 +35,8 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.ServeHTTP(w, r)
 }
 
+var zeroRequest http.Request
+
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// match service from config
@@ -63,47 +65,54 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// start building the input but only URI parameters for now.
 	// They might be required to build parametric authorization c.f. buildAuth()
 	// Only URI arguments can be used
-	var input = reqdata.NewRequest(r, service)
-	if err := input.ExtractURI(); err != nil {
+	var input = reqdata.NewRequest(service)
+	if err := input.ExtractURI(r); err != nil {
 		// should never fail as type validators are always checked in
 		// s.conf.Find -> config.Service.matchPattern
+		input.Release()
 		s.respond(w, nil, enrichInputError(err))
 		return
 	}
 
 	// add info into context
-	c := r.Context()
-	c = context.WithValue(c, ctx.Request, r)
-	c = context.WithValue(c, ctx.Response, w)
-	c = context.WithValue(c, ctx.Auth, buildAuth(service.Scope, service.ScopeVars, input.Data))
+	c := context.WithValue(r.Context(), ctx.Key, &api.Context{
+		Request:        r,
+		ResponseWriter: w,
+		Auth:           buildAuth(service.Scope, service.ScopeVars, input.Data),
+	})
 
 	// create http handler
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := api.GetAuth(r.Context())
-		if auth == nil {
+		ctx := api.Extract(r.Context())
+		if ctx == nil || ctx.Auth == nil {
 			// should never happen
+			input.Release()
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 
 		// reject non granted requests
-		if !auth.Granted() {
+		if !ctx.Auth.Granted() {
+			input.Release()
 			s.respond(w, nil, api.ErrForbidden)
 			return
 		}
 
 		// extract remaining input parameters
-		if err := input.ExtractQuery(); err != nil {
+		if err := input.ExtractQuery(ctx.Request); err != nil {
+			input.Release()
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
-		if err := input.ExtractForm(); err != nil {
+		if err := input.ExtractForm(ctx.Request); err != nil {
+			input.Release()
 			s.respond(w, nil, enrichInputError(err))
 			return
 		}
 
 		// execute the service handler
-		s.handle(r.Context(), input, handler, service, w, r)
+		s.handle(r.Context(), input, handler, service, w)
+		input.Release()
 	})
 
 	// run contextual middlewares
@@ -112,17 +121,21 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// serve using the pre-filled context
-	h.ServeHTTP(w, r.WithContext(c))
+	h.ServeHTTP(w, zeroRequest.WithContext(c))
 }
 
 // handle the service request with the associated handler func and respond using
 // the handler func output
-func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter, r *http.Request) {
+func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter) {
 	// pass execution to the handler function
 	data, err := handler.callable(c, input.Data)
+	if data == nil {
+		s.respond(w, nil, err)
+		return
+	}
 
 	// rename data
-	renamed := map[string]interface{}{}
+	renamed := make(map[string]interface{}, len(service.Output))
 	for key, value := range data {
 		// find original name from 'rename' field
 		for name, param := range service.Output {
@@ -180,7 +193,7 @@ func enrichInputError(err error) error {
 // it replaces format '[a]' in scope where 'a' is an existing input argument's
 // name with its value.
 // Warning notice: only uri parameters are allowed
-func buildAuth(scope [][]string, scopeVars map[string][2]int, in map[string]interface{}) *api.Auth {
+func buildAuth(scope [][]string, scopeVars []config.ScopeVar, in map[string]interface{}) *api.Auth {
 	if len(scope) < 1 || len(scopeVars) < 1 {
 		return &api.Auth{Required: scope}
 	}
@@ -196,15 +209,15 @@ func buildAuth(scope [][]string, scopeVars map[string][2]int, in map[string]inte
 
 	// replace '[arg_name]' with the 'arg_name' value if it is a known variable
 	// name
-	for param, indexes := range scopeVars {
-		value, set := in[param]
+	for _, sv := range scopeVars {
+		value, set := in[sv.CaptureName]
 		if !set {
 			continue
 		}
-		a, b := indexes[0], indexes[1]
+		a, b := sv.Position[0], sv.Position[1]
 		updated[a][b] = strings.ReplaceAll(
 			updated[a][b],
-			fmt.Sprintf("[%s]", param),
+			fmt.Sprintf("[%s]", sv.CaptureName),
 			fmt.Sprintf("[%v]", value),
 		)
 	}

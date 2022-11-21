@@ -7,38 +7,25 @@ import (
 	"github.com/xdrm-io/aicra/internal/ctx"
 )
 
-// GetRequest extracts the current request from a context.Context
-func GetRequest(c context.Context) *http.Request {
-	var (
-		raw      = c.Value(ctx.Request)
-		cast, ok = raw.(*http.Request)
-	)
-	if !ok {
-		return nil
-	}
-	return cast
+// Context defines the value stored in the request's context
+type Context struct {
+	Request        *http.Request
+	ResponseWriter http.ResponseWriter
+	Auth           *Auth
 }
 
-// GetResponseWriter extracts the response writer from a context.Context
-func GetResponseWriter(c context.Context) http.ResponseWriter {
-	var (
-		raw      = c.Value(ctx.Response)
-		cast, ok = raw.(http.ResponseWriter)
-	)
-	if !ok {
-		return nil
+// Extract the current internal data from a context.Context. Note: it never
+// returns nil but struct fields can be nil
+func Extract(c context.Context) *Context {
+	if c == nil {
+		return &Context{}
 	}
-	return cast
-}
-
-// GetAuth returns the api.Auth associated with this request from a context.Context
-func GetAuth(c context.Context) *Auth {
 	var (
-		raw      = c.Value(ctx.Auth)
-		cast, ok = raw.(*Auth)
+		raw      = c.Value(ctx.Key)
+		cast, ok = raw.(*Context)
 	)
 	if !ok {
-		return nil
+		return &Context{}
 	}
 	return cast
 }

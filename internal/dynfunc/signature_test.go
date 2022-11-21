@@ -1,4 +1,4 @@
-package dynfunc
+package dynfunc_test
 
 import (
 	"context"
@@ -7,18 +7,19 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/internal/dynfunc"
 )
 
-func getReqType[Req, Res any](HandlerFunc[Req, Res]) reflect.Type {
+func getReqType[Req, Res any](dynfunc.HandlerFunc[Req, Res]) reflect.Type {
 	return reflect.TypeOf((*Req)(nil)).Elem()
 }
-func getResType[Req, Res any](HandlerFunc[Req, Res]) reflect.Type {
+func getResType[Req, Res any](dynfunc.HandlerFunc[Req, Res]) reflect.Type {
 	return reflect.TypeOf((*Res)(nil)).Elem()
 }
 
-func testIn[Req any]() func(s *Signature) error {
-	return func(s *Signature) error {
-		var fn HandlerFunc[Req, struct{}] = func(context.Context, Req) (*struct{}, error) {
+func testIn[Req any]() func(s *dynfunc.Signature) error {
+	return func(s *dynfunc.Signature) error {
+		var fn dynfunc.HandlerFunc[Req, struct{}] = func(context.Context, Req) (*struct{}, error) {
 			return nil, nil
 		}
 		return s.ValidateRequest(getReqType(fn))
@@ -43,18 +44,18 @@ func TestRequestValidation(t *testing.T) {
 	tt := []struct {
 		name   string
 		config map[string]reflect.Type
-		test   func(s *Signature) error
+		test   func(s *dynfunc.Signature) error
 		err    error
 	}{
 		{
 			name: "int",
 			test: testIn[int](),
-			err:  ErrNotAStruct,
+			err:  dynfunc.ErrNotAStruct,
 		},
 		{
 			name: "struct pointer",
 			test: testIn[*struct{}](),
-			err:  ErrNotAStruct,
+			err:  dynfunc.ErrNotAStruct,
 		},
 		{
 			name: "0 required 0 ok",
@@ -64,7 +65,7 @@ func TestRequestValidation(t *testing.T) {
 		{
 			name: "0 required 1 provided",
 			test: testIn[struct{ ID int }](),
-			err:  ErrUnexpectedFields,
+			err:  dynfunc.ErrUnexpectedFields,
 		},
 
 		{
@@ -73,7 +74,7 @@ func TestRequestValidation(t *testing.T) {
 				"ID": reflect.TypeOf(int(0)),
 			},
 			test: testIn[struct{}](),
-			err:  ErrMissingField,
+			err:  dynfunc.ErrMissingField,
 		},
 		{
 			name: "1 required 1 unexported",
@@ -81,7 +82,7 @@ func TestRequestValidation(t *testing.T) {
 				"id": reflect.TypeOf(int(0)),
 			},
 			test: testIn[struct{ id int }](),
-			err:  ErrUnexportedField,
+			err:  dynfunc.ErrUnexportedField,
 		},
 		{
 			name: "1 required 1 invalid",
@@ -89,7 +90,7 @@ func TestRequestValidation(t *testing.T) {
 				"ID": reflect.TypeOf(int(0)),
 			},
 			test: testIn[struct{ ID string }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 required 1 ok",
@@ -113,7 +114,7 @@ func TestRequestValidation(t *testing.T) {
 				"Int": reflect.TypeOf(int(0)),
 			},
 			test: testIn[struct{ Int CustomInt }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 required wrapper 1 primitive",
@@ -121,7 +122,7 @@ func TestRequestValidation(t *testing.T) {
 				"Int": reflect.TypeOf(CustomInt(0)),
 			},
 			test: testIn[struct{ Int int }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 
 		{
@@ -130,7 +131,7 @@ func TestRequestValidation(t *testing.T) {
 				"ID": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testIn[struct{}](),
-			err:  ErrMissingField,
+			err:  dynfunc.ErrMissingField,
 		},
 		{
 			name: "1 optional 1 unexported",
@@ -138,7 +139,7 @@ func TestRequestValidation(t *testing.T) {
 				"id": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testIn[struct{ id *int }](),
-			err:  ErrUnexportedField,
+			err:  dynfunc.ErrUnexportedField,
 		},
 		{
 			name: "1 optional 1 not pointer",
@@ -146,7 +147,7 @@ func TestRequestValidation(t *testing.T) {
 				"ID": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testIn[struct{ ID int }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 optional 1 invalid pointer",
@@ -154,7 +155,7 @@ func TestRequestValidation(t *testing.T) {
 				"ID": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testIn[struct{ ID *string }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 optional 1 ok",
@@ -178,7 +179,7 @@ func TestRequestValidation(t *testing.T) {
 				"Int": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testIn[struct{ Int *CustomInt }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 optional wrapper 1 primitive",
@@ -186,7 +187,7 @@ func TestRequestValidation(t *testing.T) {
 				"Int": reflect.PointerTo(reflect.TypeOf(CustomInt(0))),
 			},
 			test: testIn[struct{ Int *int }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 
 		{
@@ -205,7 +206,7 @@ func TestRequestValidation(t *testing.T) {
 				Bytes []byte
 				Runes []rune
 			}](),
-			err: ErrMissingField,
+			err: dynfunc.ErrMissingField,
 		},
 		{
 			name: "N required N ok",
@@ -229,7 +230,7 @@ func TestRequestValidation(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			s := &Signature{
+			s := &dynfunc.Signature{
 				In: tc.config,
 			}
 
@@ -241,9 +242,9 @@ func TestRequestValidation(t *testing.T) {
 	}
 }
 
-func testOut[Res any]() func(s *Signature) error {
-	return func(s *Signature) error {
-		var fn HandlerFunc[struct{}, Res] = func(context.Context, struct{}) (*Res, error) {
+func testOut[Res any]() func(s *dynfunc.Signature) error {
+	return func(s *dynfunc.Signature) error {
+		var fn dynfunc.HandlerFunc[struct{}, Res] = func(context.Context, struct{}) (*Res, error) {
 			return nil, nil
 		}
 		return s.ValidateResponse(getResType(fn))
@@ -268,18 +269,18 @@ func TestResponseValidation(t *testing.T) {
 	tt := []struct {
 		name   string
 		config map[string]reflect.Type
-		test   func(s *Signature) error
+		test   func(s *dynfunc.Signature) error
 		err    error
 	}{
 		{
 			name: "int",
 			test: testOut[int](),
-			err:  ErrNotAStruct,
+			err:  dynfunc.ErrNotAStruct,
 		},
 		{
 			name: "struct pointer",
 			test: testOut[*struct{}](),
-			err:  ErrNotAStruct,
+			err:  dynfunc.ErrNotAStruct,
 		},
 		{
 			name: "0 required 0 ok",
@@ -289,7 +290,7 @@ func TestResponseValidation(t *testing.T) {
 		{
 			name: "0 required 1 provided",
 			test: testOut[struct{ ID int }](),
-			err:  ErrUnexpectedFields,
+			err:  dynfunc.ErrUnexpectedFields,
 		},
 
 		{
@@ -298,7 +299,7 @@ func TestResponseValidation(t *testing.T) {
 				"ID": reflect.TypeOf(int(0)),
 			},
 			test: testOut[struct{}](),
-			err:  ErrMissingField,
+			err:  dynfunc.ErrMissingField,
 		},
 		{
 			name: "1 required 1 unexported",
@@ -306,7 +307,7 @@ func TestResponseValidation(t *testing.T) {
 				"id": reflect.TypeOf(int(0)),
 			},
 			test: testOut[struct{ id int }](),
-			err:  ErrUnexportedField,
+			err:  dynfunc.ErrUnexportedField,
 		},
 		{
 			name: "1 required 1 invalid",
@@ -314,7 +315,7 @@ func TestResponseValidation(t *testing.T) {
 				"ID": reflect.TypeOf(int(0)),
 			},
 			test: testOut[struct{ ID string }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 required 1 ok",
@@ -355,7 +356,7 @@ func TestResponseValidation(t *testing.T) {
 				"ID": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testOut[struct{}](),
-			err:  ErrMissingField,
+			err:  dynfunc.ErrMissingField,
 		},
 		{
 			name: "1 optional 1 unexported",
@@ -363,7 +364,7 @@ func TestResponseValidation(t *testing.T) {
 				"id": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testOut[struct{ id *int }](),
-			err:  ErrUnexportedField,
+			err:  dynfunc.ErrUnexportedField,
 		},
 		{
 			name: "1 optional 1 not pointer",
@@ -371,7 +372,7 @@ func TestResponseValidation(t *testing.T) {
 				"ID": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testOut[struct{ ID int }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 optional 1 invalid pointer",
@@ -379,7 +380,7 @@ func TestResponseValidation(t *testing.T) {
 				"ID": reflect.PointerTo(reflect.TypeOf(int(0))),
 			},
 			test: testOut[struct{ ID *string }](),
-			err:  ErrInvalidType,
+			err:  dynfunc.ErrInvalidType,
 		},
 		{
 			name: "1 optional 1 ok",
@@ -430,7 +431,7 @@ func TestResponseValidation(t *testing.T) {
 				Bytes []byte
 				Runes []rune
 			}](),
-			err: ErrMissingField,
+			err: dynfunc.ErrMissingField,
 		},
 		{
 			name: "N required N ok",
@@ -454,7 +455,7 @@ func TestResponseValidation(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			s := &Signature{
+			s := &dynfunc.Signature{
 				Out: tc.config,
 			}
 
@@ -467,14 +468,14 @@ func TestResponseValidation(t *testing.T) {
 
 }
 
-func TestFromConfig(t *testing.T) {
+func TestNewSignature(t *testing.T) {
 	t.Parallel()
 
 	tt := []struct {
 		name string
 		conf *config.Service
 
-		expect Signature
+		expect dynfunc.Signature
 	}{
 		{
 			name: "ignore input without rename",
@@ -484,7 +485,7 @@ func TestFromConfig(t *testing.T) {
 					"Used":    {GoType: reflect.TypeOf(""), Rename: "Renamed"},
 				},
 			},
-			expect: Signature{
+			expect: dynfunc.Signature{
 				In: map[string]reflect.Type{
 					"Renamed": reflect.TypeOf(""),
 				},
@@ -498,7 +499,7 @@ func TestFromConfig(t *testing.T) {
 					"Used":    {GoType: reflect.TypeOf(""), Rename: "Renamed"},
 				},
 			},
-			expect: Signature{
+			expect: dynfunc.Signature{
 				Out: map[string]reflect.Type{
 					"Renamed": reflect.TypeOf(""),
 				},
@@ -514,7 +515,7 @@ func TestFromConfig(t *testing.T) {
 					"OptString": {GoType: reflect.TypeOf(""), Rename: "OptString", Optional: true},
 				},
 			},
-			expect: Signature{
+			expect: dynfunc.Signature{
 				In: map[string]reflect.Type{
 					"Int":       reflect.TypeOf(int(0)),
 					"OptInt":    reflect.PointerTo(reflect.TypeOf(int(0))),
@@ -526,7 +527,7 @@ func TestFromConfig(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		s := FromConfig(tc.conf)
+		s := dynfunc.NewSignature(tc.conf)
 
 		if len(s.In) != len(tc.expect.In) {
 			t.Fatalf("invalid input count\nactual: %d\nexpect: %d", len(s.In), len(tc.expect.In))

@@ -33,7 +33,7 @@ type Callable func(context.Context, map[string]interface{}) (map[string]interfac
 //  - when no input is configured, the `in` struct MUST be empty
 //  - when no output is configured, the `out` struct MUST be empty
 func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Callable, error) {
-	var signature = FromConfig(service)
+	var signature = NewSignature(service)
 
 	var (
 		treq = reflect.TypeOf((*Req)(nil)).Elem()
@@ -51,25 +51,45 @@ func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Cal
 }
 
 // Wrap a generic handler into a callable function
-func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable {
+func Wrap[Req, Res any](s *Signature, fn HandlerFunc[Req, Res]) Callable {
+	// preprocess indexes to avoid using FieldByName()
+	var (
+		treq = reflect.TypeOf((*Req)(nil)).Elem()
+		tres = reflect.TypeOf((*Res)(nil)).Elem()
+	)
+
+	var reqIndex = make(map[string][]int, len(s.In))
+	for name := range s.In {
+		if field, ok := treq.FieldByName(name); ok {
+			reqIndex[name] = make([]int, len(field.Index))
+			copy(reqIndex[name], field.Index)
+		}
+	}
+
+	var resIndex = make(map[string][]int, len(s.Out))
+	for name := range s.Out {
+		if field, ok := tres.FieldByName(name); ok {
+			resIndex[name] = make([]int, len(field.Index))
+			copy(resIndex[name], field.Index)
+		}
+	}
+
 	return func(ctx context.Context, in map[string]interface{}) (map[string]interface{}, error) {
 		var (
-			tfn       = reflect.TypeOf(fn)
-			hasOutput = len(signature.Out) > 0
+			hasInput  = len(s.In) > 0
+			hasOutput = len(s.Out) > 0
 		)
 
 		// create zero value struct
-		var (
-			inStructPtr = reflect.New(tfn.In(1))
-			inStruct    = inStructPtr.Elem()
-		)
+		var req Req
+		var vreq reflect.Value
+		if hasInput {
+			vreq = reflect.ValueOf(&req).Elem()
+		}
 
 		// convert map[string]interface{} into Req
-		for name := range signature.In {
-			field := inStruct.FieldByName(name)
-			if !field.CanSet() {
-				panic(fmt.Errorf("cannot set field %q", name))
-			}
+		for name := range s.In {
+			field := vreq.FieldByIndex(reqIndex[name])
 
 			// get value from @data
 			value, provided := in[name]
@@ -104,20 +124,19 @@ func Wrap[Req, Res any](signature *Signature, fn HandlerFunc[Req, Res]) Callable
 
 		// call the handler
 		var (
-			req      = inStruct.Interface().(Req)
 			res, err = fn(ctx, req)
 			vres     = reflect.ValueOf(res).Elem()
 		)
 
 		// no output OR pointer to output struct is nil
 		if !hasOutput || res == nil {
-			return map[string]interface{}{}, err
+			return nil, err
 		}
 
 		// convert Res to map[string]interface{}
-		out := make(map[string]interface{}, len(signature.Out))
-		for name := range signature.Out {
-			field := vres.FieldByName(name)
+		out := make(map[string]interface{}, len(s.Out))
+		for name := range s.Out {
+			field := vres.FieldByIndex(resIndex[name])
 			out[name] = field.Interface()
 		}
 		return out, err
