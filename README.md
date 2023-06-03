@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/xdrm-io/aicra">
-    <img src="https://github.com/xdrm-io/aicra/raw/0.4.0/readme.assets/loGO.png" alt="aicra loGO" width="200" height="200">
+    <img src="https://github.com/xdrm-io/aicra/raw/0.4.0/readme.assets/logo.png" alt="aicra logo" width="200" height="200">
   </a>
 </p>
 
@@ -10,12 +10,12 @@
   Fast, intuitive, and powerful configuration-driven engine for faster and easier <em>REST</em> development.
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GO version](https://img.shields.io/badge/GO_version-1.16-blue.svg)](https://GOlang.org/doc/GO1.16) [![GO doc](https://pkg.GO.dev/badge/github.com/xdrm-io/aicra)](https://pkg.GO.dev/github.com/xdrm-io/aicra) [![GO Report Card](https://GOreportcard.com/badge/github.com/xdrm-io/aicra)](https://GOreportcard.com/report/github.com/xdrm-io/aicra) [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/GO.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/GO.yml) [![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GO version](https://img.shields.io/badge/go_version-1.16-blue.svg)](https://golang.org/doc/go1.16) [![doc](https://pkg.go.dev/badge/github.com/xdrm-io/aicra)](https://pkg.go.dev/github.com/xdrm-io/aicra) [![Go Report Card](https://goreportcard.com/badge/github.com/xdrm-io/aicra)](https://goreportcard.com/report/github.com/xdrm-io/aicra) [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/go.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/go.yml) [![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
 
 
 # Presentation
 
-`aicra` is a lightweight and idiomatic configuration-driven engine for building REST services. It's especially GOod at helping you write large APIs that remain maintainable as your project grows.
+`aicra` is a lightweight and idiomatic configuration-driven engine for building REST services. It's especially good at helping you write large APIs that remain maintainable as your project grows.
 
 The focus of the project is to allow you to build a fully-featured REST API in an elegant, comfortable and inexpensive way. This is achieved by using a single configuration file to drive the server. This one file describes your entire API: methods, uris, input data, expected output, permissions, etc.
 
