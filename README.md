@@ -10,7 +10,7 @@
   Fast, intuitive, and powerful configuration-driven engine for faster and easier <em>REST</em> development.
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GO version](https://img.shields.io/badge/GO_version-1.16-blue.svg)](https://GOlang.org/doc/GO1.16) [![GO doc](https://pkg.GO.dev/badge/github.com/xdrm-io/aicra)](https://pkg.GO.dev/github.com/xdrm-io/aicra) [![GO Report Card](https://GOreportcard.com/badge/github.com/xdrm-io/aicra)](https://GOreportcard.com/report/github.com/xdrm-io/aicra) [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/GO.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/GO.yml) [![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GO version](https://img.shields.io/badge/GO_version-1.16-blue.svg)](https://GOlang.org/doc/GO1.16) [![GO doc](https://pkg.GO.dev/badge/github.com/xdrm-io/aicra)](https://pkg.GO.dev/github.com/xdrm-io/aicra) [![GO Report Card](https://GOreportcard.com/badge/github.com/xdrm-io/aicra)](https://GOreportcard.com/report/github.com/xdrm-io/aicra) [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/go.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/go.yml) [![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
 
 # Presentation
 
