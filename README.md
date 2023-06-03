@@ -10,7 +10,8 @@
   Fast, intuitive, and powerful configuration-driven engine for faster and easier <em>REST</em> development.
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GO version](https://img.shields.io/badge/GO_version-1.16-blue.svg)](https://GOlang.org/doc/GO1.16) [![GO doc](https://pkg.GO.dev/badge/github.com/xdrm-io/aicra)](https://pkg.GO.dev/github.com/xdrm-io/aicra) [![GO Report Card](https://GOreportcard.com/badge/github.com/xdrm-io/aicra)](https://GOreportcard.com/report/github.com/xdrm-io/aicra) [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/go.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/go.yml) [![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GO version](https://img.shields.io/badge/GO_version-1.16-blue.svg)](https://GOlang.org/doc/GO1.16) [![GO doc](https://pkg.GO.dev/badge/github.com/xdrm-io/aicra)](https://pkg.GO.dev/github.com/xdrm-io/aicra) [![GO Report Card](https://GOreportcard.com/badge/github.com/xdrm-io/aicra)](https://GOreportcard.com/report/github.com/xdrm-io/aicra) [![Build status](https://github.com/xdrm-io/aicra/actions/workflows/GO.yml/badge.svg)](https://github.com/xdrm-io/aicra/actions/workflows/GO.yml) [![Coverage](https://codecov.io/gh/xdrm-io/aicra/branch/0.4.0/graph/badge.svg?token=HDIMZ0MKXW)](https://codecov.io/gh/xdrm-io/aicra)
+
 
 # Presentation
 
@@ -19,6 +20,32 @@
 The focus of the project is to allow you to build a fully-featured REST API in an elegant, comfortable and inexpensive way. This is achieved by using a single configuration file to drive the server. This one file describes your entire API: methods, uris, input data, expected output, permissions, etc.
 
 Repetitive tasks are automated by `aicra` based on your configuration, you're left with implementing your endpoints (_usually business logic_).
+
+
+# Table of contents
+
+- [Presentation](#presentation)
+- [Table of contents](#table-of-contents)
+- [Installation](#installation)
+- [What's automated](#whats-automated)
+- [API Documentation](#api-documentation)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+    - [Endpoints](#endpoints)
+  - [Contextual Permissions](#contextual-permissions)
+  - [Parameters](#parameters)
+    - [Input extraction](#input-extraction)
+    - [Mandatory vs. Optional](#mandatory-vs-optional)
+    - [Renaming](#renaming)
+    - [Input validators](#input-validators)
+    - [Output types](#output-types)
+- [Writing endpoint handlers](#writing-endpoint-handlers)
+  - [Function signature](#function-signature)
+  - [Response formatting](#response-formatting)
+- [Example endpoint](#example-endpoint)
+  - [Configuration](#configuration-1)
+  - [Code](#code)
+- [Coming next](#coming-next)
 
 
 # Installation
@@ -50,18 +77,21 @@ Aicra injects input data into your endpoints and formats the output data back to
 
 Any error in the configuration or your code is spotted before the server starts and accepts incoming requests. Only when the server is valid (the configuration and your endpoints), it starts listening for incoming requests. Moreover, errors give you enough context to pinpoint and solve the issue effortlessly. There will be no surprise at "runtime" !
 
-Configuration errors:
-- missing configuration fields
+You will get errors for:
+- invalid configuration syntax
+- handler signature not matching the configuration
+- configuration endpoint with no handler
+- handler matching no endpoint
+
+The same applies if your configuration is invalid:
 - unknown HTTP method
 - invalid uri
 - uri collision between 2 services
-- unknown input/output data type
-- collision between input/output variable names
+- missing fields
+- unknown data type
+- input name collision
+- etc.
 
-Endpoint errors:
-- an endpoint from the configuration has no code attached
-- an endpoint from your code does not match the configuration
-- an endpoint from your code does not match the configuration endpoint signature (input and output)
 
 # API Documentation
 
@@ -69,10 +99,12 @@ The base idea behind aicra is to avoid the requirement for tooling in addition t
 
 It avoids having multiple sources of truth, where your documentation can be outdated. With aicra the same file is used to drive your API server and document your API for other team members as the configuration is versioned alongside your code.
 
+
 # Getting started
 
-Example `main()` to launch your aicra server.
+> Other examples are available in the [examples folder](./examples/).
 
+Example `main()` to launch your aicra server.
 ```GO
 package main
 
@@ -118,7 +150,7 @@ func main() {
     builder.WithContext(func(next http.Handler) http.Handler{ /* ... */ })
 
     // bind your endpoints to your functions
-    err = builder.Bind(http.MethodGet, "/user/{id}", getUserById)
+    err = aicra.Bind(builder, http.MethodGet, "/user/{id}", getUserById)
     if err != nil {
         log.Fatalf("cannot bind: %s", err)
     }
@@ -144,6 +176,7 @@ server := &http.Server{
 
 server.ListenAndServeTLS("server.crt", "server.key")
 ```
+
 
 
 # Configuration
@@ -186,6 +219,7 @@ The configuration file defines a list of endpoints. Each one is defined by:
 ```
 
 The `scope` is a 2-dimensional list of permissions. The first list means **or**, the second means **and**, it allows for complex permission combinations. The example above can be translated to: this method requires users to have permissions (author **and** reader) **or** (admin)
+
 
 ## Contextual Permissions
 
@@ -257,26 +291,56 @@ Input and output parameters share the same format, consisting of:
 ```
 
 </details>
-
 <br>
 
 ### Input extraction
 
 The format of the key for input arguments defines where it comes from:
-- `{var}` is an uri parameter, must be present in the `"path"`
-- `GET@var` is an URL parameter (see [HTTP query](https://tools.ietf.org/html/rfc3986#section-3.4))
-- `var` is body parameter
+1. `{param}` is an URI parameter that is extracted from the `"path"`
+2. `GET@param` is an URL parameter that is extracted from the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
+3. `param` is a body parameter extracted according to the Content-Type.
 
 Body parameters are extracted based on the `Content-Type` header. Supported types are:
-- `application/x-www-form-urlencoded`
-- `multipart/form-data`
-- `application/json`
+- `application/x-www-form-urlencoded` - data send in the body following the [HTTP Query](https://tools.ietf.org/html/rfc3986#section-3.4) syntax.
+- `multipart/form-data` - data send in the body with a dedicated [format](https://tools.ietf.org/html/rfc2388#section-3). This format can be quite heavy but allows to transmit data as well as files.
+- `application/json` - data sent in the body as a json object
+
+<details>
+<summary>Example</summary>
+
+```json
+[
+    {
+        "method": "PUT",
+        "path": "/article/{id}",
+        "scope": [["author"]],
+        "info": "updates an article",
+        "in": {
+            "{id}":      { "info": "...", "type": "int",     "name": "ID"    },
+            "GET@title": { "info": "...", "type": "?string", "name": "Title" },
+            "Content":   { "info": "...", "type": "string"                   }
+        },
+        "out": {
+            "Title":   { "info": "updated article title",   "type": "string" },
+            "Content": { "info": "updated article content", "type": "string" }
+        }
+    }
+]
+```
+
+In the example above, it reads:
+1. `{id}` is extracted from the end of the URI and is a number compliant with the `int` type checker. It is renamed `ID`, this new name will be used by the handler in GO code.
+2. `GET@title` is extracted from the query (_e.g. [http://host/uri?get-var=value](http://host/uri?get-var=value)_). It must be a valid `string` or not provided at all (the `?` at the beginning of the type tells that the argument is **optional**) ; it will be named `Title`.
+3. `Content` can be extracted from json, multipart or url-encoded data; it makes no difference and only give clients a choice over the technology to use. It is not renamed, the variable will pass to the handler with its original name `Content`.
+</details>
+<br>
 
 ### Mandatory vs. Optional
 
 If you want to make an input parameter optional, prefix its type with a question mark, by default all parameters are mandatory.
 
 When a parameter is optional, the attribute of the GO struct must be a pointer.
+
 
 ### Renaming
 
@@ -286,6 +350,7 @@ Renaming with the field `"name"` is mandatory for:
 - body parameters that do not start with an uppercase letter or contain invalid characters for GO variables
 
 These names are the same as input or output parameters in your code, they must begin with an uppercase letter in order to be exported and valid GO.
+
 
 ### Input validators
 
@@ -328,7 +393,6 @@ builder.Input(NumberType{})
 ```
 
 </details>
-
 <br>
 
 The `Validator()` method of the interface seems a bit complicated, this is to allow complex types such as arrays or maps.
@@ -336,7 +400,6 @@ The `Validator()` method of the interface seems a bit complicated, this is to al
 The `typename` argument allows to create a dynamic type such as a `varchar` type that can have parameters, i.e. `varchar(123)`. There is an example of such a validator with the [built-in string type](https://pkg.go.dev/github.com/xdrm-io/aicra@v0.4.11/validator#StringType).
 
 The `avail` argument allows to build aggregation types, such as arrays of other existing types. The `avail` argument contains all validators of the aicra server.
-
 
 <details>
 <summary>Example array meta type</summary>
@@ -381,9 +444,11 @@ func (ArrayType) Validator(typename string, avail ...validator.Type) ValidateFun
 		return slice, true
 	}
 }
+
+// main.go
+builder.Input(ArrayType{})
 ```
 </details>
-
 <br>
 
 ### Output types
@@ -401,9 +466,208 @@ builder.Output("user",   UserStruct{}) // your custom struct UserStruct
 > The [Output()](https://pkg.go.dev/github.com/xdrm-io/aicra#Builder.Output) method uses reflection to get the type of the second argument.
 
 
-# Writing endpoints
+# Writing endpoint handlers
 
-Besides your main package where you launch your server, you will need to create endpoints matching those defined in your configuration file.
+Besides your main package where you launch your server, you will need to create a handler for each endpoint defined in your configuration file.
+
+
+## Function signature
+
+Handler's function signature is defined by the configuration of the endpoint it implements.
+
+Every handler function must feature at least:
+- a first input argument of type `context.Context`
+- a last output argument of type `error`
+
+Request and/or response struct must be added when defined in the configuration. Here are some basic examples.
+
+<table>
+    <thead>
+        <tr>
+            <td>service configuration (json)</td>
+            <td>service handler (go)</td>
+        </tr>
+    </thead>
+    <tbody>
+<tr>
+<td>
+
+No input with no output
+```json
+[
+    {
+        "method": "GET",
+        "path": "/users",
+        "scope": [],
+        "info": "lists all users",
+        "in": {},
+        "out": {}
+    }
+]
+```
+
+</td>
+<td>
+
+```go
+func serviceHandler(ctx context.Context) error {
+    return nil
+}
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+Input with no output
+```json
+[
+    {
+        "method": "PUT",
+        "path": "/user/{id}",
+        "scope": [],
+        "info": "updates an existing user",
+        "in": {
+            "{id}": {
+                "name": "ID",
+                "type": "uint",
+                "info": "target user uid"
+            },
+            "firstname": {
+                "name": "Firstname",
+                "type": "?string",
+                "info": "new firstname"
+            },
+            "lastname": {
+                "name": "Lastname",
+                "type": "?string",
+                "info": "new lastname"
+            }
+        },
+        "out": {}
+    }
+]
+```
+
+</td>
+<td>
+
+Note: optional input arguments are pointers.
+```go
+type request {
+    ID uint
+    Firstname *string
+    Lastname *string
+}
+func serviceHandler(ctx context.Context, req request) error {
+    return nil
+}
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+No input with output
+```json
+[
+    {
+        "method": "GET",
+        "path": "/users",
+        "scope": [],
+        "info": "returns all existing users",
+        "in": {},
+        "out": {
+            "users": {
+                "name": "Users",
+                "type": "[]User",
+                "info": "list of existing users"
+            }
+        }
+    }
+]
+```
+
+</td>
+<td>
+
+```go
+type response {
+    Users []User
+}
+func serviceHandler(ctx context.Context) (*response, error) {
+    return &response{Users: []User{}}, nil
+}
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+Input with output
+```json
+[
+    {
+        "method": "PUT",
+        "path": "/user/{id}",
+        "scope": [],
+        "info": "updates an existing user",
+        "in": {
+            "{id}": {
+                "name": "ID",
+                "type": "uint",
+                "info": "target user uid"
+            },
+            "firstname": {
+                "name": "Firstname",
+                "type": "?string",
+                "info": "new firstname"
+            },
+            "lastname": {
+                "name": "Lastname",
+                "type": "?string",
+                "info": "new lastname"
+            }
+        },
+        "out": {
+            "user": {
+                "name": "User",
+                "type": "User",
+                "info": "updated user info",
+            }
+        }
+    }
+]
+```
+
+</td>
+<td>
+
+```go
+type request {
+    ID uint
+    Firstname *string
+    Lastname *string
+}
+type response {
+    User User
+}
+func serviceHandler(ctx context.Context, req request) (*response, error) {
+    return &response{User: User{}}, nil
+}
+```
+
+</td>
+</tr>
+    </tbody>
+</table>
+
+If your handler signature does not exactly match the configuration, the server will print out the error and won't start.
+
+## Response formatting
 
 Example parameters configuration :
 ```json
@@ -418,13 +682,10 @@ Example parameters configuration :
 	}
 }
 ```
-
-The code below implements the endpoint above :
-
 ```GO
 type req struct{
     Input1 int
-    Input2 *string // optional are pointers
+    Input2 *string
 }
 type res struct{
     Output1 string
@@ -443,8 +704,6 @@ func myEndpoint(ctx context.Context, r req) (*res, error) {
     return &res{Output1: "out1", Output2: true}, nil
 }
 ```
-
-If your handler signature does not match the configuration exactly, the server will print out the error and won't start.
 
 The [`api.Err`](https://pkg.go.dev/github.com/xdrm-io/aicra@v0.4.11/api#Err) type automatically maps to HTTP status codes and error descriptions that will be sent to the client as json. This way, clients can manage the same format for every response:
 ```http
@@ -564,4 +823,5 @@ func endpoint(ctx context.Context, r req) (*res, error) {
 
 # Coming next
 - [ ] support for PATCH or other custom http methods. It might be interesting to generate the list of allowed methods from the configuration. A check against available http methods as a failsafe might be required.
+	- it might be interesting to generate the list of allowed methods from the configuration
 - [ ] Consider code generation to avoid using `reflect` that has a big impact on performance as it is used for every incoming request. Some big issues appear with code generation, to be designed properly.
