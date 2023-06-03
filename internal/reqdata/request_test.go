@@ -12,7 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/xdrm-io/aicra/internal/config"
 )
@@ -83,25 +82,23 @@ func TestRequestPoolReUse(t *testing.T) {
 	var oldPool = mapPool
 	defer func() { mapPool = oldPool }()
 
-	var i uint32
-	mapPool = sync.Pool{
+	var i atomic.Uint32
+	mapPool = &sync.Pool{
 		New: func() interface{} {
-			atomic.AddUint32(&i, 1)
+			i.Add(1)
 			return make(map[string]interface{}, 8)
 		},
 	}
 
-	req1 := NewRequest(&config.Service{})
-	if atomic.AddUint32(&i, 0) != 1 {
+	req1 := NewRequest(nil)
+	if i.Load() != 1 {
 		t.Fatalf("NewRequest shall have allocated 1 map")
 	}
 	req1.Data["test"] = "value"
+
 	req1.Release()
-
-	time.Sleep(1 * time.Microsecond)
-
-	req2 := NewRequest(&config.Service{})
-	if atomic.AddUint32(&i, 0) != 1 {
+	req2 := NewRequest(nil)
+	if i.Load() != 1 {
 		t.Fatalf("NewRequest shall have reused the previously allocated map")
 	}
 	if _, exists := req2.Data["test"]; exists {

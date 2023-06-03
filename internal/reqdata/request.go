@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-var mapPool = sync.Pool{
+var mapPool = &sync.Pool{
 	New: func() interface{} {
 		return make(map[string]interface{}, 8)
 	},
