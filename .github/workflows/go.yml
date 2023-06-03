@@ -42,18 +42,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Test
-      run: go test -race ./...
-
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.18
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Coverage
       run: go test -race ./... -coverprofile=cover.out -covermode=atomic
     - name: Upload coverage to Codecov
       run: bash <(curl -s https://codecov.io/bash)
