@@ -71,7 +71,7 @@ It avoids having multiple sources of truth, where your documentation can be outd
 
 # Getting started
 
-Here is an example `main()` to launch your aicra server.
+Example `main()` to launch your aicra server.
 
 ```GO
 package main
@@ -199,7 +199,11 @@ When writing your scopes, you can use the `[Var]` syntax to refer to the `path` 
 >
 > Allowing GET or body variables in the scope means that an unauthorized party could overload the server with large requests. We must check authentication first in an inexpensive way before extracting its content.
 
-### Example
+
+<details>
+<summary>
+Example
+</summary>
 
 In this example we only want the user to update its own information.
 
@@ -252,6 +256,10 @@ Input and output parameters share the same format, consisting of:
 ]
 ```
 
+</details>
+
+<br>
+
 ### Input extraction
 
 The format of the key for input arguments defines where it comes from:
@@ -283,7 +291,10 @@ These names are the same as input or output parameters in your code, they must b
 
 Every input type must match one of the input validators registered with [`Builder.Input()`](https://pkg.go.dev/github.com/xdrm-io/aicra#Builder.Input). Aicra provides [built-in validators](https://pkg.go.dev/github.com/xdrm-io/aicra@v0.4.11/validator), you can add your own according to your needs. Validators must implement the [`validator.Type`](https://pkg.go.dev/github.com/xdrm-io/aicra@v0.4.11/validator#Type) interface.
 
-Example validator for any number :
+
+<details>
+<summary>Example validator for any number</summary>
+
 ```go
 type NumberType struct{}
 
@@ -316,13 +327,22 @@ func (NumberType) Validator(typename string, avail ...validator.Type) ValidateFu
 builder.Input(NumberType{})
 ```
 
+</details>
+
+<br>
+
 The `Validator()` method of the interface seems a bit complicated, this is to allow complex types such as arrays or maps.
 
 The `typename` argument allows to create a dynamic type such as a `varchar` type that can have parameters, i.e. `varchar(123)`. There is an example of such a validator with the [built-in string type](https://pkg.go.dev/github.com/xdrm-io/aicra@v0.4.11/validator#StringType).
 
 The `avail` argument allows to build aggregation types, such as arrays of other existing types. The `avail` argument contains all validators of the aicra server.
 
-Example array meta type (not tested, but the idea is here):
+
+<details>
+<summary>Example array meta type</summary>
+
+> This does not work and has not been tested, but the idea is here.
+
 ```go
 func (ArrayType) Validator(typename string, avail ...validator.Type) ValidateFunc {
 	// matches: []string, []int, []user, ...
@@ -362,7 +382,9 @@ func (ArrayType) Validator(typename string, avail ...validator.Type) ValidateFun
 	}
 }
 ```
+</details>
 
+<br>
 
 ### Output types
 
@@ -379,11 +401,9 @@ builder.Output("user",   UserStruct{}) // your custom struct UserStruct
 > The [Output()](https://pkg.go.dev/github.com/xdrm-io/aicra#Builder.Output) method uses reflection to get the type of the second argument.
 
 
-
 # Writing endpoints
 
 Besides your main package where you launch your server, you will need to create endpoints matching those defined in your configuration file.
-
 
 Example parameters configuration :
 ```json
