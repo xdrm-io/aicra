@@ -1,0 +1,80 @@
+{
+	"package": "apidef",
+	"imports": {
+		"builtin": "github.com/xdrm-io/aicra/validator",
+		"noalias": "github.com/xdrm-io/aicra/noalias",
+		"custom": "github.com/xdrm-io/my-project/validator",
+		"alias": "github.com/xdrm-io/aicra/other",
+		"model": "github.com/xdrm-io/my-project/model"
+	},
+	"validators": [
+		"builtin.AnyType",
+		"builtin.StringType",
+		"builtin.UintType",
+		"custom.UUID",
+		"custom.Hexa",
+		"noalias.TextValidator"
+	],
+
+	"endpoints": [
+		{
+			"name": "GetUsers",
+			"method": "GET",
+			"path": "/user",
+			"scope": [],
+			"info": "fetches all users",
+			"in": {},
+			"out": {
+				"users": { "info": "list of users", "type": "[]model.User", "name": "Users" }
+			}
+		},
+		{
+			"name": "CreateUser",
+			"method": "POST",
+			"path": "/user",
+			"scope": [["admin"]],
+			"info": "creates a new user",
+			"in": {
+				"username":  { "info": "new username",    "type": "string", "name": "Username"  },
+				"firstname": { "info": "new firstname",   "type": "string", "name": "Firstname" },
+				"lastname":  { "info": "new lastname",    "type": "string", "name": "Lastname"  }
+			},
+			"out": {
+				"id":        { "info": "new user id",   "type": "uint",   "name": "ID"        },
+				"username":  { "info": "new username",  "type": "string", "name": "Username"  },
+				"firstname": { "info": "new firstname", "type": "string", "name": "Firstname" },
+				"lastname":  { "info": "new lastname",  "type": "string", "name": "Lastname"  }
+			}
+		},
+		{
+			"name": "UpdateUser",
+			"method": "PUT",
+			"path": "/user/{id}",
+			"scope": [ ["admin"], ["user[ID]"] ],
+			"info": "updates user information",
+			"in": {
+				"{id}":      { "info": "id of the user to update", "type": "uint",    "name": "ID"        },
+				"username":  { "info": "optional new username",    "type": "?string", "name": "Username"  },
+				"firstname": { "info": "optional new firstname",   "type": "?string", "name": "Firstname" },
+				"lastname":  { "info": "optional new lastname",    "type": "?string", "name": "Lastname"  }
+			},
+			"out": {
+				"id":        { "info": "new user id",   "type": "uint",   "name": "ID"        },
+				"username":  { "info": "new username",  "type": "string", "name": "Username"  },
+				"firstname": { "info": "new firstname", "type": "string", "name": "Firstname" },
+				"lastname":  { "info": "new lastname",  "type": "string", "name": "Lastname"  }
+			}
+		},
+		{
+			"name": "DeleteUser",
+			"method": "DELETE",
+			"path": "/user/{id}",
+			"scope": [ ["admin"], ["user[ID]"] ],
+			"info": "deletes an existing user",
+			"in": {
+				"{id}": { "info": "id of the user to remove", "type": "uint", "name": "ID" }
+			},
+			"out": {}
+		}
+	]
+}
