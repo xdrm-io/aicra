@@ -1,0 +1,53 @@
+package {{ .Package }}
+
+import (
+	"fmt"
+	"context"
+	"github.com/xdrm-io/aicra"
+	{{- range $alias, $path := .Imports }}
+	{{ $alias }} "{{ $path }}"
+	{{- end }}
+)
+
+type Server interface {
+	{{- range .Endpoints }}
+	// {{.Name}} {{ .Description }}
+	{{- $inStruct  := printf "%sReq" .Name }}
+	{{- $outStruct := printf "%sRes" .Name }}
+	{{ .Name }}(context.Context, {{ $inStruct }}) (*{{$outStruct}}, error)
+	{{- end }}
+}
+
+{{- range .Endpoints }}
+{{- $inStruct  := printf "%sReq" .Name }}
+{{- $outStruct := printf "%sRes" .Name }}
+{{- if eq (len .Input) 0 }}
+type {{$inStruct}} struct {}
+{{- else }}
+type {{$inStruct}} struct {
+	{{- range .Input }}
+	{{.Name}} {{.Type}}
+	{{- end }}
+}
+{{- end }}
+
+{{- if eq (len .Output) 0 }}
+type {{$outStruct}} struct {}
+{{- else }}
+type {{$outStruct}} struct {
+	{{- range .Output }}
+	{{.Name}} {{.Type}}
+	{{- end }}
+}
+{{- end }}
+{{- end }}
+
+func Wire(b *aicra.Builder, impl Server) error {
+	mapped := mapper{impl: impl, validators: validators}
+	{{- range .Endpoints }}
+	if err := b.Bind("{{.Method}}", "{{.Pattern}}", mapped.{{.Name}}); err != nil {
+		return fmt.Errorf("cannot bind '{{ .Method }} {{ .Pattern }}': %s", err)
+	}
+	{{- end }}
+	return nil
+}

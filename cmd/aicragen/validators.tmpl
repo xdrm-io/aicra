@@ -1,0 +1,14 @@
+package {{ .Package }}
+
+import (
+	aicraValidator "github.com/xdrm-io/aicra/validator"
+	{{- range $alias, $path := .Imports }}
+	{{ $alias }} "{{ $path }}"
+	{{- end }}
+)
+
+var validators = []aicraValidator.Type{
+	{{- range  .Validators }}
+	new({{.}}),
+	{{- end }}
+}
