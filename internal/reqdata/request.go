@@ -32,12 +32,12 @@ var mapPool = &sync.Pool{
 //   - 'application/x-www-form-urlencoded' => standard parameters as QUERY parameters
 //   - 'multipart/form-data'               => parse form-data format
 type Request struct {
-	service *config.Service
+	service *config.Endpoint
 	Data    map[string]interface{}
 }
 
 // NewRequest creates a new empty store.
-func NewRequest(service *config.Service) *Request {
+func NewRequest(service *config.Endpoint) *Request {
 	r := &Request{
 		service: service,
 		Data:    mapPool.Get().(map[string]interface{}),

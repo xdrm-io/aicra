@@ -19,8 +19,8 @@ type Callable func(context.Context, map[string]interface{}) (map[string]interfac
 // according to the configuration.
 //
 // `fn` must have as a signature : `func(context.Context, in) (*out, api.Err)`
-//  - `in`  is a struct{} containing a field for each service input
-//  - `out` is a struct{} containing a field for each service output
+//   - `in`  is a struct{} containing a field for each service input
+//   - `out` is a struct{} containing a field for each service output
 //
 // Struct field names must be literally the same as the "name" field from the
 // configuration, or the argument key if no "name" is provided.
@@ -30,9 +30,9 @@ type Callable func(context.Context, map[string]interface{}) (map[string]interfac
 // Output struct field types must match output types.
 //
 // Special cases:
-//  - when no input is configured, the `in` struct MUST be empty
-//  - when no output is configured, the `out` struct MUST be empty
-func Build[Req, Res any](service *config.Service, fn HandlerFunc[Req, Res]) (Callable, error) {
+//   - when no input is configured, the `in` struct MUST be empty
+//   - when no output is configured, the `out` struct MUST be empty
+func Build[Req, Res any](service *config.Endpoint, fn HandlerFunc[Req, Res]) (Callable, error) {
 	var signature = NewSignature(service)
 
 	var (

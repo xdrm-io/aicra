@@ -92,7 +92,7 @@ func TestNoOpValidator(t *testing.T) {
 func TestAddInputType(t *testing.T) {
 	t.Parallel()
 
-	srv := &Server{}
+	srv := &API{}
 	srv.AddInputValidator(validator.BoolType{})
 	if srv.Input == nil {
 		t.Fatalf("input is nil")
@@ -108,7 +108,7 @@ func TestAddInputType(t *testing.T) {
 func TestAddOutputType(t *testing.T) {
 	t.Parallel()
 
-	srv := &Server{}
+	srv := &API{}
 	srv.AddOutputValidator("bool", reflect.TypeOf(true))
 	if srv.Output == nil {
 		t.Fatalf("input is nil")
@@ -209,7 +209,7 @@ func TestLegalServicePath(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			err := srv.Parse(strings.NewReader(tc.conf))
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("invalid error\nactual: %v\nexpect: %v", err, tc.err)
@@ -259,7 +259,7 @@ func TestAvailableMethods(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			err := srv.Parse(strings.NewReader(tc.conf))
 			if tc.validMethod && err != nil {
 				t.Fatalf("unexpected error: %q", err.Error())
@@ -273,7 +273,7 @@ func TestAvailableMethods(t *testing.T) {
 func TestParseEmpty(t *testing.T) {
 	t.Parallel()
 	r := strings.NewReader(`[]`)
-	srv := &Server{}
+	srv := &API{}
 	err := srv.Parse(r)
 	if err != nil {
 		t.Fatalf("unexpected error (got %q)", err)
@@ -283,7 +283,7 @@ func TestParseJsonError(t *testing.T) {
 	r := strings.NewReader(`{
 		"GET": { "info": "info },
 	}`) // trailing ',' is invalid JSON
-	srv := &Server{}
+	srv := &API{}
 	err := srv.Parse(r)
 	if err == nil {
 		t.Fatalf("expected error")
@@ -333,7 +333,7 @@ func TestParseMissingMethodDescription(t *testing.T) {
 	for _, tc := range tt {
 
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			err := srv.Parse(strings.NewReader(tc.conf))
 			if tc.validDesc && err != nil {
 				t.Fatalf("unexpected error: %q", err)
@@ -358,18 +358,18 @@ func TestParamEmptyRenameNoRename(t *testing.T) {
 			}
 		}
 	]`)
-	srv := &Server{}
+	srv := &API{}
 	srv.AddInputValidator(validator.AnyType{})
 	err := srv.Parse(r)
 	if err != nil {
 		t.Fatalf("unexpected error: %q", err)
 	}
 
-	if len(srv.Services) < 1 {
+	if len(srv.Endpoints) < 1 {
 		t.Fatalf("expected a service")
 	}
 
-	for _, param := range srv.Services[0].Input {
+	for _, param := range srv.Endpoints[0].Input {
 		if param.Rename != "original" {
 			t.Fatalf("expected the parameter 'original' not to be renamed to %q", param.Rename)
 		}
@@ -485,7 +485,7 @@ func TestMissingParam(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			for _, t := range tc.in {
 				srv.AddInputValidator(t)
 			}
@@ -523,7 +523,7 @@ func TestOptionalParam(t *testing.T) {
 			}
 		}
 	]`)
-	srv := &Server{}
+	srv := &API{}
 	srv.AddInputValidator(validator.AnyType{})
 	srv.AddInputValidator(validator.BoolType{})
 	err := srv.Parse(r)
@@ -531,10 +531,10 @@ func TestOptionalParam(t *testing.T) {
 		t.Fatalf("unexpected error: %q", err)
 	}
 
-	if len(srv.Services) < 1 {
+	if len(srv.Endpoints) < 1 {
 		t.Fatalf("expected a service")
 	}
-	for pName, param := range srv.Services[0].Input {
+	for pName, param := range srv.Endpoints[0].Input {
 		if pName == "optional" || pName == "optional2" {
 			if !param.Optional {
 				t.Fatalf("expected parameter %q to be optional", pName)
@@ -824,7 +824,7 @@ func TestParseParameters(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			srv.AddInputValidator(validator.AnyType{})
 			err := srv.Parse(strings.NewReader(tc.conf))
 			if !errors.Is(err, tc.err) {
@@ -984,7 +984,7 @@ func TestServiceCollision(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			srv.AddInputValidator(validator.StringType{})
 			srv.AddInputValidator(validator.UintType{})
 
@@ -1068,7 +1068,7 @@ func TestServiceCollisionPanic(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run("missing param:"+tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			srv.AddInputValidator(validator.StringType{})
 			srv.AddInputValidator(validator.UintType{})
 
@@ -1089,7 +1089,7 @@ func TestServiceCollisionPanic(t *testing.T) {
 			srv.Parse(strings.NewReader(raw))
 
 			// remove parameters
-			for _, svc := range srv.Services {
+			for _, svc := range srv.Endpoints {
 				svc.Input = map[string]*Parameter{}
 			}
 
@@ -1107,7 +1107,7 @@ func TestServiceCollisionPanic(t *testing.T) {
 		})
 
 		t.Run("nil validator:"+tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			srv.AddInputValidator(validator.StringType{})
 			srv.AddInputValidator(validator.UintType{})
 
@@ -1128,7 +1128,7 @@ func TestServiceCollisionPanic(t *testing.T) {
 			srv.Parse(strings.NewReader(raw))
 
 			// remove param validators
-			for _, svc := range srv.Services {
+			for _, svc := range srv.Endpoints {
 				for i := range svc.Input {
 					svc.Input[i].Validator = nil
 				}
@@ -1278,7 +1278,7 @@ func TestMatchSimple(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			srv.AddInputValidator(validator.AnyType{})
 			srv.AddInputValidator(validator.IntType{})
 			srv.AddInputValidator(validator.BoolType{})
@@ -1288,12 +1288,12 @@ func TestMatchSimple(t *testing.T) {
 				t.Fatalf("unexpected error: %q", err)
 			}
 
-			if len(srv.Services) != 1 {
-				t.Fatalf("expected to have 1 service, got %d", len(srv.Services))
+			if len(srv.Endpoints) != 1 {
+				t.Fatalf("expected to have 1 service, got %d", len(srv.Endpoints))
 			}
 
 			req := httptest.NewRequest(http.MethodGet, tc.uri, nil)
-			match := srv.Services[0].Match(req)
+			match := srv.Endpoints[0].Match(req)
 			if tc.match && !match {
 				t.Fatalf("expected %q to match", tc.uri)
 			}
@@ -1377,7 +1377,7 @@ func TestFindPriority(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := &Server{}
+			srv := &API{}
 			srv.AddInputValidator(validator.AnyType{})
 			srv.AddInputValidator(validator.IntType{})
 			srv.AddInputValidator(validator.BoolType{})
@@ -1471,7 +1471,7 @@ func TestScopeVars(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := &Service{
+			svc := &Endpoint{
 				Scope:    tc.scope,
 				Captures: make([]*BraceCapture, 0, len(tc.vars)),
 			}

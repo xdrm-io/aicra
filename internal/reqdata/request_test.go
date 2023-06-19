@@ -16,12 +16,12 @@ import (
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
-func getEmptyService() *config.Service {
-	return &config.Service{}
+func getEmptyService() *config.Endpoint {
+	return &config.Endpoint{}
 }
 
-func getServiceWithURI(capturingBraces ...string) *config.Service {
-	service := &config.Service{
+func getServiceWithURI(capturingBraces ...string) *config.Endpoint {
+	service := &config.Endpoint{
 		Input: make(map[string]*config.Parameter),
 	}
 
@@ -43,8 +43,8 @@ func getServiceWithURI(capturingBraces ...string) *config.Service {
 	}
 	return service
 }
-func getServiceWithQuery(t reflect.Type, params ...string) *config.Service {
-	service := &config.Service{
+func getServiceWithQuery(t reflect.Type, params ...string) *config.Endpoint {
+	service := &config.Endpoint{
 		Input: make(map[string]*config.Parameter),
 		Query: make(map[string]*config.Parameter),
 	}
@@ -60,8 +60,8 @@ func getServiceWithQuery(t reflect.Type, params ...string) *config.Service {
 	}
 	return service
 }
-func getServiceWithForm(t reflect.Type, params ...string) *config.Service {
-	service := &config.Service{
+func getServiceWithForm(t reflect.Type, params ...string) *config.Endpoint {
+	service := &config.Endpoint{
 		Input: make(map[string]*config.Parameter),
 		Form:  make(map[string]*config.Parameter),
 	}
@@ -925,7 +925,7 @@ Content-Type: application/zip
 			req.Header.Add("Content-Type", "multipart/form-data; boundary=xxx")
 			defer req.Body.Close()
 
-			service := &config.Service{
+			service := &config.Endpoint{
 				Input: make(map[string]*config.Parameter),
 				Form:  make(map[string]*config.Parameter),
 			}

@@ -126,7 +126,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 
 // handle the service request with the associated handler func and respond using
 // the handler func output
-func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Service, w http.ResponseWriter) {
+func (s *Handler) handle(c context.Context, input *reqdata.Request, handler *serviceHandler, service *config.Endpoint, w http.ResponseWriter) {
 	// pass execution to the handler function
 	data, err := handler.callable(c, input.Data)
 	if data == nil {

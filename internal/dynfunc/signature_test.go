@@ -473,13 +473,13 @@ func TestNewSignature(t *testing.T) {
 
 	tt := []struct {
 		name string
-		conf *config.Service
+		conf *config.Endpoint
 
 		expect dynfunc.Signature
 	}{
 		{
 			name: "ignore input without rename",
-			conf: &config.Service{
+			conf: &config.Endpoint{
 				Input: map[string]*config.Parameter{
 					"Ignored": {GoType: reflect.TypeOf(int(0))},
 					"Used":    {GoType: reflect.TypeOf(""), Rename: "Renamed"},
@@ -493,7 +493,7 @@ func TestNewSignature(t *testing.T) {
 		},
 		{
 			name: "ignore output without rename",
-			conf: &config.Service{
+			conf: &config.Endpoint{
 				Output: map[string]*config.Parameter{
 					"Ignored": {GoType: reflect.TypeOf(int(0))},
 					"Used":    {GoType: reflect.TypeOf(""), Rename: "Renamed"},
@@ -507,7 +507,7 @@ func TestNewSignature(t *testing.T) {
 		},
 		{
 			name: "optional input pointers",
-			conf: &config.Service{
+			conf: &config.Endpoint{
 				Input: map[string]*config.Parameter{
 					"Int":       {GoType: reflect.TypeOf(int(0)), Rename: "Int"},
 					"OptInt":    {GoType: reflect.TypeOf(int(0)), Rename: "OptInt", Optional: true},

@@ -21,8 +21,8 @@ type ScopeVar struct {
 	Position    [2]int
 }
 
-// Service definition
-type Service struct {
+// Endpoint definition
+type Endpoint struct {
 	Method      string                `json:"method"`
 	Pattern     string                `json:"path"`
 	Scope       [][]string            `json:"scope"`
@@ -59,12 +59,12 @@ type BraceCapture struct {
 }
 
 // Match returns if this service would handle this HTTP request
-func (svc *Service) Match(req *http.Request) bool {
+func (svc *Endpoint) Match(req *http.Request) bool {
 	return req.Method == svc.Method && svc.matchPattern(req.URL.Path)
 }
 
 // checks if an uri matches the service's pattern
-func (svc *Service) matchPattern(uri string) bool {
+func (svc *Endpoint) matchPattern(uri string) bool {
 	var parts = SplitURI(uri)
 
 	if len(parts) != len(svc.parts) {
@@ -107,7 +107,7 @@ func (svc *Service) matchPattern(uri string) bool {
 }
 
 // validate the service configuration
-func (svc *Service) validate(input []validator.Type, output []validator.Type) error {
+func (svc *Endpoint) validate(input []validator.Type, output []validator.Type) error {
 	err := svc.checkMethod()
 	if err != nil {
 		return fmt.Errorf("field 'method': %w", err)
@@ -145,7 +145,7 @@ func (svc *Service) validate(input []validator.Type, output []validator.Type) er
 	return nil
 }
 
-func (svc *Service) checkMethod() error {
+func (svc *Endpoint) checkMethod() error {
 	for _, available := range availableHTTPMethods {
 		if svc.Method == available {
 			return nil
@@ -155,7 +155,7 @@ func (svc *Service) checkMethod() error {
 }
 
 // cleanScope simplifies empty scopes and marks
-func (svc *Service) cleanScope() {
+func (svc *Endpoint) cleanScope() {
 	// transform [[]] into []
 	if len(svc.Scope) == 1 && len(svc.Scope[0]) < 1 {
 		svc.Scope = [][]string{}
@@ -189,7 +189,7 @@ func (svc *Service) cleanScope() {
 //
 // This methods sets up the service state with adding capture params that are
 // expected; checkInputs() will be able to check params against pattern captures
-func (svc *Service) checkPattern() error {
+func (svc *Endpoint) checkPattern() error {
 	length := len(svc.Pattern)
 
 	// empty pattern
@@ -236,7 +236,7 @@ func (svc *Service) checkPattern() error {
 	return nil
 }
 
-func (svc *Service) checkInput(validators []validator.Type) error {
+func (svc *Endpoint) checkInput(validators []validator.Type) error {
 	// no parameter
 	if svc.Input == nil || len(svc.Input) < 1 {
 		svc.Input = map[string]*Parameter{}
@@ -284,7 +284,7 @@ func (svc *Service) checkInput(validators []validator.Type) error {
 	return nil
 }
 
-func (svc *Service) checkOutput(validators []validator.Type) error {
+func (svc *Endpoint) checkOutput(validators []validator.Type) error {
 	// no parameter
 	if svc.Output == nil || len(svc.Output) < 1 {
 		svc.Output = make(map[string]*Parameter, 0)
@@ -327,22 +327,22 @@ const (
 )
 
 // parseParam determines which param type it is from its name:
-// - `{paramName}` is an capture; it captures a segment of the uri defined in
-//    the pattern definition, e.g. `/some/path/with/{paramName}/somewhere`
-// - `GET@paramName` is an uri query that is received from the http query format
-//    in the uri, e.g. `http://domain.com/uri?paramName=paramValue&param2=value2`
-// - any other name that contains valid characters is considered a Form
-//   parameter; it is extracted from the http request's body as: json, multipart
-//   or using the x-www-form-urlencoded format.
+//   - `{paramName}` is an capture; it captures a segment of the uri defined in
+//     the pattern definition, e.g. `/some/path/with/{paramName}/somewhere`
+//   - `GET@paramName` is an uri query that is received from the http query format
+//     in the uri, e.g. `http://domain.com/uri?paramName=paramValue&param2=value2`
+//   - any other name that contains valid characters is considered a Form
+//     parameter; it is extracted from the http request's body as: json, multipart
+//     or using the x-www-form-urlencoded format.
 //
 // Special notes:
-// - capture params MUST be found in the pattern definition.
-// - capture params MUST NOT be optional as they are in the pattern anyways.
-// - capture and query params MUST be renamed because the `{param}` or
-//   `GET@param` name formats cannot be translated to a valid go exported name.
-//    c.f. the `dynfunc` package that creates a handler func() signature from
-//    the service definitions (i.e. input and output parameters).
-func (svc *Service) parseParam(name string, p *Parameter) (paramType, error) {
+//   - capture params MUST be found in the pattern definition.
+//   - capture params MUST NOT be optional as they are in the pattern anyways.
+//   - capture and query params MUST be renamed because the `{param}` or
+//     `GET@param` name formats cannot be translated to a valid go exported name.
+//     c.f. the `dynfunc` package that creates a handler func() signature from
+//     the service definitions (i.e. input and output parameters).
+func (svc *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
 	var (
 		captureMatches = captureRegex.FindAllStringSubmatch(name, -1)
 		isCapture      = len(captureMatches) > 0 && len(captureMatches[0]) > 1

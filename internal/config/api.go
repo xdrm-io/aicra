@@ -11,38 +11,15 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
-// Server definition
-type Server struct {
-	// Input type validators available
-	Input []validator.Type
-	// Output types (no-op) validators available
-	Output   []validator.Type
-	Services []*Service
-}
-
-// AddInputValidator makes a new type available for services "in". It must be
-// called before Parse() or will be ignored
-func (s *Server) AddInputValidator(v validator.Type) {
-	if s.Input == nil {
-		s.Input = make([]validator.Type, 0)
-	}
-	s.Input = append(s.Input, v)
-}
-
-// AddOutputValidator adds an available output no-op validator for services "out"
-// It only features a type name and a go type ; it must be called before Parse()
-// or will be ignored
-func (s *Server) AddOutputValidator(typename string, goType reflect.Type) {
-	if s.Output == nil {
-		s.Output = make([]validator.Type, 0)
-	}
-	s.Output = append(s.Output, noOp{name: typename, goType: goType})
+// API definition
+type API struct {
+	Endpoints []*Endpoint `json:"endpoints"`
 }
 
 // Parse a configuration into a server. Server.Validators must be set beforehand
 // to make datatypes available when checking and formatting the configuration.
-func (s *Server) Parse(r io.Reader) error {
-	err := json.NewDecoder(r).Decode(&s.Services)
+func (s *API) Parse(r io.Reader) error {
+	err := json.NewDecoder(r).Decode(&s.Endpoints)
 	if err != nil {
 		return fmt.Errorf("%s: %w", ErrRead, err)
 	}
@@ -54,12 +31,12 @@ func (s *Server) Parse(r io.Reader) error {
 	return nil
 }
 
-// validate all services
-func (s Server) validate() error {
-	for _, service := range s.Services {
-		err := service.validate(s.Input, s.Output)
+// validate all endpoints
+func (s API) validate() error {
+	for _, endpoint := range s.Endpoints {
+		err := endpoint.validate(s.Input, s.Output)
 		if err != nil {
-			return fmt.Errorf("%s %q: %w", service.Method, service.Pattern, err)
+			return fmt.Errorf("%s %q: %w", endpoint.Method, endpoint.Pattern, err)
 		}
 	}
 
@@ -69,47 +46,47 @@ func (s Server) validate() error {
 	return nil
 }
 
-// Find a service matching an incoming HTTP request
-func (s Server) Find(r *http.Request) *Service {
-	for _, service := range s.Services {
-		if matches := service.Match(r); matches {
-			return service
+// Find a endpoint matching an incoming HTTP request
+func (s API) Find(r *http.Request) *Endpoint {
+	for _, endpoint := range s.Endpoints {
+		if matches := endpoint.Match(r); matches {
+			return endpoint
 		}
 	}
 	return nil
 }
 
-// collide returns if there is collision between any service for the same method
-// and colliding paths. Note that service path collision detection relies on
+// collide returns if there is collision between any endpoint for the same method
+// and colliding paths. Note that endpoint path collision detection relies on
 // validators:
-//  - example 1: `/user/{id}` and `/user/articles` will not collide as {id} is
-//    an int and "articles" is not
-//  - example 2: `/user/{name}` and `/user/articles` will collide as {name} is
-//    a string so as "articles"
-//  - example 3: `/user/{name}` and `/user/{id}` will collide as {name} and {id}
-//    cannot be checked against their potential values
-func (s *Server) collide() error {
-	length := len(s.Services)
+//   - example 1: `/user/{id}` and `/user/articles` will not collide as {id} is
+//     an int and "articles" is not
+//   - example 2: `/user/{name}` and `/user/articles` will collide as {name} is
+//     a string so as "articles"
+//   - example 3: `/user/{name}` and `/user/{id}` will collide as {name} and {id}
+//     cannot be checked against their potential values
+func (s *API) collide() error {
+	length := len(s.Endpoints)
 
-	// for each service combination
+	// for each endpoint combination
 	for a := 0; a < length; a++ {
 		for b := a + 1; b < length; b++ {
-			aService := s.Services[a]
-			bService := s.Services[b]
+			aendpoint := s.Endpoints[a]
+			bendpoint := s.Endpoints[b]
 
-			if aService.Method != bService.Method {
+			if aendpoint.Method != bendpoint.Method {
 				continue
 			}
 
-			aURIParts := SplitURI(aService.Pattern)
-			bURIParts := SplitURI(bService.Pattern)
+			aURIParts := SplitURI(aendpoint.Pattern)
+			bURIParts := SplitURI(bendpoint.Pattern)
 			if len(aURIParts) != len(bURIParts) {
 				continue
 			}
 
-			err := checkURICollision(aURIParts, bURIParts, aService.Input, bService.Input)
+			err := checkURICollision(aURIParts, bURIParts, aendpoint.Input, bendpoint.Input)
 			if err != nil {
-				return fmt.Errorf("(%s %q) vs (%s %q): %w", aService.Method, aService.Pattern, bService.Method, bService.Pattern, err)
+				return fmt.Errorf("(%s %q) vs (%s %q): %w", aendpoint.Method, aendpoint.Pattern, bendpoint.Method, bendpoint.Pattern, err)
 			}
 		}
 	}
@@ -117,7 +94,7 @@ func (s *Server) collide() error {
 	return nil
 }
 
-// check if uri of services A and B collide
+// check if uri of endpoints A and B collide
 func checkURICollision(aURI, bURI []string, aInput, bInput map[string]*Parameter) error {
 	var err error
 

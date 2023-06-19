@@ -12,7 +12,7 @@ import (
 	"github.com/xdrm-io/aicra/internal/dynfunc"
 )
 
-type fakeConfig config.Service
+type fakeConfig config.Endpoint
 
 // builds a mock service with provided arguments as Input and matched as Output
 func (s *fakeConfig) withArgs(dtypes ...reflect.Type) *fakeConfig {
@@ -54,8 +54,8 @@ func (s *fakeSign) withArgs(dtypes ...reflect.Type) *fakeSign {
 	return s
 }
 
-func build[Req, Res any](fn dynfunc.HandlerFunc[Req, Res]) func(svc *config.Service) (dynfunc.Callable, error) {
-	return func(svc *config.Service) (dynfunc.Callable, error) {
+func build[Req, Res any](fn dynfunc.HandlerFunc[Req, Res]) func(svc *config.Endpoint) (dynfunc.Callable, error) {
+	return func(svc *config.Endpoint) (dynfunc.Callable, error) {
 		return dynfunc.Build(svc, fn)
 	}
 }
@@ -79,7 +79,7 @@ func TestInput(t *testing.T) {
 		name    string
 		conf    *fakeConfig // warps config.Service
 		hasCtx  bool
-		builder func(svc *config.Service) (dynfunc.Callable, error)
+		builder func(svc *config.Endpoint) (dynfunc.Callable, error)
 		in      []interface{}
 		out     []interface{}
 		err     error
@@ -178,7 +178,7 @@ func TestInput(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			callable, err := tc.builder((*config.Service)(tc.conf))
+			callable, err := tc.builder((*config.Endpoint)(tc.conf))
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -365,27 +365,27 @@ func TestBuild(t *testing.T) {
 
 	tt := []struct {
 		name    string
-		service config.Service
-		builder func(s *config.Service) (dynfunc.Callable, error)
+		service config.Endpoint
+		builder func(s *config.Endpoint) (dynfunc.Callable, error)
 		err     error
 	}{
 		{
 			// input already tested in signature.ValidateInput
 			name:    "unexpected input",
-			service: config.Service{},
+			service: config.Endpoint{},
 			builder: build(func(context.Context, struct{ Int int }) (*struct{}, error) { return nil, nil }),
 			err:     dynfunc.ErrUnexpectedFields,
 		},
 		{
 			// output already tested in signature.ValidateOutput
 			name:    "unexpected output",
-			service: config.Service{},
+			service: config.Endpoint{},
 			builder: build(func(context.Context, struct{}) (*struct{ Int int }, error) { return nil, nil }),
 			err:     dynfunc.ErrUnexpectedFields,
 		},
 		{
 			name:    "valid empty service",
-			service: config.Service{},
+			service: config.Endpoint{},
 			builder: build(func(context.Context, struct{}) (*struct{}, error) { return nil, nil }),
 			err:     nil,
 		},

@@ -16,7 +16,7 @@ type Signature struct {
 }
 
 // NewSignature builds the handler signature type from a service's configuration
-func NewSignature(service *config.Service) *Signature {
+func NewSignature(service *config.Endpoint) *Signature {
 	s := &Signature{
 		In:  make(map[string]reflect.Type, len(service.Input)),
 		Out: make(map[string]reflect.Type, len(service.Output)),

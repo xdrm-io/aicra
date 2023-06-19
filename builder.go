@@ -25,7 +25,7 @@ const (
 // Builder for an aicra server
 type Builder struct {
 	// the server configuration defining available services
-	conf *config.Server
+	conf *config.API
 	// respond func defines how to write data and error into an http response,
 	// defaults to `DefaultResponder`.
 	respond Responder
@@ -70,14 +70,16 @@ func (b *Builder) SetBodyLimit(size int64) {
 // Input adds an available validator for input arguments
 func (b *Builder) Input(t validator.Type) error {
 	if b.conf == nil {
-		b.conf = &config.Server{}
+		b.conf = &config.API{}
 	}
-	if b.conf.Services != nil {
+	if b.conf.Endpoints != nil {
 		return errLateType
 	}
 	b.conf.AddInputValidator(t)
 	return nil
 }
+
+type test uint
 
 // Output adds an type available for output arguments as well as a value example.
 // Some examples:
@@ -86,9 +88,9 @@ func (b *Builder) Input(t validator.Type) error {
 // - Output("users", []model.User{})
 func (b *Builder) Output(name string, sample interface{}) error {
 	if b.conf == nil {
-		b.conf = &config.Server{}
+		b.conf = &config.API{}
 	}
-	if b.conf.Services != nil {
+	if b.conf.Endpoints != nil {
 		return errLateType
 	}
 	b.conf.AddOutputValidator(name, reflect.TypeOf(sample))
@@ -135,9 +137,9 @@ func (b *Builder) WithContext(mw func(http.Handler) http.Handler) {
 // panics if already setup
 func (b *Builder) Setup(r io.Reader) error {
 	if b.conf == nil {
-		b.conf = &config.Server{}
+		b.conf = &config.API{}
 	}
-	if b.conf.Services != nil {
+	if b.conf.Endpoints != nil {
 		return errAlreadySetup
 	}
 	return b.conf.Parse(r)
@@ -145,13 +147,13 @@ func (b *Builder) Setup(r io.Reader) error {
 
 // Bind a dynamic handler to a REST service (method and pattern)
 func Bind[Req, Res any](b *Builder, method, path string, fn HandlerFunc[Req, Res]) error {
-	if b.conf == nil || b.conf.Services == nil {
+	if b.conf == nil || b.conf.Endpoints == nil {
 		return errNotSetup
 	}
 
 	// find associated service from config
-	var service *config.Service
-	for _, s := range b.conf.Services {
+	var service *config.Endpoint
+	for _, s := range b.conf.Endpoints {
 		if method == s.Method && path == s.Pattern {
 			service = s
 			break
@@ -189,7 +191,7 @@ func (b Builder) Build() (http.Handler, error) {
 		b.respond = DefaultResponder
 	}
 
-	for _, service := range b.conf.Services {
+	for _, service := range b.conf.Endpoints {
 		var isHandled bool
 		for _, handler := range b.handlers {
 			if handler.Method == service.Method && handler.Path == service.Pattern {
