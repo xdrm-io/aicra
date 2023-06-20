@@ -32,18 +32,6 @@ func main() {
 
 	var gen = Generator{cnf}
 
-	f, err = os.OpenFile(filepath.Join(args.GenFolderPath, "validators.go"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
-	if err != nil {
-		clifmt.Fprintf(os.Stderr, "${generate validators}(red) | %s\n", err)
-		os.Exit(1)
-	}
-	err = gen.WriteValidators(f)
-	f.Close()
-	if err != nil {
-		clifmt.Fprintf(os.Stderr, "${generate validators}(red) | %s\n", err)
-		os.Exit(1)
-	}
-
 	f, err = os.OpenFile(filepath.Join(args.GenFolderPath, "endpoints.go"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
 	if err != nil {
 		clifmt.Fprintf(os.Stderr, "${generate endpoints}(red) | %s\n", err)
@@ -53,18 +41,6 @@ func main() {
 	f.Close()
 	if err != nil {
 		clifmt.Fprintf(os.Stderr, "${generate endpoints}(red) | %s\n", err)
-		os.Exit(1)
-	}
-
-	f, err = os.OpenFile(filepath.Join(args.GenFolderPath, "mappers.go"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
-	if err != nil {
-		clifmt.Fprintf(os.Stderr, "${generate mappers}(red) | %s\n", err)
-		os.Exit(1)
-	}
-	err = gen.WriteMappers(f)
-	f.Close()
-	if err != nil {
-		clifmt.Fprintf(os.Stderr, "${generate mappers}(red) | %s\n", err)
 		os.Exit(1)
 	}
 
