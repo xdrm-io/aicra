@@ -1,15 +1,13 @@
 package validator
 
-// Bool makes the "bool" type available in the aicra configuration
-// It considers valid:
-// - booleans
-// - strings containing "true" or "false"
-// - []byte containing "true" or "false"
+// Bool considers valid
+// * booleans
+// * strings or []byte strictly equal to "true" or "false"
 type Bool struct{}
 
 // Validate implements Validator
-func (Bool) Validate(typename string) ExtractFunc[bool] {
-	if typename != "bool" {
+func (Bool) Validate(params []string) ExtractFunc[bool] {
+	if len(params) != 0 {
 		return nil
 	}
 	return func(value interface{}) (bool, bool) {

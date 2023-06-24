@@ -1,12 +1,11 @@
 package validator
 
-// Any makes the "any" type available in the aicra configuration
-// It considers valid any value
+// Any considers valid any value
 type Any struct{}
 
 // Validate implements Validator
-func (Any) Validate(typename string) ExtractFunc[any] {
-	if typename != "any" {
+func (Any) Validate(params []string) ExtractFunc[any] {
+	if len(params) != 0 {
 		return nil
 	}
 	return func(value interface{}) (any, bool) {

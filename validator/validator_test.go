@@ -8,9 +8,9 @@ import (
 )
 
 type testCase[T any] struct {
-	name     string
-	typename string
-	value    interface{}
+	name   string
+	params []string
+	value  interface{}
 
 	match     bool
 	valid     bool
@@ -20,7 +20,7 @@ type testCase[T any] struct {
 func testValidator[T any](t *testing.T, validator validator.Validator[T], tt []testCase[T]) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			extractor := validator.Validate(tc.typename)
+			extractor := validator.Validate(tc.params)
 			require.Equal(t, tc.match, extractor != nil, "match")
 			if !tc.match {
 				return
