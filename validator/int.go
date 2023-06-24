@@ -1,46 +1,50 @@
 package validator
 
 import (
-	"math"
-	"reflect"
 	"strconv"
 )
 
-// IntType makes the "int" type available in the aicra configuration
+// Int makes the "int" type available in the aicra configuration
 // It considers valid:
 // - int
 // - float64 (since it does not overflow)
 // - uint (since it does not overflow)
 // - strings containing json-compatible integers
 // - []byte containing json-compatible integers
-type IntType struct{}
+type Int struct{}
 
-// GoType returns the `int` type
-func (IntType) GoType() reflect.Type {
-	return reflect.TypeOf(int(0))
-}
-
-// Validator for int values
-func (IntType) Validator(typename string, avail ...Type) ValidateFunc {
-	// nothing if type not handled
+// Validate implements Validator
+func (Int) Validate(typename string) ExtractFunc[int] {
 	if typename != "int" {
 		return nil
 	}
-
-	return func(value interface{}) (interface{}, bool) {
+	return func(value interface{}) (int, bool) {
 		switch cast := value.(type) {
 
 		case int:
-			return cast, true
-
+			return castNumber[int, int](cast)
+		case int8:
+			return castNumber[int8, int](cast)
+		case int16:
+			return castNumber[int16, int](cast)
+		case int32:
+			return castNumber[int32, int](cast)
+		case int64:
+			return castNumber[int64, int](cast)
 		case uint:
-			overflows := cast > math.MaxInt64
-			return int(cast), !overflows
-
+			return castNumber[uint, int](cast)
+		case uint8:
+			return castNumber[uint8, int](cast)
+		case uint16:
+			return castNumber[uint16, int](cast)
+		case uint32:
+			return castNumber[uint32, int](cast)
+		case uint64:
+			return castNumber[uint64, int](cast)
+		case float32:
+			return castNumber[float32, int](cast)
 		case float64:
-			intVal := int(cast)
-			overflows := cast < float64(math.MinInt64) || cast > float64(math.MaxInt64)
-			return intVal, cast == float64(intVal) && !overflows
+			return castNumber[float64, int](cast)
 
 			// serialized string -> try to convert to int
 		case string:

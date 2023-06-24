@@ -1,115 +1,37 @@
 package validator_test
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
 
-func TestBool_ReflectType(t *testing.T) {
+func TestBool(t *testing.T) {
 	t.Parallel()
 
-	var (
-		dt       = validator.BoolType{}
-		expected = reflect.TypeOf(true)
-	)
-	if dt.GoType() != expected {
-		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
-	}
-}
+	testValidator[bool](t, validator.Bool{}, []testCase[bool]{
+		{name: "type BOOL fail", typename: "BOOL", match: false},
+		{name: "type Bool fail", typename: "Bool", match: false},
+		{name: "type ' bool ' fail", typename: " bool ", match: false},
 
-func TestBool_AvailableTypes(t *testing.T) {
-	t.Parallel()
+		{name: "true ok", typename: "bool", value: true, match: true, valid: true, extracted: true},
+		{name: "false ok", typename: "bool", value: false, match: true, valid: true, extracted: false},
 
-	dt := validator.BoolType{}
+		{name: "true json string ok", typename: "bool", value: "true", match: true, valid: true, extracted: true},
+		{name: "false json string ok", typename: "bool", value: "false", match: true, valid: true, extracted: false},
 
-	tests := []struct {
-		Type    string
-		Handled bool
-	}{
-		{"bool", true},
-		{"Bool", false},
-		{"boolean", false},
-		{" bool", false},
-		{"bool ", false},
-		{" bool ", false},
-	}
+		{name: "true []byte ok", typename: "bool", value: []byte("true"), match: true, valid: true, extracted: true},
+		{name: "false []byte ok", typename: "bool", value: []byte("false"), match: true, valid: true, extracted: false},
 
-	for _, test := range tests {
-		t.Run(test.Type, func(t *testing.T) {
-			validator := dt.Validator(test.Type)
-			if validator == nil {
-				if test.Handled {
-					t.Errorf("expect %q to be handled", test.Type)
-					t.Fail()
-				}
-				return
-			}
+		{name: "1 invalid", typename: "bool", value: 1, match: true, valid: false},
+		{name: "0 invalid", typename: "bool", value: 0, match: true, valid: false},
+		{name: "-1 invalid", typename: "bool", value: -1, match: true, valid: false},
 
-			if !test.Handled {
-				t.Errorf("expect %q NOT to be handled", test.Type)
-				t.Fail()
-			}
-		})
-	}
+		{name: "1 json string invalid", typename: "bool", value: "1", match: true, valid: false},
+		{name: "0 json string invalid", typename: "bool", value: "0", match: true, valid: false},
+		{name: "-1 json string invalid", typename: "bool", value: "-1", match: true, valid: false},
 
-}
-
-func TestBool_Values(t *testing.T) {
-	t.Parallel()
-
-	const typeName = "bool"
-
-	validator := validator.BoolType{}.Validator(typeName)
-	if validator == nil {
-		t.Errorf("expect %q to be handled", typeName)
-		t.Fail()
-	}
-
-	tests := []struct {
-		Value interface{}
-		Valid bool
-	}{
-		{true, true},
-		{false, true},
-		{1, false},
-		{0, false},
-		{-1, false},
-
-		// json number
-		{"-1", false},
-		{"0", false},
-		{"1", false},
-
-		// json string
-		{"true", true},
-		{"false", true},
-		{[]byte("true"), true},
-		{[]byte("false"), true},
-
-		{"string", false},
-		{[]byte("bytes"), false},
-		{-0.1, false},
-		{0.1, false},
-		{nil, false},
-	}
-
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			if _, isValid := validator(test.Value); isValid {
-				if !test.Valid {
-					t.Errorf("expect value to be invalid")
-					t.Fail()
-				}
-				return
-			}
-			if test.Valid {
-				t.Errorf("expect value to be valid")
-				t.Fail()
-			}
-		})
-	}
-
+		{name: "nil invalid", typename: "bool", value: nil, match: true, valid: false},
+		{name: "struct invalid", typename: "bool", value: struct{}{}, match: true, valid: false},
+	})
 }
