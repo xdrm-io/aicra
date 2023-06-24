@@ -1,86 +1,36 @@
 package validator_test
 
 import (
-	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
 
-func TestAny_ReflectType(t *testing.T) {
+func TestAny(t *testing.T) {
 	t.Parallel()
 
-	var (
-		dt       = validator.AnyType{}
-		expected = reflect.TypeOf(interface{}(nil))
-	)
-	if dt.GoType() != expected {
-		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
-	}
-}
-
-func TestAny_AvailableTypes(t *testing.T) {
-	t.Parallel()
-
-	dt := validator.AnyType{}
-
-	tests := []struct {
-		Type    string
-		Handled bool
-	}{
-		{"any", true},
-		{" any", false},
-		{"any ", false},
-		{" any ", false},
-		{"Any", false},
-		{"ANY", false},
-		{"anything-else", false},
+	type custom struct {
+		A uint
+		B bool
 	}
 
-	for _, test := range tests {
-		validator := dt.Validator(test.Type)
+	testValidator[any](t, validator.Any{}, []testCase[any]{
+		{name: "type ANY fail", typename: "ANY", match: false},
+		{name: "type Any fail", typename: "Any", match: false},
+		{name: "type ' any ' fail", typename: " any ", match: false},
 
-		if validator == nil {
-			if test.Handled {
-				t.Errorf("expect %q to be handled", test.Type)
-			}
-			continue
-		}
+		{name: "true ok", typename: "any", value: true, match: true, valid: true, extracted: true},
+		{name: "false ok", typename: "any", value: false, match: true, valid: true, extracted: false},
 
-		if !test.Handled {
-			t.Errorf("expect %q NOT to be handled", test.Type)
-		}
-	}
+		{name: "1 ok", typename: "any", value: 1, match: true, valid: true, extracted: 1},
+		{name: "0 ok", typename: "any", value: 0, match: true, valid: true, extracted: 0},
+		{name: "-1 ok", typename: "any", value: -1, match: true, valid: true, extracted: -1},
+		{name: "1.23 ok", typename: "any", value: 1.23, match: true, valid: true, extracted: 1.23},
+		{name: "string ok", typename: "any", value: "string", match: true, valid: true, extracted: "string"},
+		{name: "bytes ok", typename: "any", value: []byte{1, 2, 3}, match: true, valid: true, extracted: []byte{1, 2, 3}},
 
-}
-
-func TestAny_AlwaysTrue(t *testing.T) {
-	t.Parallel()
-
-	const typeName = "any"
-
-	validator := validator.AnyType{}.Validator(typeName)
-	if validator == nil {
-		t.Errorf("expect %q to be handled", typeName)
-		t.Fail()
-	}
-
-	values := []interface{}{
-		1,
-		0.1,
-		nil,
-		"string",
-		[]byte("bytes"),
-	}
-
-	for i, value := range values {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			if _, isValid := validator(value); !isValid {
-				t.Errorf("expect value to be valid")
-				t.Fail()
-			}
-		})
-	}
-
+		{name: "nil ok", typename: "any", value: nil, match: true, valid: true, extracted: nil},
+		{name: "struct ok", typename: "any", value: struct{}{}, match: true, valid: true, extracted: struct{}{}},
+		{name: "custom struct ok", typename: "any", value: custom{A: 123, B: true}, match: true, valid: true, extracted: custom{A: 123, B: true}},
+	})
 }
