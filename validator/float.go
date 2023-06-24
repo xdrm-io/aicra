@@ -4,18 +4,17 @@ import (
 	"strconv"
 )
 
-// Float makes the "float" (or "float64") type available in the aicra configuration
-// It considers valid:
-// - float64
-// - int (since it does not overflow)
-// - uint (since it does not overflow)
-// - strings containing json-compatible floats
-// - []byte containing json-compatible floats
+// Float considers valid:
+// * float64
+// * int (since it does not overflow)
+// * uint (since it does not overflow)
+// * strings containing json-compatible floats
+// * []byte containing json-compatible floats
 type Float struct{}
 
 // Validate implements Validator
-func (Float) Validate(typename string) ExtractFunc[float64] {
-	if typename != "float64" && typename != "float" {
+func (Float) Validate(params []string) ExtractFunc[float64] {
+	if len(params) != 0 {
 		return nil
 	}
 	return func(value interface{}) (float64, bool) {

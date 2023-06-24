@@ -4,18 +4,17 @@ import (
 	"strconv"
 )
 
-// Uint makes the "uint" type available in the aicra configuration
-// It considers valid:
-// - uint
-// - int (since it does not overflow)
-// - float64 (since it does not overflow)
-// - strings containing json-compatible integers
-// - []byte containing json-compatible integers
+// Uint considers valid:
+// * uint
+// * int (since it does not overflow)
+// * float64 (since it does not overflow)
+// * strings containing json-compatible integers
+// * []byte containing json-compatible integers
 type Uint struct{}
 
 // Validate implements Validator for uint values
-func (Uint) Validate(other string) ExtractFunc[uint] {
-	if other != "uint" {
+func (Uint) Validate(params []string) ExtractFunc[uint] {
+	if len(params) != 0 {
 		return nil
 	}
 

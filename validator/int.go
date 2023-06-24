@@ -4,18 +4,17 @@ import (
 	"strconv"
 )
 
-// Int makes the "int" type available in the aicra configuration
-// It considers valid:
-// - int
-// - float64 (since it does not overflow)
-// - uint (since it does not overflow)
-// - strings containing json-compatible integers
-// - []byte containing json-compatible integers
+// Int considers valid:
+// * int
+// * float64 (since it does not overflow)
+// * uint (since it does not overflow)
+// * strings containing json-compatible integers
+// * []byte containing json-compatible integers
 type Int struct{}
 
 // Validate implements Validator
-func (Int) Validate(typename string) ExtractFunc[int] {
-	if typename != "int" {
+func (Int) Validate(params []string) ExtractFunc[int] {
+	if len(params) != 0 {
 		return nil
 	}
 	return func(value interface{}) (int, bool) {
