@@ -5,21 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 )
 
 var (
-	captureRegex         = regexp.MustCompile(`^{([A-Za-z_-]+)}$`)
-	queryRegex           = regexp.MustCompile(`^GET@([A-Za-z_-]+)$`)
-	availableHTTPMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+	captureRe    = regexp.MustCompile(`^{([A-Za-z_-]+)}$`)
+	queryRe      = regexp.MustCompile(`^GET@([A-Za-z_-]+)$`)
+	formRe       = regexp.MustCompile(`^[A-Za-z0-9 \.\(\)\$\+_-]+$`)
+	availMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
 )
-
-// ScopeVar lists all scope positions that need to be replaced with an uri input
-type ScopeVar struct {
-	CaptureName string
-	Position    [2]int
-}
 
 // Endpoint definition
 type Endpoint struct {
@@ -35,28 +31,15 @@ type Endpoint struct {
 	// The format for those parameter names is "{paramName}"
 	Captures []*BraceCapture `json:"-"`
 
-	// Query contains references to HTTP Query parameters from the `Input` map.
-	// Query parameters names are "GET@paramName", this map contains escaped
-	// names, e.g. "paramName"
-	Query map[string]*Parameter `json:"-"`
-
-	// Form references form parameters from the `Input` map (all but Captures
-	// and Query).
-	Form map[string]*Parameter `json:"-"`
-
-	// Pattern uri fragments (c.f. SplitURL)
+	// Pattern uri fragments
 	fragments []string `json:"-"`
-
-	// lists scope variables to be replaced
-	// 'varName' -> [index, subindex]
-	ScopeVars []ScopeVar `json:"-"`
 }
 
 // BraceCapture links to the related URI parameter
 type BraceCapture struct {
-	Name  string
-	Index int
-	Ref   *Parameter
+	Name    string
+	Index   int
+	Defined bool
 }
 
 // UnmarshalJSON with custom validation
@@ -118,7 +101,7 @@ func (e *Endpoint) validate() error {
 
 	// fail when a brace capture remains undefined
 	for _, capture := range e.Captures {
-		if capture.Ref == nil {
+		if !capture.Defined {
 			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrBraceCaptureUndefined)
 		}
 	}
@@ -126,7 +109,6 @@ func (e *Endpoint) validate() error {
 	if err != nil {
 		return fmt.Errorf("field 'out': %w", err)
 	}
-	e.cleanScope()
 	return nil
 }
 
@@ -150,7 +132,6 @@ func (e *Endpoint) matchPattern(uri string) bool {
 	// check part by part
 	for i, fragment := range e.fragments {
 		part := fragments[i]
-
 		isCapture := len(fragment) > 0 && fragment[0] == '{'
 
 		// if no capture -> check equality
@@ -160,8 +141,7 @@ func (e *Endpoint) matchPattern(uri string) bool {
 			}
 			continue
 		}
-		param, exists := e.Input[fragment]
-		if !exists || param == nil {
+		if param, exists := e.Input[fragment]; !exists || param == nil {
 			return false
 		}
 	}
@@ -180,40 +160,12 @@ func (e *Endpoint) Validate(avail Validators) error {
 }
 
 func (e *Endpoint) checkMethod() error {
-	for _, available := range availableHTTPMethods {
-		if e.Method == available {
+	for _, avail := range availMethods {
+		if e.Method == avail {
 			return nil
 		}
 	}
 	return ErrMethodUnknown
-}
-
-// cleanScope simplifies empty scopes and marks
-func (e *Endpoint) cleanScope() {
-	// transform [[]] into []
-	if len(e.Scope) == 1 && len(e.Scope[0]) < 1 {
-		e.Scope = [][]string{}
-	}
-
-	if len(e.Captures) < 1 {
-		return
-	}
-
-	// check if dynamic variables are used in the scope
-	e.ScopeVars = make([]ScopeVar, 0, len(e.Captures))
-	for a, list := range e.Scope {
-		for b, perm := range list {
-			for _, capture := range e.Captures {
-				token := fmt.Sprintf("[%s]", capture.Ref.Rename)
-				if strings.Contains(perm, token) {
-					e.ScopeVars = append(e.ScopeVars, ScopeVar{
-						CaptureName: capture.Ref.Rename,
-						Position:    [2]int{a, b},
-					})
-				}
-			}
-		}
-	}
 }
 
 // checkPattern checks for the validity of the pattern definition (i.e. the uri)
@@ -240,14 +192,14 @@ func (e *Endpoint) checkPattern() error {
 
 	// for each slash-separated chunk
 	e.fragments = URIFragments(e.Pattern)
-	for i, part := range e.fragments {
-		if len(part) < 1 {
+	for i, fragment := range e.fragments {
+		if len(fragment) < 1 {
 			return ErrPatternInvalid
 		}
 
 		// if brace capture
-		if matches := captureRegex.FindAllStringSubmatch(part, -1); len(matches) > 0 && len(matches[0]) > 1 {
-			braceName := matches[0][1]
+		if matches := captureRe.FindStringSubmatch(fragment); len(matches) > 1 {
+			braceName := matches[1]
 
 			// append
 			if e.Captures == nil {
@@ -256,13 +208,12 @@ func (e *Endpoint) checkPattern() error {
 			e.Captures = append(e.Captures, &BraceCapture{
 				Index: i,
 				Name:  braceName,
-				Ref:   nil,
 			})
 			continue
 		}
 
 		// fail on invalid format
-		if strings.ContainsAny(part, "{}") {
+		if strings.ContainsAny(fragment, "{}") {
 			return ErrPatternInvalidBraceCapture
 		}
 	}
@@ -285,23 +236,23 @@ func (e *Endpoint) checkInput() error {
 
 		// parse parameters: capture (uri), query or form and update the service
 		// attributes accordingly
-		ptype, err := e.parseParam(name, p)
+		err := e.parseParam(name, p)
 		if err != nil {
 			return err
 		}
 
 		// Rename mandatory for capture and query
-		if len(p.Rename) < 1 && (ptype == captureParam || ptype == queryParam) {
+		if p.Rename == "" && (p.Kind == KindURI || p.Kind == KindQuery) {
 			return fmt.Errorf("%s: %w", name, ErrRenameMandatory)
 		}
 
 		// fallback to name when Rename is not provided
-		if len(p.Rename) < 1 {
+		if p.Rename == "" {
 			p.Rename = name
 		}
 
 		// capture parameter cannot be optional
-		if p.Optional && ptype == captureParam {
+		if p.Optional && p.Kind == KindURI {
 			return fmt.Errorf("%s: %w", name, ErrParamOptionalIllegalURI)
 		}
 
@@ -321,12 +272,12 @@ func (e *Endpoint) checkOutput() error {
 	}
 
 	for name, p := range e.Output {
-		if len(name) < 1 {
+		if name == "" {
 			return fmt.Errorf("%s: %w", name, ErrParamNameIllegal)
 		}
 
 		// fallback to name when Rename is not provided
-		if len(p.Rename) < 1 {
+		if p.Rename == "" {
 			p.Rename = name
 		}
 
@@ -340,14 +291,6 @@ func (e *Endpoint) checkOutput() error {
 	}
 	return nil
 }
-
-type paramType int
-
-const (
-	captureParam paramType = iota
-	queryParam
-	formParam
-)
 
 // parseParam determines which param type it is from its name:
 //   - `{paramName}` is an capture; it captures a segment of the uri defined in
@@ -365,52 +308,39 @@ const (
 //     `GET@param` name formats cannot be translated to a valid go exported name.
 //     c.f. the `dynfunc` package that creates a handler func() signature from
 //     the service definitions (i.e. input and output parameters).
-func (e *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
-	var (
-		captureMatches = captureRegex.FindAllStringSubmatch(name, -1)
-		isCapture      = len(captureMatches) > 0 && len(captureMatches[0]) > 1
-	)
-
+func (e *Endpoint) parseParam(name string, p *Parameter) error {
 	// Parameter is a capture (uri/{param})
-	if isCapture {
-		captureName := captureMatches[0][1]
+	if match := captureRe.FindStringSubmatch(name); len(match) > 1 {
+		p.Kind = KindURI
 
 		// fail if brace capture does not exists in pattern
-		found := false
-		for _, capture := range e.Captures {
-			if capture.Name == captureName {
-				capture.Ref = p
+		var found bool
+		for i, capture := range e.Captures {
+			if capture.Name == match[1] {
+				capture.Defined = true
+				p.ExtractName = strconv.FormatInt(int64(i), 10)
 				found = true
 				break
 			}
 		}
 		if !found {
-			return captureParam, fmt.Errorf("%s: %w", name, ErrBraceCaptureUnspecified)
+			return fmt.Errorf("%s: %w", name, ErrBraceCaptureUnspecified)
 		}
-		return captureParam, nil
+		return nil
 	}
 
-	var (
-		queryMatches = queryRegex.FindAllStringSubmatch(name, -1)
-		isQuery      = len(queryMatches) > 0 && len(queryMatches[0]) > 1
-	)
-
-	// Parameter is a query (uri?param)
-	if isQuery {
-		queryName := queryMatches[0][1]
-		if e.Query == nil {
-			e.Query = make(map[string]*Parameter)
-		}
-		e.Query[queryName] = p
-		return queryParam, nil
+	if match := queryRe.FindStringSubmatch(name); len(match) > 1 {
+		p.Kind = KindQuery
+		p.ExtractName = match[1]
+		return nil
 	}
 
-	// Parameter is a form param
-	if e.Form == nil {
-		e.Form = make(map[string]*Parameter)
+	if match := formRe.MatchString(name); !match {
+		return ErrParamNameIllegal
 	}
-	e.Form[name] = p
-	return formParam, nil
+	p.Kind = KindForm
+	p.ExtractName = name
+	return nil
 }
 
 // nameConflicts returns whether ar given parameter has its name or Rename field

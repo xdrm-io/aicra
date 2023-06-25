@@ -39,7 +39,7 @@ func (s API) validate() error {
 		return ErrPackageMissing
 	}
 
-	var builtin = []string{"fmt", "context", "http", "aicra", "validator"}
+	var builtin = []string{"fmt", "context", "http", "aicra", "builtin", "runtime"}
 	var uniqPath = map[string]struct{}{}
 	for alias, path := range s.Imports {
 		if !importNameRe.MatchString(alias) {
