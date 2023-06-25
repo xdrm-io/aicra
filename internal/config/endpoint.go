@@ -1,12 +1,12 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/xdrm-io/aicra/validator"
+	"unicode"
 )
 
 var (
@@ -23,6 +23,7 @@ type ScopeVar struct {
 
 // Endpoint definition
 type Endpoint struct {
+	Name        string                `json:"name"`
 	Method      string                `json:"method"`
 	Pattern     string                `json:"path"`
 	Scope       [][]string            `json:"scope"`
@@ -32,23 +33,23 @@ type Endpoint struct {
 
 	// Captures contains references to URI parameters from the `Input` map.
 	// The format for those parameter names is "{paramName}"
-	Captures []*BraceCapture
+	Captures []*BraceCapture `json:"-"`
 
 	// Query contains references to HTTP Query parameters from the `Input` map.
 	// Query parameters names are "GET@paramName", this map contains escaped
 	// names, e.g. "paramName"
-	Query map[string]*Parameter
+	Query map[string]*Parameter `json:"-"`
 
 	// Form references form parameters from the `Input` map (all but Captures
 	// and Query).
-	Form map[string]*Parameter
+	Form map[string]*Parameter `json:"-"`
 
-	// Pattern uri parts (c.f. SplitURL)
-	parts []string
+	// Pattern uri fragments (c.f. SplitURL)
+	fragments []string `json:"-"`
 
 	// lists scope variables to be replaced
 	// 'varName' -> [index, subindex]
-	ScopeVars []ScopeVar
+	ScopeVars []ScopeVar `json:"-"`
 }
 
 // BraceCapture links to the related URI parameter
@@ -58,47 +59,109 @@ type BraceCapture struct {
 	Ref   *Parameter
 }
 
+// UnmarshalJSON with custom validation
+func (e *Endpoint) UnmarshalJSON(b []byte) error {
+	type receiver Endpoint
+	var r receiver
+	if err := json.Unmarshal(b, &r); err != nil {
+		return fmt.Errorf("%s %s: %w", r.Method, r.Pattern, err)
+	}
+
+	e.Name = r.Name
+	e.Method = r.Method
+	e.Pattern = r.Pattern
+	e.Scope = r.Scope
+	e.Description = r.Description
+	e.Input = r.Input
+	e.Output = r.Output
+
+	if err := e.validate(); err != nil {
+		return fmt.Errorf("%s %s: %w", r.Method, r.Pattern, err)
+	}
+	return nil
+}
+
+var nameRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9_-]*$`)
+
+// validate the service configuration
+func (e *Endpoint) validate() error {
+	err := e.checkMethod()
+	if err != nil {
+		return fmt.Errorf("field 'method': %w", err)
+	}
+
+	e.Pattern = strings.Trim(e.Pattern, " \t\r\n")
+	err = e.checkPattern()
+	if err != nil {
+		return fmt.Errorf("field 'path': %w", err)
+	}
+
+	// starts with an uppercase letter
+	if len(e.Name) < 1 {
+		return fmt.Errorf("field 'name': %w", ErrNameMissing)
+	}
+	if !unicode.IsUpper(rune(e.Name[0])) {
+		return fmt.Errorf("field 'name': %w", ErrNameUnexported)
+	}
+	if !nameRe.MatchString(e.Name) {
+		return fmt.Errorf("field 'name': %w", ErrNameInvalid)
+	}
+
+	if len(e.Description) < 1 {
+		return fmt.Errorf("field 'description': %w", ErrDescMissing)
+	}
+
+	err = e.checkInput()
+	if err != nil {
+		return fmt.Errorf("field 'in': %w", err)
+	}
+
+	// fail when a brace capture remains undefined
+	for _, capture := range e.Captures {
+		if capture.Ref == nil {
+			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrBraceCaptureUndefined)
+		}
+	}
+	err = e.checkOutput()
+	if err != nil {
+		return fmt.Errorf("field 'out': %w", err)
+	}
+	e.cleanScope()
+	return nil
+}
+
 // Match returns if this service would handle this HTTP request
-func (svc *Endpoint) Match(req *http.Request) bool {
-	return req.Method == svc.Method && svc.matchPattern(req.URL.Path)
+func (e *Endpoint) Match(req *http.Request) bool {
+	return req.Method == e.Method && e.matchPattern(req.URL.Path)
 }
 
 // checks if an uri matches the service's pattern
-func (svc *Endpoint) matchPattern(uri string) bool {
-	var parts = SplitURI(uri)
-
-	if len(parts) != len(svc.parts) {
+func (e *Endpoint) matchPattern(uri string) bool {
+	var fragments = URIFragments(uri)
+	if len(fragments) != len(e.fragments) {
 		return false
 	}
 
 	// root url '/'
-	if len(svc.parts) == 0 && len(parts) == 0 {
+	if len(e.fragments) == 0 && len(fragments) == 0 {
 		return true
 	}
 
 	// check part by part
-	for i, part := range svc.parts {
-		uripart := parts[i]
+	for i, fragment := range e.fragments {
+		part := fragments[i]
 
-		isCapture := len(part) > 0 && part[0] == '{'
+		isCapture := len(fragment) > 0 && fragment[0] == '{'
 
 		// if no capture -> check equality
 		if !isCapture {
-			if part != uripart {
+			if fragment != part {
 				return false
 			}
 			continue
 		}
-
-		param, exists := svc.Input[part]
-
-		// fail if no validator
-		if !exists || param.Validator == nil {
-			return false
-		}
-
-		// fail if not type-valid
-		if _, valid := param.Validator(uripart); !valid {
+		param, exists := e.Input[fragment]
+		if !exists || param == nil {
 			return false
 		}
 	}
@@ -106,73 +169,44 @@ func (svc *Endpoint) matchPattern(uri string) bool {
 	return true
 }
 
-// validate the service configuration
-func (svc *Endpoint) validate(input []validator.Type, output []validator.Type) error {
-	err := svc.checkMethod()
-	if err != nil {
-		return fmt.Errorf("field 'method': %w", err)
-	}
-
-	svc.Pattern = strings.Trim(svc.Pattern, " \t\r\n")
-	err = svc.checkPattern()
-	if err != nil {
-		return fmt.Errorf("field 'path': %w", err)
-	}
-
-	if len(strings.Trim(svc.Description, " \t\r\n")) < 1 {
-		return fmt.Errorf("field 'description': %w", ErrMissingDescription)
-	}
-
-	err = svc.checkInput(input)
-	if err != nil {
-		return fmt.Errorf("field 'in': %w", err)
-	}
-
-	// fail when a brace capture remains undefined
-	for _, capture := range svc.Captures {
-		if capture.Ref == nil {
-			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrUndefinedBraceCapture)
+// Validate the endpoint configuration with code-generated validators
+func (e *Endpoint) Validate(avail Validators) error {
+	for name, param := range e.Input {
+		if err := param.Validate(avail); err != nil {
+			return fmt.Errorf("field 'in': '%s': %w", name, err)
 		}
 	}
-
-	err = svc.checkOutput(output)
-	if err != nil {
-		return fmt.Errorf("field 'out': %w", err)
-	}
-
-	svc.cleanScope()
-
 	return nil
 }
 
-func (svc *Endpoint) checkMethod() error {
+func (e *Endpoint) checkMethod() error {
 	for _, available := range availableHTTPMethods {
-		if svc.Method == available {
+		if e.Method == available {
 			return nil
 		}
 	}
-	return ErrUnknownMethod
+	return ErrMethodUnknown
 }
 
 // cleanScope simplifies empty scopes and marks
-func (svc *Endpoint) cleanScope() {
+func (e *Endpoint) cleanScope() {
 	// transform [[]] into []
-	if len(svc.Scope) == 1 && len(svc.Scope[0]) < 1 {
-		svc.Scope = [][]string{}
+	if len(e.Scope) == 1 && len(e.Scope[0]) < 1 {
+		e.Scope = [][]string{}
 	}
 
-	if len(svc.Captures) < 1 {
+	if len(e.Captures) < 1 {
 		return
 	}
 
 	// check if dynamic variables are used in the scope
-	svc.ScopeVars = make([]ScopeVar, 0, len(svc.Captures))
-	for a, list := range svc.Scope {
+	e.ScopeVars = make([]ScopeVar, 0, len(e.Captures))
+	for a, list := range e.Scope {
 		for b, perm := range list {
-			for _, capture := range svc.Captures {
+			for _, capture := range e.Captures {
 				token := fmt.Sprintf("[%s]", capture.Ref.Rename)
 				if strings.Contains(perm, token) {
-					svc.ScopeVars = append(svc.ScopeVars, ScopeVar{
+					e.ScopeVars = append(e.ScopeVars, ScopeVar{
 						CaptureName: capture.Ref.Rename,
 						Position:    [2]int{a, b},
 					})
@@ -189,26 +223,26 @@ func (svc *Endpoint) cleanScope() {
 //
 // This methods sets up the service state with adding capture params that are
 // expected; checkInputs() will be able to check params against pattern captures
-func (svc *Endpoint) checkPattern() error {
-	length := len(svc.Pattern)
+func (e *Endpoint) checkPattern() error {
+	length := len(e.Pattern)
 
 	// empty pattern
 	if length < 1 {
-		return ErrInvalidPattern
+		return ErrPatternInvalid
 	}
 
 	if length > 1 {
 		// pattern not starting with '/' or ending with '/'
-		if svc.Pattern[0] != '/' || svc.Pattern[length-1] == '/' {
-			return ErrInvalidPattern
+		if e.Pattern[0] != '/' || e.Pattern[length-1] == '/' {
+			return ErrPatternInvalid
 		}
 	}
 
 	// for each slash-separated chunk
-	svc.parts = SplitURI(svc.Pattern)
-	for i, part := range svc.parts {
+	e.fragments = URIFragments(e.Pattern)
+	for i, part := range e.fragments {
 		if len(part) < 1 {
-			return ErrInvalidPattern
+			return ErrPatternInvalid
 		}
 
 		// if brace capture
@@ -216,10 +250,10 @@ func (svc *Endpoint) checkPattern() error {
 			braceName := matches[0][1]
 
 			// append
-			if svc.Captures == nil {
-				svc.Captures = make([]*BraceCapture, 0)
+			if e.Captures == nil {
+				e.Captures = make([]*BraceCapture, 0)
 			}
-			svc.Captures = append(svc.Captures, &BraceCapture{
+			e.Captures = append(e.Captures, &BraceCapture{
 				Index: i,
 				Name:  braceName,
 				Ref:   nil,
@@ -229,36 +263,36 @@ func (svc *Endpoint) checkPattern() error {
 
 		// fail on invalid format
 		if strings.ContainsAny(part, "{}") {
-			return ErrInvalidPatternBraceCapture
+			return ErrPatternInvalidBraceCapture
 		}
 	}
 
 	return nil
 }
 
-func (svc *Endpoint) checkInput(validators []validator.Type) error {
+func (e *Endpoint) checkInput() error {
 	// no parameter
-	if svc.Input == nil || len(svc.Input) < 1 {
-		svc.Input = map[string]*Parameter{}
+	if e.Input == nil || len(e.Input) < 1 {
+		e.Input = map[string]*Parameter{}
 		return nil
 	}
 
 	// for each parameter
-	for name, p := range svc.Input {
+	for name, p := range e.Input {
 		if len(name) < 1 {
-			return fmt.Errorf("%s: %w", name, ErrIllegalParamName)
+			return fmt.Errorf("%s: %w", name, ErrParamNameIllegal)
 		}
 
 		// parse parameters: capture (uri), query or form and update the service
 		// attributes accordingly
-		ptype, err := svc.parseParam(name, p)
+		ptype, err := e.parseParam(name, p)
 		if err != nil {
 			return err
 		}
 
 		// Rename mandatory for capture and query
 		if len(p.Rename) < 1 && (ptype == captureParam || ptype == queryParam) {
-			return fmt.Errorf("%s: %w", name, ErrMandatoryRename)
+			return fmt.Errorf("%s: %w", name, ErrRenameMandatory)
 		}
 
 		// fallback to name when Rename is not provided
@@ -266,17 +300,12 @@ func (svc *Endpoint) checkInput(validators []validator.Type) error {
 			p.Rename = name
 		}
 
-		err = p.validate(validators...)
-		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-
 		// capture parameter cannot be optional
 		if p.Optional && ptype == captureParam {
-			return fmt.Errorf("%s: %w", name, ErrIllegalOptionalURIParam)
+			return fmt.Errorf("%s: %w", name, ErrParamOptionalIllegalURI)
 		}
 
-		err = nameConflicts(name, p, svc.Input)
+		err = nameConflicts(name, p, e.Input)
 		if err != nil {
 			return err
 		}
@@ -284,16 +313,16 @@ func (svc *Endpoint) checkInput(validators []validator.Type) error {
 	return nil
 }
 
-func (svc *Endpoint) checkOutput(validators []validator.Type) error {
+func (e *Endpoint) checkOutput() error {
 	// no parameter
-	if svc.Output == nil || len(svc.Output) < 1 {
-		svc.Output = make(map[string]*Parameter, 0)
+	if e.Output == nil || len(e.Output) < 1 {
+		e.Output = make(map[string]*Parameter, 0)
 		return nil
 	}
 
-	for name, p := range svc.Output {
+	for name, p := range e.Output {
 		if len(name) < 1 {
-			return fmt.Errorf("%s: %w", name, ErrIllegalParamName)
+			return fmt.Errorf("%s: %w", name, ErrParamNameIllegal)
 		}
 
 		// fallback to name when Rename is not provided
@@ -301,17 +330,11 @@ func (svc *Endpoint) checkOutput(validators []validator.Type) error {
 			p.Rename = name
 		}
 
-		err := p.validate(validators...)
-		if err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
-
 		if p.Optional {
-			return fmt.Errorf("%s: %w", name, ErrOptionalOption)
+			return fmt.Errorf("%s: %w", name, ErrOutputOptional)
 		}
 
-		err = nameConflicts(name, p, svc.Output)
-		if err != nil {
+		if err := nameConflicts(name, p, e.Output); err != nil {
 			return err
 		}
 	}
@@ -342,7 +365,7 @@ const (
 //     `GET@param` name formats cannot be translated to a valid go exported name.
 //     c.f. the `dynfunc` package that creates a handler func() signature from
 //     the service definitions (i.e. input and output parameters).
-func (svc *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
+func (e *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
 	var (
 		captureMatches = captureRegex.FindAllStringSubmatch(name, -1)
 		isCapture      = len(captureMatches) > 0 && len(captureMatches[0]) > 1
@@ -354,7 +377,7 @@ func (svc *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
 
 		// fail if brace capture does not exists in pattern
 		found := false
-		for _, capture := range svc.Captures {
+		for _, capture := range e.Captures {
 			if capture.Name == captureName {
 				capture.Ref = p
 				found = true
@@ -362,7 +385,7 @@ func (svc *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
 			}
 		}
 		if !found {
-			return captureParam, fmt.Errorf("%s: %w", name, ErrUnspecifiedBraceCapture)
+			return captureParam, fmt.Errorf("%s: %w", name, ErrBraceCaptureUnspecified)
 		}
 		return captureParam, nil
 	}
@@ -375,21 +398,18 @@ func (svc *Endpoint) parseParam(name string, p *Parameter) (paramType, error) {
 	// Parameter is a query (uri?param)
 	if isQuery {
 		queryName := queryMatches[0][1]
-
-		// init map
-		if svc.Query == nil {
-			svc.Query = make(map[string]*Parameter)
+		if e.Query == nil {
+			e.Query = make(map[string]*Parameter)
 		}
-		svc.Query[queryName] = p
-
+		e.Query[queryName] = p
 		return queryParam, nil
 	}
 
 	// Parameter is a form param
-	if svc.Form == nil {
-		svc.Form = make(map[string]*Parameter)
+	if e.Form == nil {
+		e.Form = make(map[string]*Parameter)
 	}
-	svc.Form[name] = p
+	e.Form[name] = p
 	return formParam, nil
 }
 
