@@ -23,7 +23,11 @@ type Generator struct {
 
 // WriteEndpoints writes endpoints go file
 func (g Generator) WriteEndpoints(w io.Writer) error {
-	tmpl, err := template.ParseFS(endpointsTmpl, "endpoints.tmpl")
+	tmpl := template.New("endpoints.tmpl")
+	tmpl.Funcs(template.FuncMap{
+		"getType": goType,
+	})
+	tmpl, err := tmpl.ParseFS(endpointsTmpl, "endpoints.tmpl")
 	if err != nil {
 		return err
 	}
@@ -46,4 +50,14 @@ func validate(src []byte, w io.Writer) error {
 		Tabwidth: 4,
 	}
 	return cfg.Fprint(w, fset, f)
+}
+
+// goType returns the GO type associated to a parameter according to the
+// validators
+func goType(validatorName string, validators map[string]config.Validator) string {
+	validator, ok := validators[validatorName]
+	if !ok {
+		return ""
+	}
+	return validator.Type
 }
