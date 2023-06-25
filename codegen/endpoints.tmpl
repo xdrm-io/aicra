@@ -5,7 +5,7 @@ import (
 	"context"
 	"net/http"
 	"github.com/xdrm-io/aicra"
-	aicraValidator "github.com/xdrm-io/aicra/validator"
+	"github.com/xdrm-io/aicra/validator"
 	{{- range $alias, $path := .Imports }}
 	{{ $alias }} "{{ $path }}"
 	{{- end }}
@@ -20,9 +20,9 @@ type Server interface {
 	{{- end }}
 }
 
-var validators = []aicraValidator.Type{
-	{{- range  .Validators }}
-	new({{.}}),
+var validators = map[string]any{
+	{{- range $name, $validator := .Validators }}
+	"{{$name}}": validator.Validator[{{$validator.Type}}](new({{$validator.Validator}})),
 	{{- end }}
 }
 
@@ -57,7 +57,7 @@ type {{$inStruct}} struct {}
 {{- else }}
 type {{$inStruct}} struct {
 	{{- range .Input }}
-	{{.Name}} {{.Type}}
+	{{.Rename}} {{ getType .ValidatorName $.Validators }}
 	{{- end }}
 }
 {{- end }}
@@ -67,7 +67,7 @@ type {{$outStruct}} struct {}
 {{- else }}
 type {{$outStruct}} struct {
 	{{- range .Output }}
-	{{.Name}} {{.Type}}
+	{{.Rename}} {{ getType .ValidatorName $.Validators }}
 	{{- end }}
 }
 {{- end }}
@@ -84,8 +84,8 @@ type mapper struct {
 func (m mapper) {{ .Name }}(w http.ResponseWriter, r *http.Request) {
 	{{- if ne (len .Input) 0 }}
 	extract := map[string]string{
-		{{- range .Input }}
-		"{{.Name}}": "{{.Type}}",
+		{{- range $name, $p := .Input }}
+		"{{$name}}": "{{ getType $p.Type $.Validators }}",
 		{{- end }}
 	}
 	in, err := runtime.Parse(r, validators, extract)
@@ -94,16 +94,16 @@ func (m mapper) {{ .Name }}(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := {{$inStruct}}{
-		{{- range .Input }}
-		{{- if not .Optional }}
-		{{ .Name }}: in["{{.Name}}"].({{.Type}}),
+		{{- range $name, $p := .Input }}
+		{{- if not $p.Optional }}
+		{{ $p.Rename }}: in["{{$name}}"].({{ getType $p.ValidatorName $.Validators }}),
 		{{- end }}
 		{{- end }}
 	}
-	{{- range .Input }}
+	{{- range $name, $p := .Input }}
 	{{- if .Optional }}
-	if v, ok := in["{{.Name}}"] ; ok {
-		req.{{.Name}} = &(v.({{ .Type }}))
+	if v, ok := in["{{$name}}"] ; ok {
+		req.{{$p.Rename}} = &(v.({{ getType $p.ValidatorName $.Validators }}))
 	}
 	{{- end }}
 	{{- end }}
@@ -117,8 +117,8 @@ func (m mapper) {{ .Name }}(w http.ResponseWriter, r *http.Request) {
 	res, err := m.impl.{{ .Name }}(r.Context(), {{$inStruct}}{})
 	{{- end }}
 	out := map[string]interface{}{
-		{{- range $id, $p := .Output }}
-		"{{$id}}": res.{{$p.Name}},
+		{{- range $name, $p := .Output }}
+		"{{$name}}": res.{{$p.Rename}},
 		{{- end }}
 	}
 	runtime.Respond(w, out, err)
