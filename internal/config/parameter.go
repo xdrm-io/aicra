@@ -7,6 +7,16 @@ import (
 	"strings"
 )
 
+// ParamKind defines supported parameter kinds
+type ParamKind uint8
+
+// supported kinds
+const (
+	KindURI ParamKind = iota
+	KindQuery
+	KindForm
+)
+
 // Parameter represents a parameter definition (from api.json)
 type Parameter struct {
 	Description string `json:"info"`
@@ -16,9 +26,13 @@ type Parameter struct {
 
 	ValidatorName   string   `json:"-"`
 	ValidatorParams []string `json:"-"`
+
+	// filled by the endpoint containing the parameter
+	Kind        ParamKind `json:"-"`
+	ExtractName string    `json:"-"`
 }
 
-var typenameRe = regexp.MustCompile(`^([^\(]+)(\([^\),]+(?:, ?[^\),]+)*\))?$`)
+var typenameRe = regexp.MustCompile(`^([^\(]+)(?:\(([^\),]+(?:, ?[^\),]+)*)\))?$`)
 
 // UnmarshalJSON with custom validation and parsing
 func (p *Parameter) UnmarshalJSON(b []byte) error {
