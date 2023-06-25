@@ -24,7 +24,7 @@ const (
 // Form represents a form extracted from an http request.
 type Form struct {
 	typ    contentType
-	values map[string]interface{}
+	values map[string]any
 }
 
 // ParseForm parses the body to be ready for parameter extraction
@@ -33,9 +33,9 @@ type Form struct {
 // - 'multipart/form-data'
 // - 'x-www-form-urlencoded'
 // - 'application/json'
-func ParseForm(r *http.Request) (*Form, error) {
+func ParseForm(r *http.Request) (Form, error) {
 	if r.Method == http.MethodGet {
-		return nil, nil
+		return Form{}, nil
 	}
 	ct := r.Header.Get("Content-Type")
 
@@ -53,42 +53,42 @@ func ParseForm(r *http.Request) (*Form, error) {
 		}
 		return parseMultipart(r.Body, params["boundary"])
 	}
-	return nil, ErrUnhandledContentType
+	return Form{}, ErrUnhandledContentType
 }
 
 // parseJSON parses JSON from the request body inside 'Form'
 // and 'Set'
-func parseJSON(reader io.Reader) (*Form, error) {
-	form := &Form{
+func parseJSON(reader io.Reader) (Form, error) {
+	form := Form{
 		typ:    JSON,
-		values: make(map[string]interface{}),
+		values: make(map[string]any),
 	}
 	err := json.NewDecoder(reader).Decode(&form.values)
 	if err == io.EOF {
-		return nil, nil
+		return Form{}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", err, ErrInvalidJSON)
+		return Form{}, fmt.Errorf("%s: %w", err, ErrInvalidJSON)
 	}
 	return form, nil
 }
 
 // parseUrlencoded parses urlencoded from the request body inside 'Form'
 // and 'Set'
-func parseUrlencoded(reader io.Reader) (*Form, error) {
+func parseUrlencoded(reader io.Reader) (Form, error) {
 	body, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return Form{}, err
 	}
 
 	query, err := url.ParseQuery(string(body))
 	if err != nil {
-		return nil, err
+		return Form{}, err
 	}
 
-	form := &Form{
+	form := Form{
 		typ:    URLEncoded,
-		values: make(map[string]interface{}),
+		values: make(map[string]any),
 	}
 	for name, values := range query {
 		form.values[name] = values
@@ -98,12 +98,12 @@ func parseUrlencoded(reader io.Reader) (*Form, error) {
 
 // parseMultipart parses multi-part from the request body inside 'Form'
 // and 'Set'
-func parseMultipart(r io.Reader, boundary string) (*Form, error) {
+func parseMultipart(r io.Reader, boundary string) (Form, error) {
 	var mr = multipart.NewReader(r, boundary)
 
-	form := &Form{
+	form := Form{
 		typ:    Multipart,
-		values: make(map[string]interface{}),
+		values: make(map[string]any),
 	}
 	for {
 		p, err := mr.NextPart()
@@ -111,12 +111,12 @@ func parseMultipart(r io.Reader, boundary string) (*Form, error) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrInvalidMultipart, err)
+			return Form{}, fmt.Errorf("%w: %w", ErrInvalidMultipart, err)
 		}
 
 		data, err := ioutil.ReadAll(p)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s: %w", ErrInvalidMultipart, p.FormName(), err)
+			return Form{}, fmt.Errorf("%w: %s: %w", ErrInvalidMultipart, p.FormName(), err)
 		}
 		form.values[p.FormName()] = data
 	}

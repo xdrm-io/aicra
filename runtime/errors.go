@@ -18,8 +18,8 @@ const (
 	// ErrInvalidJSON is returned when json parse failed
 	ErrInvalidJSON = Err("invalid json")
 
-	// ErrMissingRequiredParam - required param is missing
-	ErrMissingRequiredParam = Err("missing required param")
+	// ErrMissingParam - param is missing
+	ErrMissingParam = Err("missing param")
 
 	// ErrInvalidType - parameter value does not satisfy its type
 	ErrInvalidType = Err("invalid type")
