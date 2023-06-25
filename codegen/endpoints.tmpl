@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"github.com/xdrm-io/aicra"
-	"github.com/xdrm-io/aicra/validator"
 	{{- range $alias, $path := .Imports }}
 	{{ $alias }} "{{ $path }}"
 	{{- end }}
@@ -17,12 +16,6 @@ type Server interface {
 	{{- $outStruct := printf "%sRes" .Name }}
 	// {{ .Name }} {{ .Description }}
 	{{ .Name }}(context.Context, {{ $inStruct }}) (*{{$outStruct}}, error)
-	{{- end }}
-}
-
-var validators = map[string]any{
-	{{- range $name, $validator := .Validators }}
-	"{{$name}}": validator.Validator[{{$validator.Type}}](new({{$validator.Validator}})),
 	{{- end }}
 }
 
@@ -52,86 +45,19 @@ func Wire(b *aicra.Builder, impl Server) error {
 {{- range .Endpoints }}
 {{- $inStruct  := printf "%sReq" .Name }}
 {{- $outStruct := printf "%sRes" .Name }}
-{{- if eq (len .Input) 0 }}
-type {{$inStruct}} struct {}
-{{- else }}
 type {{$inStruct}} struct {
 	{{- range .Input }}
+	{{- if eq .Optional true }}
+	{{.Rename}} *{{ getType .ValidatorName $.Validators }}
+	{{- else }}
 	{{.Rename}} {{ getType .ValidatorName $.Validators }}
 	{{- end }}
+	{{- end }}
 }
-{{- end }}
 
-{{- if eq (len .Output) 0 }}
-type {{$outStruct}} struct {}
-{{- else }}
 type {{$outStruct}} struct {
 	{{- range .Output }}
 	{{.Rename}} {{ getType .ValidatorName $.Validators }}
 	{{- end }}
 }
 {{- end }}
-{{- end }}
-
-
-type mapper struct {
-	impl Server
-}
-
-{{ range .Endpoints }}
-{{- $inStruct  := printf "%sReq" .Name }}
-{{- $outStruct := printf "%sRes" .Name }}
-func (m mapper) {{ .Name }}(w http.ResponseWriter, r *http.Request) {
-	{{- if ne (len .Input) 0 }}
-	extract := map[string]string{
-		{{- range $name, $p := .Input }}
-		"{{$name}}": "{{ getType $p.Type $.Validators }}",
-		{{- end }}
-	}
-	in, err := runtime.Parse(r, validators, extract)
-	if err != nil {
-		runtime.Respond(w, nil, err)
-		return
-	}
-	req := {{$inStruct}}{
-		{{- range $name, $p := .Input }}
-		{{- if not $p.Optional }}
-		{{ $p.Rename }}: in["{{$name}}"].({{ getType $p.ValidatorName $.Validators }}),
-		{{- end }}
-		{{- end }}
-	}
-	{{- range $name, $p := .Input }}
-	{{- if .Optional }}
-	if v, ok := in["{{$name}}"] ; ok {
-		req.{{$p.Rename}} = &(v.({{ getType $p.ValidatorName $.Validators }}))
-	}
-	{{- end }}
-	{{- end }}
-	{{- end }}
-
-	{{- if ne (len .Output) 0 }}
-
-	{{- if ne (len .Input) 0 }}
-	res, err := m.impl.{{ .Name }}(r.Context(), req)
-	{{- else }}
-	res, err := m.impl.{{ .Name }}(r.Context(), {{$inStruct}}{})
-	{{- end }}
-	out := map[string]interface{}{
-		{{- range $name, $p := .Output }}
-		"{{$name}}": res.{{$p.Rename}},
-		{{- end }}
-	}
-	runtime.Respond(w, out, err)
-
-	{{- else  }}
-
-	{{- if ne (len .Input) 0 }}
-	_, err = m.impl.{{ .Name }}(r.Context(), req)
-	{{- else }}
-	_, err := m.impl.{{ .Name }}(r.Context(), {{$inStruct}}{})
-	{{- end }}
-	runtime.Respond(w, nil, err)
-
-	{{- end }}
-}
-{{ end }}

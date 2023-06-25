@@ -1,0 +1,14 @@
+package {{ .Package }}
+
+import (
+	builtin "github.com/xdrm-io/aicra/validator"
+	{{- range $alias, $path := .Imports }}
+	{{ $alias }} "{{ $path }}"
+	{{- end }}
+)
+
+{{- range $name, $validator := .Validators }}
+func {{ getterName .Validator }}(params []string) builtin.ExtractFunc[{{ .Type }}] {
+	return new({{ $validator.Validator }}).Validate(params)
+}
+{{- end }}
