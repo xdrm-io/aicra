@@ -29,3 +29,25 @@ type Validator[T any] interface {
 	//
 	Validate(params []string) ExtractFunc[T]
 }
+
+// Wrap any generic validator into a fixed-type any validator
+func Wrap[T any](v Validator[T]) Validator[any] {
+	return wrapper(func(params []string) ExtractFunc[any] {
+		extractor := v.Validate(params)
+		if extractor == nil {
+			return nil
+		}
+		return func(value any) (any, bool) {
+			cast, ok := extractor(value)
+			return any(cast), ok
+		}
+	})
+}
+
+// wraps a generic validator into a any validators
+type wrapper func([]string) ExtractFunc[any]
+
+// Validate for wrapped validator
+func (w wrapper) Validate(params []string) ExtractFunc[any] {
+	return (func([]string) ExtractFunc[any])(w)(params)
+}
