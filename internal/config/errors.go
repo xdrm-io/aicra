@@ -74,6 +74,9 @@ const (
 	// ErrParamTypeMissing - missing parameter type
 	ErrParamTypeMissing = Err("missing parameter type")
 
+	// ErrParamRenameInvalid - invalid or unexported parameter rename
+	ErrParamRenameInvalid = Err("name is unexported, must start with uppercase")
+
 	// ErrParamTypeInvalid - parameter type syntax is invalid
 	ErrParamTypeInvalid = Err("invalid parameter type syntax")
 
