@@ -32,8 +32,8 @@ type Parameter struct {
 }
 
 var (
-	typeRe      = regexp.MustCompile(`^([^\(]+)(?:\(([^\),]+(?:, ?[^\),]+)*)\))?$`)
-	paramNameRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9_-]*$`)
+	typeRe        = regexp.MustCompile(`^([^\(]+)(?:\(([^\),]+(?:, ?[^\),]+)*)\))?$`)
+	paramRenameRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9_-]*$`)
 )
 
 // UnmarshalJSON with custom validation and parsing
@@ -46,7 +46,7 @@ func (p *Parameter) UnmarshalJSON(b []byte) error {
 	p.Type = r.Type
 	p.Rename = r.Rename
 
-	if p.Rename != "" && !paramNameRe.MatchString(p.Rename) {
+	if p.Rename != "" && !paramRenameRe.MatchString(p.Rename) {
 		return fmt.Errorf("param '%s': %w", p.Rename, ErrParamRenameInvalid)
 	}
 

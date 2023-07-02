@@ -44,6 +44,9 @@ const (
 	// ErrRenameMandatory - capture/query parameters must be renamed
 	ErrRenameMandatory = Err("uri and query parameters must be renamed")
 
+	// ErrRenameUnexported - form parameters must be renamed when unexported
+	ErrRenameUnexported = Err("form parameters must be renamed when unexported (starting with lowercase)")
+
 	// ErrNameMissing - a endpoint is missing its name
 	ErrNameMissing = Err("missing name")
 
@@ -61,6 +64,12 @@ const (
 
 	// ErrOutputOptional - cannot have optional output
 	ErrOutputOptional = Err("output cannot be optional")
+
+	// ErrOutputURIForbidden - cannot have URI output
+	ErrOutputURIForbidden = Err("output cannot be an uri parameter")
+
+	// ErrOutputQueryForbidden - cannot have Query output
+	ErrOutputQueryForbidden = Err("output cannot be an query parameter")
 
 	// ErrParamDescMissing - missing parameter description
 	ErrParamDescMissing = Err("missing parameter description")

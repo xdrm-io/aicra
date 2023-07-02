@@ -12,9 +12,10 @@ import (
 
 var (
 	captureRe    = regexp.MustCompile(`^{([A-Za-z_-]+)}$`)
-	queryRe      = regexp.MustCompile(`^GET@([A-Za-z_-]+)$`)
+	queryRe      = regexp.MustCompile(`^\?([A-Za-z_-]+)$`)
 	formRe       = regexp.MustCompile(`^[A-Za-z0-9 \.\(\)\$\+_-]+$`)
-	availMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete}
+	nameRe       = regexp.MustCompile(`^[A-Z][A-Za-z0-9_-]*$`)
+	availMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete}
 )
 
 // Endpoint definition
@@ -31,8 +32,8 @@ type Endpoint struct {
 	// The format for those parameter names is "{paramName}"
 	Captures []*BraceCapture `json:"-"`
 
-	// Pattern uri fragments
-	fragments []string `json:"-"`
+	// Pattern uri Fragments
+	Fragments []string `json:"-"`
 }
 
 // BraceCapture links to the related URI parameter
@@ -64,23 +65,10 @@ func (e *Endpoint) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-var nameRe = regexp.MustCompile(`^[A-Z][A-Za-z0-9_-]*$`)
-
 // validate the service configuration
 func (e *Endpoint) validate() error {
-	err := e.checkMethod()
-	if err != nil {
-		return fmt.Errorf("field 'method': %w", err)
-	}
-
-	e.Pattern = strings.Trim(e.Pattern, " \t\r\n")
-	err = e.checkPattern()
-	if err != nil {
-		return fmt.Errorf("field 'path': %w", err)
-	}
-
 	// starts with an uppercase letter
-	if len(e.Name) < 1 {
+	if e.Name == "" {
 		return fmt.Errorf("field 'name': %w", ErrNameMissing)
 	}
 	if !unicode.IsUpper(rune(e.Name[0])) {
@@ -90,12 +78,20 @@ func (e *Endpoint) validate() error {
 		return fmt.Errorf("field 'name': %w", ErrNameInvalid)
 	}
 
-	if len(e.Description) < 1 {
+	if err := e.checkMethod(); err != nil {
+		return fmt.Errorf("field 'method': %w", err)
+	}
+
+	e.Pattern = strings.Trim(e.Pattern, " \t\r\n")
+	if err := e.checkPattern(); err != nil {
+		return fmt.Errorf("field 'path': %w", err)
+	}
+
+	if e.Description == "" {
 		return fmt.Errorf("field 'description': %w", ErrDescMissing)
 	}
 
-	err = e.checkInput()
-	if err != nil {
+	if err := e.checkInput(); err != nil {
 		return fmt.Errorf("field 'in': %w", err)
 	}
 
@@ -105,8 +101,8 @@ func (e *Endpoint) validate() error {
 			return fmt.Errorf("field 'in': %s: %w", capture.Name, ErrBraceCaptureUndefined)
 		}
 	}
-	err = e.checkOutput()
-	if err != nil {
+
+	if err := e.checkOutput(); err != nil {
 		return fmt.Errorf("field 'out': %w", err)
 	}
 	return nil
@@ -120,17 +116,17 @@ func (e *Endpoint) Match(req *http.Request) bool {
 // checks if an uri matches the service's pattern
 func (e *Endpoint) matchPattern(uri string) bool {
 	var fragments = URIFragments(uri)
-	if len(fragments) != len(e.fragments) {
+	if len(fragments) != len(e.Fragments) {
 		return false
 	}
 
 	// root url '/'
-	if len(e.fragments) == 0 && len(fragments) == 0 {
+	if len(e.Fragments) == 0 && len(fragments) == 0 {
 		return true
 	}
 
 	// check part by part
-	for i, fragment := range e.fragments {
+	for i, fragment := range e.Fragments {
 		part := fragments[i]
 		isCapture := len(fragment) > 0 && fragment[0] == '{'
 
@@ -149,10 +145,11 @@ func (e *Endpoint) matchPattern(uri string) bool {
 	return true
 }
 
-// Validate the endpoint configuration with code-generated validators
-func (e *Endpoint) Validate(avail Validators) error {
+// RuntimeCheck fails when the config is invalid with the code-generated
+// validators
+func (e *Endpoint) RuntimeCheck(avail Validators) error {
 	for name, param := range e.Input {
-		if err := param.Validate(avail); err != nil {
+		if err := param.RuntimeCheck(avail); err != nil {
 			return fmt.Errorf("field 'in': '%s': %w", name, err)
 		}
 	}
@@ -191,9 +188,9 @@ func (e *Endpoint) checkPattern() error {
 	}
 
 	// for each slash-separated chunk
-	e.fragments = URIFragments(e.Pattern)
-	for i, fragment := range e.fragments {
-		if len(fragment) < 1 {
+	e.Fragments = URIFragments(e.Pattern)
+	for i, fragment := range e.Fragments {
+		if len(fragment) == 0 {
 			return ErrPatternInvalid
 		}
 
@@ -230,13 +227,13 @@ func (e *Endpoint) checkInput() error {
 
 	// for each parameter
 	for name, p := range e.Input {
-		if len(name) < 1 {
+		if name == "" {
 			return fmt.Errorf("%s: %w", name, ErrParamNameIllegal)
 		}
 
 		// parse parameters: capture (uri), query or form and update the service
 		// attributes accordingly
-		err := e.parseParam(name, p)
+		err := e.parseParam(name, p, true)
 		if err != nil {
 			return err
 		}
@@ -244,6 +241,11 @@ func (e *Endpoint) checkInput() error {
 		// Rename mandatory for capture and query
 		if p.Rename == "" && (p.Kind == KindURI || p.Kind == KindQuery) {
 			return fmt.Errorf("%s: %w", name, ErrRenameMandatory)
+		}
+
+		// unexported and no rename
+		if p.Kind == KindForm && !unicode.IsUpper(rune(name[0])) && p.Rename == "" {
+			return fmt.Errorf("%s: %w", name, ErrRenameUnexported)
 		}
 
 		// fallback to name when Rename is not provided
@@ -276,6 +278,18 @@ func (e *Endpoint) checkOutput() error {
 			return fmt.Errorf("%s: %w", name, ErrParamNameIllegal)
 		}
 
+		// parse parameters: capture (uri), query or form and update the service
+		// attributes accordingly
+		err := e.parseParam(name, p, false)
+		if err != nil {
+			return err
+		}
+
+		// unexported and no rename
+		if !unicode.IsUpper(rune(name[0])) && p.Rename == "" {
+			return fmt.Errorf("%s: %w", name, ErrRenameUnexported)
+		}
+
 		// fallback to name when Rename is not provided
 		if p.Rename == "" {
 			p.Rename = name
@@ -295,7 +309,7 @@ func (e *Endpoint) checkOutput() error {
 // parseParam determines which param type it is from its name:
 //   - `{paramName}` is an capture; it captures a segment of the uri defined in
 //     the pattern definition, e.g. `/some/path/with/{paramName}/somewhere`
-//   - `GET@paramName` is an uri query that is received from the http query format
+//   - `?paramName` is an uri query that is received from the http query format
 //     in the uri, e.g. `http://domain.com/uri?paramName=paramValue&param2=value2`
 //   - any other name that contains valid characters is considered a Form
 //     parameter; it is extracted from the http request's body as: json, multipart
@@ -305,20 +319,24 @@ func (e *Endpoint) checkOutput() error {
 //   - capture params MUST be found in the pattern definition.
 //   - capture params MUST NOT be optional as they are in the pattern anyways.
 //   - capture and query params MUST be renamed because the `{param}` or
-//     `GET@param` name formats cannot be translated to a valid go exported name.
+//     `?param` name formats cannot be translated to a valid go exported name.
 //     c.f. the `dynfunc` package that creates a handler func() signature from
 //     the service definitions (i.e. input and output parameters).
-func (e *Endpoint) parseParam(name string, p *Parameter) error {
+func (e *Endpoint) parseParam(name string, p *Parameter, input bool) error {
 	// Parameter is a capture (uri/{param})
-	if match := captureRe.FindStringSubmatch(name); len(match) > 1 {
+	if match := captureRe.FindStringSubmatch(name); len(match) == 2 {
+		if !input {
+			return ErrOutputURIForbidden
+		}
+
 		p.Kind = KindURI
 
 		// fail if brace capture does not exists in pattern
 		var found bool
-		for i, capture := range e.Captures {
+		for _, capture := range e.Captures {
 			if capture.Name == match[1] {
 				capture.Defined = true
-				p.ExtractName = strconv.FormatInt(int64(i), 10)
+				p.ExtractName = strconv.FormatInt(int64(capture.Index), 10)
 				found = true
 				break
 			}
@@ -329,7 +347,10 @@ func (e *Endpoint) parseParam(name string, p *Parameter) error {
 		return nil
 	}
 
-	if match := queryRe.FindStringSubmatch(name); len(match) > 1 {
+	if match := queryRe.FindStringSubmatch(name); len(match) == 2 {
+		if !input {
+			return ErrOutputQueryForbidden
+		}
 		p.Kind = KindQuery
 		p.ExtractName = match[1]
 		return nil
