@@ -69,9 +69,12 @@ func (s API) validate() error {
 }
 
 // Find a endpoint matching an incoming HTTP request
-func (s API) Find(r *http.Request) *Endpoint {
+func (s API) Find(r *http.Request, validators Validators) *Endpoint {
+	if r == nil {
+		return nil
+	}
 	for _, endpoint := range s.Endpoints {
-		if matches := endpoint.Match(r); matches {
+		if matches := endpoint.Match(r, validators); matches {
 			return endpoint
 		}
 	}
@@ -97,9 +100,6 @@ func URIFragments(uri string) []string {
 	}
 	if len(uri) > 0 && uri[0] == '/' {
 		uri = uri[1:]
-	}
-	if len(uri) > 0 && uri[len(uri)-1] == '/' {
-		uri = uri[:len(uri)-1]
 	}
 	for len(uri) > 0 && uri[len(uri)-1] == '/' {
 		uri = uri[:len(uri)-1]

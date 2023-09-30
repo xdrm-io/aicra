@@ -109,12 +109,12 @@ func (e *Endpoint) validate() error {
 }
 
 // Match returns if this service would handle this HTTP request
-func (e *Endpoint) Match(req *http.Request) bool {
-	return req.Method == e.Method && e.matchPattern(req.URL.Path)
+func (e *Endpoint) Match(req *http.Request, validators Validators) bool {
+	return req.Method == e.Method && e.matchPattern(req.URL.Path, validators)
 }
 
 // checks if an uri matches the service's pattern
-func (e *Endpoint) matchPattern(uri string) bool {
+func (e *Endpoint) matchPattern(uri string, validators Validators) bool {
 	var fragments = URIFragments(uri)
 	if len(fragments) != len(e.Fragments) {
 		return false
@@ -137,11 +137,22 @@ func (e *Endpoint) matchPattern(uri string) bool {
 			}
 			continue
 		}
-		if param, exists := e.Input[fragment]; !exists || param == nil {
+		param, ok := e.Input[fragment]
+		if !ok || param == nil {
+			return false
+		}
+		validator, ok := validators[param.ValidatorName]
+		if !ok {
+			return false
+		}
+		extractFn := validator.Validate(param.ValidatorParams)
+		if extractFn == nil {
+			return false
+		}
+		if _, valid := extractFn(part); !valid {
 			return false
 		}
 	}
-
 	return true
 }
 

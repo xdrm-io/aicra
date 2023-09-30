@@ -44,6 +44,9 @@ type Builder struct {
 	// exceeding `bodyLimit` (in bytes). Negative value means there is no
 	// limit. The default value (0) falls back to the default aicra limit
 	bodyLimit int64
+
+	// validators is the list of validators used to validate the configuration
+	validators config.Validators
 }
 
 // serviceHandler links a handler func to a service (method-path combination)
@@ -145,7 +148,7 @@ func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 }
 
 // Build a fully-featured HTTP server
-func (b Builder) Build(validators config.Validators) (http.Handler, error) {
+func (b *Builder) Build(validators config.Validators) (http.Handler, error) {
 	if b.uriLimit == 0 {
 		b.uriLimit = DefaultURILimit
 	}
@@ -173,10 +176,11 @@ func (b Builder) Build(validators config.Validators) (http.Handler, error) {
 	if validators == nil {
 		return nil, errNilValidators
 	}
+	b.validators = validators
 
-	if err := b.conf.RuntimeCheck(validators); err != nil {
+	if err := b.conf.RuntimeCheck(b.validators); err != nil {
 		return nil, err
 	}
 
-	return Handler(b), nil
+	return Handler(*b), nil
 }

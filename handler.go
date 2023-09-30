@@ -34,7 +34,7 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ServeHTTP implements http.Handler and wraps it in middlewares
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// match service from config
-	var service = s.conf.Find(r)
+	var service = s.conf.Find(r, s.validators)
 	if service == nil {
 		runtime.Respond(w, nil, api.ErrUnknownService)
 		return
