@@ -12,6 +12,8 @@ import (
 type Server interface {
 	// GetUsers fetches all users
 	GetUsers(context.Context, GetUsersReq) (*GetUsersRes, error)
+	// GetUser fetches all users
+	GetUser(context.Context, GetUserReq) (*GetUserRes, error)
 	// CreateUser creates a new user
 	CreateUser(context.Context, CreateUserReq) (*CreateUserRes, error)
 	// UpdateUser updates user information
@@ -28,6 +30,7 @@ type route struct {
 func routes(impl mapper) []route {
 	return []route{
 		{"GET", "/user", impl.GetUsers},
+		{"GET", "/user/{id}", impl.GetUser},
 		{"POST", "/user", impl.CreateUser},
 		{"PUT", "/user/{id}", impl.UpdateUser},
 		{"DELETE", "/user/{id}", impl.DeleteUser},
@@ -49,6 +52,15 @@ type GetUsersReq struct {
 
 type GetUsersRes struct {
 	Users []model.User
+}
+type GetUserReq struct {
+	ID string
+}
+
+type GetUserRes struct {
+	Firstname string
+	Lastname  string
+	Username  string
 }
 type CreateUserReq struct {
 	Firstname string

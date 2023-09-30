@@ -16,8 +16,34 @@ func (m mapper) GetUsers(w http.ResponseWriter, r *http.Request) {
 	)
 
 	res, err := m.impl.GetUsers(r.Context(), req)
-	out := map[string]interface{}{
-		"users": res.Users,
+	var out map[string]any
+	if res != nil {
+		out = map[string]any{
+			"users": res.Users,
+		}
+	}
+	runtime.Respond(w, out, err)
+}
+
+func (m mapper) GetUser(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+		req GetUserReq
+	)
+	req.ID, err = runtime.ExtractURI[string](r, 1, getCustomUUIDValidator(nil))
+	if err != nil {
+		runtime.Respond(w, nil, err)
+		return
+	}
+
+	res, err := m.impl.GetUser(r.Context(), req)
+	var out map[string]any
+	if res != nil {
+		out = map[string]any{
+			"firstname": res.Firstname,
+			"lastname":  res.Lastname,
+			"username":  res.Username,
+		}
 	}
 	runtime.Respond(w, out, err)
 }
@@ -49,11 +75,14 @@ func (m mapper) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := m.impl.CreateUser(r.Context(), req)
-	out := map[string]interface{}{
-		"firstname": res.Firstname,
-		"id":        res.ID,
-		"lastname":  res.Lastname,
-		"username":  res.Username,
+	var out map[string]any
+	if res != nil {
+		out = map[string]any{
+			"firstname": res.Firstname,
+			"id":        res.ID,
+			"lastname":  res.Lastname,
+			"username":  res.Username,
+		}
 	}
 	runtime.Respond(w, out, err)
 }
@@ -99,11 +128,14 @@ func (m mapper) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := m.impl.UpdateUser(r.Context(), req)
-	out := map[string]interface{}{
-		"firstname": res.Firstname,
-		"id":        res.ID,
-		"lastname":  res.Lastname,
-		"username":  res.Username,
+	var out map[string]any
+	if res != nil {
+		out = map[string]any{
+			"firstname": res.Firstname,
+			"id":        res.ID,
+			"lastname":  res.Lastname,
+			"username":  res.Username,
+		}
 	}
 	runtime.Respond(w, out, err)
 }

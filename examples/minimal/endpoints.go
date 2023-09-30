@@ -23,7 +23,7 @@ func (e *Endpoints) GetUsers(ctx context.Context, req generated.GetUsersReq) (*g
 	if err != nil {
 		return nil, err
 	}
-	res := make([]model.User, 0, len(users))
+	res := make(model.Users, 0, len(users))
 	for id, user := range users {
 		user.ID = id
 		res = append(res, user)
@@ -34,6 +34,19 @@ func (e *Endpoints) GetUsers(ctx context.Context, req generated.GetUsersReq) (*g
 	}, nil
 }
 
+// GetUser implements generated.Server
+func (e *Endpoints) GetUser(ctx context.Context, req generated.GetUserReq) (*generated.GetUserRes, error) {
+	users, err := e.db.FetchUser(req.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &generated.GetUserRes{
+		Username:  users.Username,
+		Firstname: users.Firstname,
+		Lastname:  users.Lastname,
+	}, nil
+}
+
 // CreateUser implements generated.Server
 func (e *Endpoints) CreateUser(ctx context.Context, req generated.CreateUserReq) (*generated.CreateUserRes, error) {
 	id, err := e.db.CreateUser(req.Username, req.Firstname, req.Lastname)
@@ -41,7 +54,10 @@ func (e *Endpoints) CreateUser(ctx context.Context, req generated.CreateUserReq)
 		return nil, err
 	}
 	return &generated.CreateUserRes{
-		ID: id,
+		ID:        id,
+		Username:  req.Username,
+		Firstname: req.Firstname,
+		Lastname:  req.Lastname,
 	}, nil
 }
 
