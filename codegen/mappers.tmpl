@@ -86,10 +86,13 @@ func (m mapper) {{ .Name }}(w http.ResponseWriter, r *http.Request) {
 	{{- if ne (len .Output) 0 }}
 
 	res, err := m.impl.{{ .Name }}(r.Context(), req)
-	out := map[string]interface{}{
-		{{- range $name, $p := .Output }}
-		"{{$name}}": res.{{$p.Rename}},
-		{{- end }}
+	var out map[string]any
+	if res != nil {
+		out = map[string]any{
+			{{- range $name, $p := .Output }}
+			"{{$name}}": res.{{$p.Rename}},
+			{{- end }}
+		}
 	}
 	runtime.Respond(w, out, err)
 
