@@ -23,6 +23,21 @@
 			}
 		},
 		{
+			"name": "GetUser",
+			"method": "GET",
+			"path": "/user/{id}",
+			"scope": [],
+			"info": "fetches all users",
+			"in": {
+				"{id}": { "info": "id of the user to fetch", "type": "uuid", "name": "ID" }
+			},
+			"out": {
+				"username":  { "info": "new username",  "type": "string", "name": "Username"  },
+				"firstname": { "info": "new firstname", "type": "string", "name": "Firstname" },
+				"lastname":  { "info": "new lastname",  "type": "string", "name": "Lastname"  }
+			}
+		},
+		{
 			"name": "CreateUser",
 			"method": "POST",
 			"path": "/user",
@@ -47,10 +62,10 @@
 			"scope": [ ["admin"], ["user[ID]"] ],
 			"info": "updates user information",
 			"in": {
-				"{id}":      { "info": "id of the user to update", "type": "uuid",    "name": "ID"        },
-				"username":  { "info": "optional new username",    "type": "?string", "name": "Username"  },
-				"firstname": { "info": "optional new firstname",   "type": "?string", "name": "Firstname" },
-				"lastname":  { "info": "optional new lastname",    "type": "?string", "name": "Lastname"  }
+				"{id}":      { "info": "id of the user to update", "type": "uuid",          "name": "ID"        },
+				"username":  { "info": "optional new username",    "type": "?string(1,30)", "name": "Username"  },
+				"firstname": { "info": "optional new firstname",   "type": "?string(1,30)", "name": "Firstname" },
+				"lastname":  { "info": "optional new lastname",    "type": "?string(1,30)", "name": "Lastname"  }
 			},
 			"out": {
 				"id":        { "info": "new user id",   "type": "uuid",   "name": "ID"        },
