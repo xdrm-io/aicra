@@ -11,8 +11,17 @@ const (
 	// ErrPackageMissing - package is empty
 	ErrPackageMissing = Err("missing 'package'")
 
-	// ErrImportCharset - import alias uses invalid characters
-	ErrImportCharset = Err("invalid import name charset")
+	// ErrValidatorsMissing - validators is empty
+	ErrValidatorsMissing = Err("missing 'validators'")
+
+	// ErrEndpointsMissing - endpoints is empty
+	ErrEndpointsMissing = Err("missing 'endpoints'")
+
+	// ErrImportAliasCharset - import alias uses invalid characters
+	ErrImportAliasCharset = Err("invalid import name charset")
+
+	// ErrImportPathCharset - import path uses invalid characters
+	ErrImportPathCharset = Err("invalid import path charset")
 
 	// ErrImportTwice - import path used twice
 	ErrImportTwice = Err("import path cannot appear twice")
@@ -22,9 +31,6 @@ const (
 
 	// ErrMethodUnknown - unknown http method
 	ErrMethodUnknown = Err("unknown HTTP method")
-
-	// ErrFormat - invalid format
-	ErrFormat = Err("invalid config format")
 
 	// ErrPatternCollision - collision between 2 endpoints' patterns
 	ErrPatternCollision = Err("pattern collision")
@@ -70,9 +76,6 @@ const (
 
 	// ErrOutputQueryForbidden - cannot have Query output
 	ErrOutputQueryForbidden = Err("output cannot be an query parameter")
-
-	// ErrParamDescMissing - missing parameter description
-	ErrParamDescMissing = Err("missing parameter description")
 
 	// ErrParamTypeUnknown - unknown parameter type
 	ErrParamTypeUnknown = Err("unknown parameter datatype")

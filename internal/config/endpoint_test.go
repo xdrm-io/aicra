@@ -9,8 +9,6 @@ import (
 )
 
 func TestEndpointUnmarshal(t *testing.T) {
-	t.Parallel()
-
 	type TC struct {
 		name     string
 		conf     string
@@ -715,6 +713,8 @@ func TestEndpointUnmarshal(t *testing.T) {
 	for group, tg := range tt {
 		for _, tc := range tg {
 			t.Run(group+"/"+tc.name, func(t *testing.T) {
+				tc := tc
+				t.Parallel()
 				var endpoint config.Endpoint
 				err := json.Unmarshal([]byte(tc.conf), &endpoint)
 				if tc.err != nil {

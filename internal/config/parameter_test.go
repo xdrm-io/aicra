@@ -92,6 +92,8 @@ func TestParam(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
 			var p config.Parameter
 			err := json.Unmarshal([]byte(tc.config), &p)
 			var jsonErr *json.SyntaxError
@@ -206,6 +208,8 @@ func TestParamRuntimeCheck(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
 			err := tc.param.RuntimeCheck(validators)
 			require.ErrorIs(t, err, tc.err)
 		})

@@ -31,19 +31,29 @@ func (s *API) UnmarshalJSON(b []byte) error {
 	return s.validate()
 }
 
-var importNameRe = regexp.MustCompile(`^[a-z0-9_]+$`)
+var importNameRe = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
+var importPathRe = regexp.MustCompile(`^[a-zA-Z0-9_/\.-]+$`)
 
 // validate the configuration
 func (s API) validate() error {
 	if len(s.Package) == 0 {
 		return ErrPackageMissing
 	}
+	if len(s.Validators) == 0 {
+		return ErrValidatorsMissing
+	}
+	if s.Endpoints == nil {
+		return ErrEndpointsMissing
+	}
 
 	var builtin = []string{"fmt", "context", "http", "aicra", "builtin", "runtime"}
 	var uniqPath = map[string]struct{}{}
 	for alias, path := range s.Imports {
 		if !importNameRe.MatchString(alias) {
-			return fmt.Errorf("import '%s': %w", alias, ErrImportCharset)
+			return fmt.Errorf("import '%s': %w", alias, ErrImportAliasCharset)
+		}
+		if !importPathRe.MatchString(path) {
+			return fmt.Errorf("import '%s': %w", alias, ErrImportPathCharset)
 		}
 		for _, forbidden := range builtin {
 			if alias == forbidden {
@@ -72,6 +82,8 @@ func (s API) Find(r *http.Request) *Endpoint {
 // validators
 func (s API) RuntimeCheck(avail Validators) error {
 	for _, endpoint := range s.Endpoints {
+		// TODO: check URI collision with validators
+		// err: ErrPatternCollision
 		err := endpoint.RuntimeCheck(avail)
 		if err != nil {
 			return fmt.Errorf("%s %q: %w", endpoint.Method, endpoint.Pattern, err)
