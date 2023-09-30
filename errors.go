@@ -20,6 +20,9 @@ const (
 	// errUnknownService - no service matching this handler
 	errUnknownService = cerr("unknown service")
 
+	// errUncallableService - nil handler provided
+	errNilHandler = cerr("nil handler")
+
 	// errMissingHandler - missing handler
 	errMissingHandler = cerr("missing handler")
 

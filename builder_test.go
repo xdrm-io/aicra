@@ -1,81 +1,11 @@
 package aicra
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/xdrm-io/aicra/internal/dynfunc"
-	"github.com/xdrm-io/aicra/validator"
 )
-
-func addBuiltinTypes(b *Builder) error {
-	inputTypes := []validator.Type{
-		validator.AnyType{},
-		validator.BoolType{},
-		validator.FloatType{},
-		validator.IntType{},
-		validator.StringType{},
-		validator.UintType{},
-	}
-	outputTypes := map[string]interface{}{
-		"any":    interface{}(nil),
-		"bool":   true,
-		"float":  float64(2),
-		"int":    int(0),
-		"string": "",
-		"uint":   uint(0),
-	}
-
-	for _, t := range inputTypes {
-		if err := b.Input(t); err != nil {
-			return err
-		}
-	}
-	for k, v := range outputTypes {
-		if err := b.Output(k, v); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func TestAddInputType(t *testing.T) {
-	t.Parallel()
-
-	builder := &Builder{}
-	err := builder.Input(validator.BoolType{})
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	err = builder.Setup(strings.NewReader("[]"))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	err = builder.Input(validator.FloatType{})
-	if err != errLateType {
-		t.Fatalf("expected <%v> got <%v>", errLateType, err)
-	}
-}
-func TestAddOutputType(t *testing.T) {
-	t.Parallel()
-
-	builder := &Builder{}
-	err := builder.Output("bool", true)
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	err = builder.Setup(strings.NewReader("[]"))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	err = builder.Output("bool", true)
-	if err != errLateType {
-		t.Fatalf("expected <%v> got <%v>", errLateType, err)
-	}
-}
 
 func TestNilResponder(t *testing.T) {
 	t.Parallel()
@@ -126,12 +56,10 @@ func TestBindBeforeSetup(t *testing.T) {
 
 	builder := &Builder{}
 
-	fn := func(context.Context, struct{}) (*struct{}, error) {
-		return nil, nil
-	}
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	// binding before Setup() must fail
-	err := Bind(builder, http.MethodGet, "/path", fn)
+	err := builder.Bind(http.MethodGet, "/path", fn)
 	if err != errNotSetup {
 		t.Fatalf("expected error %v, got %v", errNotSetup, err)
 	}
@@ -140,44 +68,16 @@ func TestBindBeforeSetup(t *testing.T) {
 func TestBindUnknownService(t *testing.T) {
 	t.Parallel()
 
-	fn := func(context.Context, struct{}) (*struct{}, error) {
-		return nil, nil
-	}
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	builder := &Builder{}
 	err := builder.Setup(strings.NewReader("[]"))
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	err = Bind(builder, http.MethodGet, "/path", fn)
+	err = builder.Bind(http.MethodGet, "/path", fn)
 	if !errors.Is(err, errUnknownService) {
 		t.Fatalf("expected error %v, got %v", errUnknownService, err)
-	}
-}
-
-func TestBindInvalidHandler(t *testing.T) {
-	t.Parallel()
-
-	builder := &Builder{}
-	err := builder.Setup(strings.NewReader(`[
-		{
-			"method": "GET",
-			"path": "/path",
-			"scope": [[]],
-			"info": "info",
-			"in": {},
-			"out": {}
-		}
-	]`))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	fn := func(context.Context, struct{ Unexpected int }) (*struct{}, error) {
-		return nil, nil
-	}
-	err = Bind(builder, http.MethodGet, "/path", fn)
-	if !errors.Is(err, dynfunc.ErrUnexpectedFields) {
-		t.Fatalf("expected a dynfunc.Err got %v", err)
 	}
 }
 
@@ -206,10 +106,8 @@ func TestUnhandledService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	fn := func(context.Context, struct{}) (*struct{}, error) {
-		return nil, nil
-	}
-	err = Bind(builder, http.MethodGet, "/path", fn)
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	err = builder.Bind(http.MethodGet, "/path", fn)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -220,14 +118,16 @@ func TestUnhandledService(t *testing.T) {
 	}
 }
 
-func bind[Req, Res any](method, path string, fn HandlerFunc[Req, Res]) func(*Builder) error {
+func bind(method, path string, fn http.HandlerFunc) func(*Builder) error {
 	return func(b *Builder) error {
-		return Bind(b, method, path, fn)
+		return b.Bind(method, path, fn)
 	}
 }
 
 func TestBind(t *testing.T) {
 	t.Parallel()
+
+	noOpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	tt := []struct {
 		name     string
@@ -245,7 +145,7 @@ func TestBind(t *testing.T) {
 		{
 			name:     "none required 1 provided",
 			conf:     "[]",
-			binder:   bind("", "", func(context.Context, struct{}) (*struct{}, error) { return nil, nil }),
+			binder:   bind("", "", noOpHandler),
 			bindErr:  errUnknownService,
 			buildErr: nil,
 		},
@@ -276,7 +176,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("POST", "/path", func(context.Context, struct{}) (*struct{}, error) { return nil, nil }),
+			binder:   bind("POST", "/path", noOpHandler),
 			bindErr:  errUnknownService,
 			buildErr: errMissingHandler,
 		},
@@ -292,7 +192,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("POST", "/paths", func(context.Context, struct{}) (*struct{}, error) { return nil, nil }),
+			binder:   bind("POST", "/paths", noOpHandler),
 			bindErr:  errUnknownService,
 			buildErr: errMissingHandler,
 		},
@@ -308,7 +208,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("GET", "/path", func(context.Context, struct{}) (*struct{}, error) { return nil, nil }),
+			binder:   bind("GET", "/path", noOpHandler),
 			bindErr:  nil,
 			buildErr: nil,
 		},
@@ -326,7 +226,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("GET", "/path", func(context.Context, struct{ Name int }) (*struct{}, error) { return nil, nil }),
+			binder:   bind("GET", "/path", noOpHandler),
 			bindErr:  nil,
 			buildErr: nil,
 		},
@@ -344,7 +244,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("GET", "/path", func(context.Context, struct{ Name uint }) (*struct{}, error) { return nil, nil }),
+			binder:   bind("GET", "/path", noOpHandler),
 			bindErr:  nil,
 			buildErr: nil,
 		},
@@ -362,7 +262,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("GET", "/path", func(context.Context, struct{ Name string }) (*struct{}, error) { return nil, nil }),
+			binder:   bind("GET", "/path", noOpHandler),
 			bindErr:  nil,
 			buildErr: nil,
 		},
@@ -380,7 +280,7 @@ func TestBind(t *testing.T) {
 					"out": {}
 				}
 			]`,
-			binder:   bind("GET", "/path", func(context.Context, struct{ Name bool }) (*struct{}, error) { return nil, nil }),
+			binder:   bind("GET", "/path", noOpHandler),
 			bindErr:  nil,
 			buildErr: nil,
 		},
@@ -391,10 +291,6 @@ func TestBind(t *testing.T) {
 			t.Parallel()
 
 			builder := &Builder{}
-			if err := addBuiltinTypes(builder); err != nil {
-				t.Fatalf("add built-in types: %s", err)
-			}
-
 			err := builder.Setup(strings.NewReader(tc.conf))
 			if err != nil {
 				t.Fatalf("setup: unexpected error <%v>", err)
