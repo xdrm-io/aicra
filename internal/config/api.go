@@ -68,10 +68,11 @@ func (s API) Find(r *http.Request) *Endpoint {
 	return nil
 }
 
-// Validate the config with code-generated validators
-func (s API) Validate(avail Validators) error {
+// RuntimeCheck fails when the config is invalid with the code-generated
+// validators
+func (s API) RuntimeCheck(avail Validators) error {
 	for _, endpoint := range s.Endpoints {
-		err := endpoint.Validate(avail)
+		err := endpoint.RuntimeCheck(avail)
 		if err != nil {
 			return fmt.Errorf("%s %q: %w", endpoint.Method, endpoint.Pattern, err)
 		}
