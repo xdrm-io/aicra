@@ -12,6 +12,7 @@ import (
 
 	"github.com/xdrm-io/aicra"
 	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 	"github.com/xdrm-io/aicra/runtime"
 )
 
@@ -86,7 +87,7 @@ func TestHandlerWith(t *testing.T) {
 		t.Fatalf("bind: unexpected error <%v>", err)
 	}
 
-	handler, err := builder.Build()
+	handler, err := builder.Build(config.Validators{})
 	if err != nil {
 		t.Fatalf("build: unexpected error <%v>", err)
 	}
@@ -237,7 +238,7 @@ func TestHandlerWithAuth(t *testing.T) {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
-			handler, err := builder.Build()
+			handler, err := builder.Build(config.Validators{})
 			if err != nil {
 				t.Fatalf("build: unexpected error <%v>", err)
 			}
@@ -368,7 +369,7 @@ func TestHandlerPermissionError(t *testing.T) {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
-			handler, err := builder.Build()
+			handler, err := builder.Build(config.Validators{})
 			if err != nil {
 				t.Fatalf("build: unexpected error <%v>", err)
 			}
@@ -600,7 +601,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
-			handler, err := builder.Build()
+			handler, err := builder.Build(config.Validators{})
 			if err != nil {
 				t.Fatalf("build: unexpected error <%v>", err)
 			}
@@ -1040,7 +1041,7 @@ Content-Disposition: form-data; name="id"
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
-			handler, err := builder.Build()
+			handler, err := builder.Build(config.Validators{})
 			if err != nil {
 				t.Fatalf("build: unexpected error <%v>", err)
 			}
@@ -1240,7 +1241,7 @@ func TestHandlerResponse(t *testing.T) {
 				t.Fatalf("bind: unexpected error <%v>", err)
 			}
 
-			handler, err := builder.Build()
+			handler, err := builder.Build(config.Validators{})
 			if err != nil {
 				t.Fatalf("build: unexpected error <%v>", err)
 			}
@@ -1350,7 +1351,7 @@ func TestHandlerRequestTooLarge(t *testing.T) {
 			b.SetURILimit(tc.uriMax)
 			b.SetBodyLimit(int64(tc.bodyMax))
 
-			handler, err := b.Build()
+			handler, err := b.Build(config.Validators{})
 			if err != nil {
 				t.Fatalf("cannot build handler: %s", err)
 			}

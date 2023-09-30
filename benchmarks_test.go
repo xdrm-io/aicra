@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/xdrm-io/aicra"
+	"github.com/xdrm-io/aicra/internal/config"
 	"github.com/xdrm-io/aicra/runtime"
 )
 
@@ -252,7 +253,7 @@ func Benchmark1StaticRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -280,7 +281,7 @@ func Benchmark1StaticOutRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -318,7 +319,7 @@ func Benchmark1OverNStaticRouteMatch(b *testing.B) {
 		}
 
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -347,7 +348,7 @@ func Benchmark1UriRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -385,7 +386,7 @@ func Benchmark1OverNUriRouteMatch(b *testing.B) {
 		}
 
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -414,7 +415,7 @@ func Benchmark1GetRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -451,7 +452,7 @@ func Benchmark1OverNGetRouteMatch(b *testing.B) {
 		}
 
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -480,7 +481,7 @@ func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -519,7 +520,7 @@ func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 		}
 
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -550,7 +551,7 @@ func Benchmark1JsonRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -589,7 +590,7 @@ func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 		}
 
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -620,7 +621,7 @@ func Benchmark1MultipartRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
@@ -663,7 +664,7 @@ func Benchmark1OverNMultipartRouteMatch(b *testing.B) {
 		}
 
 	}
-	srv, err := builder.Build()
+	srv, err := builder.Build(config.Validators{})
 	if err != nil {
 		b.Fatalf("cannot build: %s", err)
 	}
