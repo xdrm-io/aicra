@@ -58,7 +58,7 @@ func main() {
 	})
 
 	// build your api
-	handler, err := builder.Build()
+	handler, err := builder.Build(generated.Validators)
 	if err != nil {
 		log.Fatalf("cannot build handler: %s", err)
 	}
