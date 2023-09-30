@@ -1,41 +1,20 @@
 package aicra
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/xdrm-io/aicra/internal/config"
 )
-
-func TestNilResponder(t *testing.T) {
-	t.Parallel()
-
-	builder := &Builder{}
-	err := builder.RespondWith(nil)
-	if !errors.Is(err, errNilResponder) {
-		t.Fatalf("expected %q, got %v", errNilResponder.Error(), err)
-	}
-}
-func TestNonNilResponder(t *testing.T) {
-	t.Parallel()
-
-	builder := &Builder{}
-	err := builder.RespondWith(DefaultResponder)
-	if !errors.Is(err, nil) {
-		t.Fatalf("unexpected error %s", err)
-	}
-}
 
 func TestSetupNoType(t *testing.T) {
 	t.Parallel()
 
 	builder := &Builder{}
 	err := builder.Setup(strings.NewReader("[]"))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	require.NoError(t, err)
 }
 
 func TestSetupTwice(t *testing.T) {
@@ -43,14 +22,10 @@ func TestSetupTwice(t *testing.T) {
 
 	builder := &Builder{}
 	err := builder.Setup(strings.NewReader("[]"))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	require.NoError(t, err)
 	// double Setup() must fail
 	err = builder.Setup(strings.NewReader("[]"))
-	if err != errAlreadySetup {
-		t.Fatalf("expected error %v, got %v", errAlreadySetup, err)
-	}
+	require.ErrorIs(t, err, errAlreadySetup)
 }
 
 func TestBindBeforeSetup(t *testing.T) {
@@ -62,9 +37,7 @@ func TestBindBeforeSetup(t *testing.T) {
 
 	// binding before Setup() must fail
 	err := builder.Bind(http.MethodGet, "/path", fn)
-	if err != errNotSetup {
-		t.Fatalf("expected error %v, got %v", errNotSetup, err)
-	}
+	require.ErrorIs(t, err, errNotSetup)
 }
 
 func TestBindUnknownService(t *testing.T) {
@@ -74,13 +47,9 @@ func TestBindUnknownService(t *testing.T) {
 
 	builder := &Builder{}
 	err := builder.Setup(strings.NewReader("[]"))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	require.NoError(t, err)
 	err = builder.Bind(http.MethodGet, "/path", fn)
-	if !errors.Is(err, errUnknownService) {
-		t.Fatalf("expected error %v, got %v", errUnknownService, err)
-	}
+	require.ErrorIs(t, err, errUnknownService)
 }
 
 func TestUnhandledService(t *testing.T) {
@@ -105,19 +74,13 @@ func TestUnhandledService(t *testing.T) {
 			"out": {}
 		}
 	]`))
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	require.NoError(t, err)
 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 	err = builder.Bind(http.MethodGet, "/path", fn)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
+	require.NoError(t, err)
 
 	_, err = builder.Build(nil)
-	if !errors.Is(err, errMissingHandler) {
-		t.Fatalf("expected a %v error, got %v", errMissingHandler, err)
-	}
+	require.ErrorIs(t, err, errMissingHandler)
 }
 
 func bind(method, path string, fn http.HandlerFunc) func(*Builder) error {
@@ -290,26 +253,20 @@ func TestBind(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
 			t.Parallel()
 
 			builder := &Builder{}
 			err := builder.Setup(strings.NewReader(tc.conf))
-			if err != nil {
-				t.Fatalf("setup: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			if tc.binder != nil {
 				err := tc.binder(builder)
-				if !errors.Is(err, tc.bindErr) {
-					t.Fatalf("invalid bind error\nactual: %v\nexpect: %v", err, tc.bindErr)
-				}
+				require.ErrorIs(t, err, tc.bindErr, "bind error")
 			}
 
 			_, err = builder.Build(config.Validators{})
-			if !errors.Is(err, tc.buildErr) {
-				t.Fatalf("invalid build error\nactual: %v\nexpect: %v", err, tc.buildErr)
-			}
-
+			require.ErrorIs(t, err, tc.buildErr, "build error")
 		})
 	}
 }

@@ -241,11 +241,7 @@ func outHandler(w http.ResponseWriter, r *http.Request) {
 func Benchmark1StaticRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(staticConfig))
+	err := builder.Setup(strings.NewReader(staticConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -269,11 +265,7 @@ func Benchmark1StaticRouteMatch(b *testing.B) {
 func Benchmark1StaticOutRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(staticOutConfig))
+	err := builder.Setup(strings.NewReader(staticOutConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -298,11 +290,7 @@ func Benchmark1StaticOutRouteMatch(b *testing.B) {
 func Benchmark1OverNStaticRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(staticMultiConfig))
+	err := builder.Setup(strings.NewReader(staticMultiConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -336,11 +324,7 @@ func Benchmark1OverNStaticRouteMatch(b *testing.B) {
 func Benchmark1UriRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(uriConfig))
+	err := builder.Setup(strings.NewReader(uriConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -365,11 +349,7 @@ func Benchmark1UriRouteMatch(b *testing.B) {
 func Benchmark1OverNUriRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(uriMultiConfig))
+	err := builder.Setup(strings.NewReader(uriMultiConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -403,11 +383,7 @@ func Benchmark1OverNUriRouteMatch(b *testing.B) {
 func Benchmark1GetRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(getConfig))
+	err := builder.Setup(strings.NewReader(getConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -431,11 +407,7 @@ func Benchmark1GetRouteMatch(b *testing.B) {
 func Benchmark1OverNGetRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(getMultiConfig))
+	err := builder.Setup(strings.NewReader(getMultiConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -469,11 +441,7 @@ func Benchmark1OverNGetRouteMatch(b *testing.B) {
 func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(formConfig))
+	err := builder.Setup(strings.NewReader(formConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -499,11 +467,7 @@ func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(formMultiConfig))
+	err := builder.Setup(strings.NewReader(formMultiConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -539,11 +503,7 @@ func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 func Benchmark1JsonRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(formConfig))
+	err := builder.Setup(strings.NewReader(formConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -569,11 +529,7 @@ func Benchmark1JsonRouteMatch(b *testing.B) {
 func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(formMultiConfig))
+	err := builder.Setup(strings.NewReader(formMultiConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -609,11 +565,7 @@ func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 func Benchmark1MultipartRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(formConfig))
+	err := builder.Setup(strings.NewReader(formConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
@@ -643,11 +595,7 @@ func Benchmark1MultipartRouteMatch(b *testing.B) {
 func Benchmark1OverNMultipartRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
-	if err != nil {
-		b.Fatalf("cannot set responder: %s", err)
-	}
-	err = builder.Setup(strings.NewReader(formMultiConfig))
+	err := builder.Setup(strings.NewReader(formMultiConfig))
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
