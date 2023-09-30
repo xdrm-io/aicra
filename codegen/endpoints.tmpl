@@ -32,7 +32,7 @@ func routes(impl mapper) []route {
 	}
 }
 
-func Wire(b *aicra.Builder, impl Server) error {
+func Bind(b *aicra.Builder, impl Server) error {
 	mapped := mapper{impl: impl}
 	for _, r := range routes(mapped) {
 		if err := b.Bind(r.method, r.path, r.fn); err != nil {
