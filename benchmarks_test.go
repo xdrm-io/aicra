@@ -1,14 +1,13 @@
 package aicra_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/xdrm-io/aicra"
-	"github.com/xdrm-io/aicra/validator"
+	"github.com/xdrm-io/aicra/runtime"
 )
 
 const staticConfig = `[
@@ -230,17 +229,12 @@ const formMultiConfig = `[
 	}
 ]`
 
-func noOpHandler(context.Context, struct{}) (*struct{}, error) {
-	return nil, nil
-}
-func noOpIntHandler(context.Context, struct{ ID int }) (*struct{}, error) {
-	return nil, nil
-}
-func outHandler(context.Context, struct{}) (*struct{ ID int }, error) {
-	return &struct{ ID int }{ID: 123}, nil
-}
-func outIntHandler(context.Context, struct{ ID int }) (*struct{}, error) {
-	return nil, nil
+func noOpHandler(w http.ResponseWriter, r *http.Request) {}
+func outHandler(w http.ResponseWriter, r *http.Request) {
+	data := map[string]any{
+		"id": 123,
+	}
+	runtime.Respond(w, data, nil)
 }
 
 func Benchmark1StaticRouteMatch(b *testing.B) {
@@ -254,7 +248,7 @@ func Benchmark1StaticRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users/123", noOpHandler)
+	err = builder.Bind("GET", "/users/123", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -274,9 +268,6 @@ func Benchmark1StaticRouteMatch(b *testing.B) {
 func Benchmark1StaticOutRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Output("int", int(0)); err != nil {
-		b.Fatalf("cannot set output type: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -285,7 +276,7 @@ func Benchmark1StaticOutRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users/123", outHandler)
+	err = builder.Bind("GET", "/users/123", outHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -322,7 +313,7 @@ func Benchmark1OverNStaticRouteMatch(b *testing.B) {
 		{"POST", "/users/456"},
 	}
 	for _, route := range routes {
-		if err := aicra.Bind(builder, route[0], route[1], noOpHandler); err != nil {
+		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -344,9 +335,6 @@ func Benchmark1OverNStaticRouteMatch(b *testing.B) {
 func Benchmark1UriRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -355,7 +343,7 @@ func Benchmark1UriRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users/{id}", noOpIntHandler)
+	err = builder.Bind("GET", "/users/{id}", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -376,9 +364,6 @@ func Benchmark1UriRouteMatch(b *testing.B) {
 func Benchmark1OverNUriRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -395,7 +380,7 @@ func Benchmark1OverNUriRouteMatch(b *testing.B) {
 		{"POST", "/articles/{id}"},
 	}
 	for _, route := range routes {
-		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
+		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -417,9 +402,6 @@ func Benchmark1OverNUriRouteMatch(b *testing.B) {
 func Benchmark1GetRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -428,7 +410,7 @@ func Benchmark1GetRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
+	err = builder.Bind("GET", "/users", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -448,9 +430,6 @@ func Benchmark1GetRouteMatch(b *testing.B) {
 func Benchmark1OverNGetRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -467,7 +446,7 @@ func Benchmark1OverNGetRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
+		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -489,9 +468,6 @@ func Benchmark1OverNGetRouteMatch(b *testing.B) {
 func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -500,7 +476,7 @@ func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
+	err = builder.Bind("GET", "/users", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -522,9 +498,6 @@ func Benchmark1URLEncodedRouteMatch(b *testing.B) {
 func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -541,7 +514,7 @@ func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
+		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -565,9 +538,6 @@ func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
 func Benchmark1JsonRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -576,7 +546,7 @@ func Benchmark1JsonRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
+	err = builder.Bind("GET", "/users", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -598,9 +568,6 @@ func Benchmark1JsonRouteMatch(b *testing.B) {
 func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -617,7 +584,7 @@ func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
+		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 
@@ -641,9 +608,6 @@ func Benchmark1OverNJsonRouteMatch(b *testing.B) {
 func Benchmark1MultipartRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -652,7 +616,7 @@ func Benchmark1MultipartRouteMatch(b *testing.B) {
 	if err != nil {
 		b.Fatalf("cannot setup: %s", err)
 	}
-	err = aicra.Bind(builder, "GET", "/users", noOpIntHandler)
+	err = builder.Bind("GET", "/users", noOpHandler)
 	if err != nil {
 		b.Fatalf("cannot bind: %s", err)
 	}
@@ -678,9 +642,6 @@ func Benchmark1MultipartRouteMatch(b *testing.B) {
 func Benchmark1OverNMultipartRouteMatch(b *testing.B) {
 	builder := &aicra.Builder{}
 
-	if err := builder.Input(validator.IntType{}); err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
 	err := builder.RespondWith(func(w http.ResponseWriter, data map[string]interface{}, err error) {})
 	if err != nil {
 		b.Fatalf("cannot set responder: %s", err)
@@ -697,7 +658,7 @@ func Benchmark1OverNMultipartRouteMatch(b *testing.B) {
 		{"POST", "/articles"},
 	}
 	for _, route := range routes {
-		if err := aicra.Bind(builder, route[0], route[1], noOpIntHandler); err != nil {
+		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
 			b.Fatalf("cannot bind: %s", err)
 		}
 

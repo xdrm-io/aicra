@@ -2,14 +2,12 @@ package aicra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 
 	"github.com/xdrm-io/aicra/internal/config"
-	"github.com/xdrm-io/aicra/internal/dynfunc"
-	"github.com/xdrm-io/aicra/validator"
 )
 
 // HandlerFunc defines the generic handler interface for services
@@ -50,9 +48,9 @@ type Builder struct {
 
 // serviceHandler links a handler func to a service (method-path combination)
 type serviceHandler struct {
-	Method   string
-	Path     string
-	callable dynfunc.Callable
+	Method string
+	Path   string
+	fn     http.Handler
 }
 
 // SetURILimit defines the maximum size of request URIs that is accepted (in
@@ -65,36 +63,6 @@ func (b *Builder) SetURILimit(size int) {
 // (in bytes)
 func (b *Builder) SetBodyLimit(size int64) {
 	b.bodyLimit = size
-}
-
-// Input adds an available validator for input arguments
-func (b *Builder) Input(t validator.Type) error {
-	if b.conf == nil {
-		b.conf = &config.API{}
-	}
-	if b.conf.Endpoints != nil {
-		return errLateType
-	}
-	b.conf.AddInputValidator(t)
-	return nil
-}
-
-type test uint
-
-// Output adds an type available for output arguments as well as a value example.
-// Some examples:
-// - Output("uint",  uint(0))
-// - Output("user",  model.User{})
-// - Output("users", []model.User{})
-func (b *Builder) Output(name string, sample interface{}) error {
-	if b.conf == nil {
-		b.conf = &config.API{}
-	}
-	if b.conf.Endpoints != nil {
-		return errLateType
-	}
-	b.conf.AddOutputValidator(name, reflect.TypeOf(sample))
-	return nil
 }
 
 // RespondWith defines the server responder, i.e. how to write data and error
@@ -142,11 +110,11 @@ func (b *Builder) Setup(r io.Reader) error {
 	if b.conf.Endpoints != nil {
 		return errAlreadySetup
 	}
-	return b.conf.Parse(r)
+	return json.NewDecoder(r).Decode(b.conf)
 }
 
-// Bind a dynamic handler to a REST service (method and pattern)
-func Bind[Req, Res any](b *Builder, method, path string, fn HandlerFunc[Req, Res]) error {
+// Bind a handler to a REST service (method and pattern)
+func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 	if b.conf == nil || b.conf.Endpoints == nil {
 		return errNotSetup
 	}
@@ -164,17 +132,15 @@ func Bind[Req, Res any](b *Builder, method, path string, fn HandlerFunc[Req, Res
 		return fmt.Errorf("%s %q: %w", method, path, errUnknownService)
 	}
 
-	var callable, err = dynfunc.Build(service, dynfunc.HandlerFunc[Req, Res](fn))
-	if err != nil {
-		return fmt.Errorf("%s %q handler: %w", method, path, err)
+	if fn == nil {
+		return fmt.Errorf("%s %q: %w", method, path, errNilHandler)
 	}
 
 	b.handlers = append(b.handlers, &serviceHandler{
-		Path:     path,
-		Method:   method,
-		callable: callable,
+		Path:   path,
+		Method: method,
+		fn:     fn,
 	})
-
 	return nil
 }
 

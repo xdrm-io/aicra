@@ -2,16 +2,13 @@ package api
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/xdrm-io/aicra/internal/ctx"
 )
 
 // Context defines the value stored in the request's context
 type Context struct {
-	Request        *http.Request
-	ResponseWriter http.ResponseWriter
-	Auth           *Auth
+	Auth *Auth
 }
 
 // Extract the current internal data from a context.Context. Note: it never
