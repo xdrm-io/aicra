@@ -2,7 +2,6 @@ package config_test
 
 import (
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,14 +16,20 @@ func TestParameter_UnmarshalJSON(t *testing.T) {
 		name   string
 		config string
 
-		jsonErr bool
-		err     error
-		param   config.Parameter
+		jsonSyntaxErr bool
+		jsonTypeErr   bool
+		err           error
+		param         config.Parameter
 	}{
 		{
-			name:    "invalid json",
-			config:  `{""}`,
-			jsonErr: true,
+			name:          "invalid json syntax",
+			config:        `{`,
+			jsonSyntaxErr: true,
+		},
+		{
+			name:        "invalid json type",
+			config:      `{"type": 123}`,
+			jsonTypeErr: true,
 		},
 		{
 			name:   "empty",
@@ -96,9 +101,15 @@ func TestParameter_UnmarshalJSON(t *testing.T) {
 			t.Parallel()
 			var p config.Parameter
 			err := json.Unmarshal([]byte(tc.config), &p)
-			var jsonErr *json.SyntaxError
-			require.Equal(t, tc.jsonErr, errors.As(err, &jsonErr), "json error")
-			if tc.jsonErr {
+
+			if tc.jsonSyntaxErr {
+				e := &json.SyntaxError{}
+				require.ErrorAs(t, err, &e, "json syntax error")
+				return
+			}
+			if tc.jsonTypeErr {
+				e := &json.UnmarshalTypeError{}
+				require.ErrorAs(t, err, &e, "json type error")
 				return
 			}
 			require.ErrorIs(t, err, tc.err)

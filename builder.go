@@ -132,11 +132,11 @@ func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 	}
 
 	if service == nil {
-		return fmt.Errorf("%s %q: %w", method, path, errUnknownService)
+		return fmt.Errorf("'%s %s': %w", method, path, errUnknownService)
 	}
 
 	if fn == nil {
-		return fmt.Errorf("%s %q: %w", method, path, errNilHandler)
+		return fmt.Errorf("'%s %s': %w", method, path, errNilHandler)
 	}
 
 	b.handlers = append(b.handlers, &serviceHandler{
