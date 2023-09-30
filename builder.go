@@ -24,9 +24,6 @@ const (
 type Builder struct {
 	// the server configuration defining available services
 	conf *config.API
-	// respond func defines how to write data and error into an http response,
-	// defaults to `DefaultResponder`.
-	respond Responder
 	// user-defined handlers bound to services from the configuration
 	handlers []*serviceHandler
 	// http middlewares wrapping the entire http connection (e.g. logger)
@@ -66,16 +63,6 @@ func (b *Builder) SetURILimit(size int) {
 // (in bytes)
 func (b *Builder) SetBodyLimit(size int64) {
 	b.bodyLimit = size
-}
-
-// RespondWith defines the server responder, i.e. how to write data and error
-// into the http response.
-func (b *Builder) RespondWith(responder Responder) error {
-	if responder == nil {
-		return errNilResponder
-	}
-	b.respond = responder
-	return nil
 }
 
 // With adds an http middleware on top of the http connection
@@ -154,10 +141,6 @@ func (b *Builder) Build(validators config.Validators) (http.Handler, error) {
 	}
 	if b.bodyLimit == 0 {
 		b.bodyLimit = DefaultBodyLimit
-	}
-
-	if b.respond == nil {
-		b.respond = DefaultResponder
 	}
 
 	for _, service := range b.conf.Endpoints {

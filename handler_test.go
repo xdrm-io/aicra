@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/xdrm-io/aicra"
 	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/config"
@@ -49,9 +50,7 @@ func TestHandlerWith(t *testing.T) {
 
 			// get value and increment
 			cast, ok := value.(int)
-			if !ok {
-				t.Fatalf("value is not an int")
-			}
+			require.True(t, ok, "cannot cast context data to int")
 			cast++
 			r = r.WithContext(context.WithValue(r.Context(), key, cast))
 			next.ServeHTTP(w, r)
@@ -63,11 +62,9 @@ func TestHandlerWith(t *testing.T) {
 		builder.With(middleware)
 	}
 
-	config := strings.NewReader(`[ { "method": "GET", "path": "/path", "scope": [[]], "info": "info", "in": {}, "out": {} } ]`)
-	err := builder.Setup(config)
-	if err != nil {
-		t.Fatalf("setup: unexpected error <%v>", err)
-	}
+	cnf := strings.NewReader(`[ { "method": "GET", "path": "/path", "scope": [[]], "info": "info", "in": {}, "out": {} } ]`)
+	err := builder.Setup(cnf)
+	require.NotNil(t, err)
 
 	pathHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// write value from middlewares into response
@@ -83,27 +80,20 @@ func TestHandlerWith(t *testing.T) {
 		w.Write([]byte(fmt.Sprintf("#%d#", cast)))
 	})
 
-	if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
-		t.Fatalf("bind: unexpected error <%v>", err)
-	}
+	err = builder.Bind(http.MethodGet, "/path", pathHandler)
+	require.NoError(t, err)
 
 	handler, err := builder.Build(config.Validators{})
-	if err != nil {
-		t.Fatalf("build: unexpected error <%v>", err)
-	}
+	require.NoError(t, err)
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/path", &bytes.Buffer{})
 
 	// test request
 	handler.ServeHTTP(response, request)
-	if response.Body == nil {
-		t.Fatalf("response has no body")
-	}
+	require.NotNil(t, response.Body, "body")
 	token := fmt.Sprintf("#%d#", n)
-	if !strings.Contains(response.Body.String(), token) {
-		t.Fatalf("expected %q to be in response <%s>", token, response.Body.String())
-	}
+	require.Containsf(t, response.Body.String(), token, "expected %q to be in response <%s>", token, response.Body.String())
 
 }
 
@@ -197,18 +187,9 @@ func TestHandlerWithAuth(t *testing.T) {
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					a := api.Extract(r.Context()).Auth
-					if a == nil {
-						t.Fatalf("cannot access api.Auth form request context")
-					}
+					require.NotNil(t, a, "cannot access api.Auth form request context")
 
-					if a.Granted() == tc.granted {
-						return
-					}
-					if a.Granted() {
-						t.Fatalf("unexpected granted auth")
-					} else {
-						t.Fatalf("expected granted auth")
-					}
+					require.Equal(t, tc.granted, a.Granted(), "auth granted")
 					next.ServeHTTP(w, r)
 				})
 			})
@@ -216,9 +197,7 @@ func TestHandlerWithAuth(t *testing.T) {
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					a := api.Extract(r.Context()).Auth
-					if a == nil {
-						t.Fatalf("cannot access api.Auth form request context")
-					}
+					require.NotNil(t, a, "cannot access api.Auth form request context")
 
 					a.Active = tc.permissions
 					next.ServeHTTP(w, r)
@@ -226,31 +205,24 @@ func TestHandlerWithAuth(t *testing.T) {
 			})
 
 			err := builder.Setup(strings.NewReader(tc.config))
-			if err != nil {
-				t.Fatalf("setup: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			pathHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				runtime.Respond(w, nil, api.ErrNotImplemented)
 			})
 
-			if err := builder.Bind(http.MethodGet, "/path", pathHandler); err != nil {
-				t.Fatalf("bind: unexpected error <%v>", err)
-			}
+			err = builder.Bind(http.MethodGet, "/path", pathHandler)
+			require.NoError(t, err)
 
 			handler, err := builder.Build(config.Validators{})
-			if err != nil {
-				t.Fatalf("build: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			response := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/path", &bytes.Buffer{})
 
 			// test request
 			handler.ServeHTTP(response, request)
-			if response.Body == nil {
-				t.Fatalf("response has no body")
-			}
+			require.NotNil(t, response.Body, "body")
 
 		})
 	}
@@ -351,9 +323,7 @@ func TestHandlerPermissionError(t *testing.T) {
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					a := api.Extract(r.Context()).Auth
-					if a == nil {
-						t.Fatalf("cannot access api.Auth form request context")
-					}
+					require.NotNil(t, a, "cannot access api.Auth form request context")
 
 					a.Active = tc.permissions
 					next.ServeHTTP(w, r)
@@ -361,18 +331,13 @@ func TestHandlerPermissionError(t *testing.T) {
 			})
 
 			err := builder.Setup(strings.NewReader(tc.config))
-			if err != nil {
-				t.Fatalf("setup: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
-			if err := tc.binder(builder); err != nil {
-				t.Fatalf("bind: unexpected error <%v>", err)
-			}
+			err = tc.binder(builder)
+			require.NoError(t, err)
 
 			handler, err := builder.Build(config.Validators{})
-			if err != nil {
-				t.Fatalf("build: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			var (
 				body     = strings.NewReader(tc.body)
@@ -382,15 +347,10 @@ func TestHandlerPermissionError(t *testing.T) {
 
 			// test request
 			handler.ServeHTTP(response, request)
-			if response.Body == nil {
-				t.Fatalf("response has no body")
-			}
+			require.NotNil(t, response.Body, "body")
 
 			expectedStatus := api.GetErrorStatus(tc.err)
-			if response.Result().StatusCode != expectedStatus {
-				t.Fatalf("expected status %d got %d", expectedStatus, response.Result().StatusCode)
-			}
-
+			require.Equalf(t, expectedStatus, response.Result().StatusCode, "http status")
 		})
 	}
 
@@ -565,17 +525,8 @@ func TestHandlerDynamicScope(t *testing.T) {
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					a := api.Extract(r.Context()).Auth
-					if a == nil {
-						t.Fatalf("cannot access api.Auth form request context")
-					}
-					if a.Granted() == tc.granted {
-						return
-					}
-					if a.Granted() {
-						t.Fatalf("unexpected granted auth")
-					} else {
-						t.Fatalf("expected granted auth")
-					}
+					require.NotNil(t, a, "cannot access api.Auth form request context")
+					require.Equal(t, tc.granted, a.Granted(), "auth granted")
 					next.ServeHTTP(w, r)
 				})
 			})
@@ -584,27 +535,20 @@ func TestHandlerDynamicScope(t *testing.T) {
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					a := api.Extract(r.Context()).Auth
-					if a == nil {
-						t.Fatalf("cannot access api.Auth form request context")
-					}
+					require.NotNil(t, a, "cannot access api.Auth form request context")
 					a.Active = tc.permissions
 					next.ServeHTTP(w, r)
 				})
 			})
 
 			err := builder.Setup(strings.NewReader(tc.config))
-			if err != nil {
-				t.Fatalf("setup: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
-			if err := tc.binder(builder); err != nil {
-				t.Fatalf("bind: unexpected error <%v>", err)
-			}
+			err = tc.binder(builder)
+			require.NoError(t, err)
 
 			handler, err := builder.Build(config.Validators{})
-			if err != nil {
-				t.Fatalf("build: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			response := httptest.NewRecorder()
 			body := strings.NewReader(tc.body)
@@ -612,10 +556,7 @@ func TestHandlerDynamicScope(t *testing.T) {
 
 			// test request
 			handler.ServeHTTP(response, request)
-			if response.Body == nil {
-				t.Fatalf("response has no body")
-			}
-
+			require.NotNil(t, response.Body, "body")
 		})
 	}
 
@@ -1033,18 +974,13 @@ Content-Disposition: form-data; name="id"
 		t.Run(tc.name, func(t *testing.T) {
 			builder := &aicra.Builder{}
 			err := builder.Setup(strings.NewReader(tc.config))
-			if err != nil {
-				t.Fatalf("setup: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
-			if err := tc.binder(builder); err != nil {
-				t.Fatalf("bind: unexpected error <%v>", err)
-			}
+			err = tc.binder(builder)
+			require.NoError(t, err)
 
 			handler, err := builder.Build(config.Validators{})
-			if err != nil {
-				t.Fatalf("build: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			var (
 				response = httptest.NewRecorder()
@@ -1057,12 +993,7 @@ Content-Disposition: form-data; name="id"
 
 			// test request
 			handler.ServeHTTP(response, request)
-
-			expectedStatus := api.GetErrorStatus(tc.err)
-
-			if response.Result().StatusCode != expectedStatus {
-				t.Fatalf("invalid response status %d, expected %d", response.Result().StatusCode, expectedStatus)
-			}
+			require.Equalf(t, api.GetErrorStatus(tc.err), response.Result().StatusCode, "http status")
 
 			if len(tc.errReason) < 1 {
 				return
@@ -1073,14 +1004,8 @@ Content-Disposition: form-data; name="id"
 			}
 			var parsedError JSONError
 			err = json.NewDecoder(response.Body).Decode(&parsedError)
-			if err != nil {
-				t.Fatalf("cannot parse body: %s", err)
-			}
-
-			if parsedError.Status != tc.errReason {
-				t.Fatalf("invalid error description %q ; expected %q", parsedError.Status, tc.errReason)
-			}
-
+			require.NoError(t, err, "parse body")
+			require.Equal(t, tc.errReason, parsedError.Status, "error reason")
 		})
 	}
 }
@@ -1233,18 +1158,13 @@ func TestHandlerResponse(t *testing.T) {
 			builder := &aicra.Builder{}
 
 			err := builder.Setup(strings.NewReader(tc.config))
-			if err != nil {
-				t.Fatalf("setup: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
-			if err := tc.binder(builder); err != nil {
-				t.Fatalf("bind: unexpected error <%v>", err)
-			}
+			err = tc.binder(builder)
+			require.NoError(t, err)
 
 			handler, err := builder.Build(config.Validators{})
-			if err != nil {
-				t.Fatalf("build: unexpected error <%v>", err)
-			}
+			require.NoError(t, err)
 
 			var (
 				response = httptest.NewRecorder()
@@ -1255,13 +1175,8 @@ func TestHandlerResponse(t *testing.T) {
 
 			// test request
 			handler.ServeHTTP(response, request)
-			if response.Body == nil {
-				t.Fatalf("response has no body")
-			}
-
-			if response.Body.String() != tc.response {
-				t.Fatalf("invalid response\n- actual: %s\n- expect: %s", printEscaped(response.Body.String()), printEscaped(tc.response))
-			}
+			require.NotNil(t, response.Body, "body")
+			require.Equalf(t, tc.response, response.Body.String(), "response")
 		})
 	}
 }
@@ -1344,17 +1259,14 @@ func TestHandlerRequestTooLarge(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b := &aicra.Builder{}
 
-			if err := b.Setup(strings.NewReader(`[]`)); err != nil {
-				t.Fatalf("cannot setup builder: %s", err)
-			}
+			err := b.Setup(strings.NewReader(`[]`))
+			require.NoError(t, err)
 
 			b.SetURILimit(tc.uriMax)
 			b.SetBodyLimit(int64(tc.bodyMax))
 
 			handler, err := b.Build(config.Validators{})
-			if err != nil {
-				t.Fatalf("cannot build handler: %s", err)
-			}
+			require.NoError(t, err)
 
 			srv := httptest.NewServer(handler)
 			defer srv.Close()
@@ -1376,27 +1288,18 @@ func TestHandlerRequestTooLarge(t *testing.T) {
 				host+fakeURI,
 				strings.NewReader(fakeBody),
 			)
-			if err != nil {
-				t.Fatalf("cannot create request: %s", err)
-			}
+			require.NoError(t, err)
 
 			res, err := http.DefaultClient.Do(req)
-			if err != nil {
-				t.Fatalf("request failed: %s", err)
-			}
+			require.NoError(t, err)
 
 			var expect int = http.StatusOK
 			if tc.err != nil {
 				cast, ok := tc.err.(api.Err)
-				if !ok {
-					t.Fatalf("invalid error")
-				}
+				require.True(t, ok, "invalid error type")
 				expect = cast.Status()
 			}
-
-			if res.StatusCode != expect {
-				t.Fatalf("wrong status %d ; expected %d (%v)", res.StatusCode, expect, tc.err)
-			}
+			require.Equal(t, expect, res.StatusCode, "http status")
 		})
 	}
 }
