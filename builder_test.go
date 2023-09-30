@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/xdrm-io/aicra/internal/config"
 )
 
 func TestNilResponder(t *testing.T) {
@@ -112,7 +114,7 @@ func TestUnhandledService(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	_, err = builder.Build()
+	_, err = builder.Build(nil)
 	if !errors.Is(err, errMissingHandler) {
 		t.Fatalf("expected a %v error, got %v", errMissingHandler, err)
 	}
@@ -303,7 +305,7 @@ func TestBind(t *testing.T) {
 				}
 			}
 
-			_, err = builder.Build()
+			_, err = builder.Build(config.Validators{})
 			if !errors.Is(err, tc.buildErr) {
 				t.Fatalf("invalid build error\nactual: %v\nexpect: %v", err, tc.buildErr)
 			}

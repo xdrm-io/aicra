@@ -145,7 +145,7 @@ func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 }
 
 // Build a fully-featured HTTP server
-func (b Builder) Build() (http.Handler, error) {
+func (b Builder) Build(validators config.Validators) (http.Handler, error) {
 	if b.uriLimit == 0 {
 		b.uriLimit = DefaultURILimit
 	}
@@ -168,6 +168,14 @@ func (b Builder) Build() (http.Handler, error) {
 		if !isHandled {
 			return nil, fmt.Errorf("%s %q: %w", service.Method, service.Pattern, errMissingHandler)
 		}
+	}
+
+	if validators == nil {
+		return nil, errNilValidators
+	}
+
+	if err := b.conf.RuntimeCheck(validators); err != nil {
+		return nil, err
 	}
 
 	return Handler(b), nil

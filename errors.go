@@ -26,6 +26,9 @@ const (
 	// errMissingHandler - missing handler
 	errMissingHandler = cerr("missing handler")
 
+	// errNilValidators - nil validators provided
+	errNilValidators = cerr("nil validators")
+
 	// errNilResponder - nil responder provided
 	errNilResponder = cerr("nil responder")
 )
