@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/xdrm-io/aicra/validator"
 )
 
 // API definition
@@ -87,7 +89,7 @@ func (s API) RuntimeCheck(avail Validators) error {
 	for _, endpoint := range s.Endpoints {
 		err := endpoint.RuntimeCheck(avail)
 		if err != nil {
-			return fmt.Errorf("%s %q: %w", endpoint.Method, endpoint.Pattern, err)
+			return fmt.Errorf("'%s %s': %w", endpoint.Method, endpoint.Pattern, err)
 		}
 	}
 	return s.collide(avail)
@@ -120,17 +122,21 @@ func (s API) collide(avail Validators) error {
 	// process captures' validation specs for every endpoint
 	captures := make(map[string]map[int]captureValidation, len(s.Endpoints))
 	for _, endpoint := range s.Endpoints {
-		captures[endpoint.Method+endpoint.Pattern] = captureSpec(endpoint)
+		cap, err := captureSpec(endpoint)
+		if err != nil {
+			return fmt.Errorf("'%s %s': %w", endpoint.Method, endpoint.Pattern, err)
+		}
+		captures[endpoint.Method+endpoint.Pattern] = cap
 	}
 
-	length := len(s.Endpoints)
+	l := len(s.Endpoints)
 
 	// for each service combination
-	for a := 0; a < length; a++ {
+	for a := 0; a < l; a++ {
 		aEndpoint := s.Endpoints[a]
 		aCaptures := captures[aEndpoint.Method+aEndpoint.Pattern]
 
-		for b := a + 1; b < length; b++ {
+		for b := a + 1; b < l; b++ {
 			bEndpoint := s.Endpoints[b]
 			bCaptures := captures[bEndpoint.Method+bEndpoint.Pattern]
 
@@ -146,10 +152,90 @@ func (s API) collide(avail Validators) error {
 
 			err := checkURICollision(aFragments, bFragments, aCaptures, bCaptures, avail)
 			if err != nil {
-				return fmt.Errorf("(%s %q) vs (%s %q): %w", aEndpoint.Method, aEndpoint.Pattern, bEndpoint.Method, bEndpoint.Pattern, err)
+				return fmt.Errorf("'%s %s' vs '%s %s': %w", aEndpoint.Method, aEndpoint.Pattern, bEndpoint.Method, bEndpoint.Pattern, err)
 			}
 		}
 	}
 
+	return nil
+}
+
+type captureValidation struct {
+	ValidatorName   string
+	ValidatorParams []string
+}
+
+// captures returns the captures' validators for an endpoint indexed by their
+// index in the URI
+func captureSpec(endpoint *Endpoint) (map[int]captureValidation, error) {
+	captures := make(map[int]captureValidation, len(endpoint.Captures))
+	for _, capture := range endpoint.Captures {
+		p, ok := endpoint.Input[`{`+capture.Name+`}`]
+		if !ok {
+			return nil, fmt.Errorf("%w: %d %q", ErrBraceCaptureUndefined, capture.Index, capture.Name)
+		}
+		captures[capture.Index] = captureValidation{
+			ValidatorName:   p.ValidatorName,
+			ValidatorParams: p.ValidatorParams,
+		}
+	}
+	return captures, nil
+}
+
+// check if uri of services A and B collide
+func checkURICollision(aFragments, bFragments []string, aCaptures, bCaptures map[int]captureValidation, avail Validators) error {
+	var err error
+
+	// for each part
+	for i, aSeg := range aFragments {
+		var (
+			bSeg = bFragments[i]
+
+			aCapture, aIsCapture = aCaptures[i]
+			bCapture, bIsCapture = bCaptures[i]
+		)
+
+		// both captures -> as we cannot check, consider a collision
+		if aIsCapture && bIsCapture {
+			err = fmt.Errorf("%w (path %s and %s)", ErrPatternCollision, aSeg, bSeg)
+			continue
+		}
+
+		// no capture -> check strict equality
+		if !aIsCapture && !bIsCapture && aSeg == bSeg {
+			err = fmt.Errorf("%w (same path %q)", ErrPatternCollision, aSeg)
+			continue
+		}
+
+		// A captures B -> fail if B is a valid A value
+		if aIsCapture {
+			extractFn := avail[aCapture.ValidatorName].Validate(aCapture.ValidatorParams)
+			e := validates(extractFn, bSeg)
+			if e != nil {
+				err = fmt.Errorf("%w: %s captures %q", e, aSeg, bSeg)
+				continue
+			}
+		}
+		// B captures A -> fail is A is a valid B value
+		if bIsCapture {
+			extractFn := avail[bCapture.ValidatorName].Validate(bCapture.ValidatorParams)
+			e := validates(extractFn, aSeg)
+			if e != nil {
+				err = fmt.Errorf("%w: %s captures %q", e, bSeg, aSeg)
+				continue
+			}
+		}
+		// no match for at least one segment -> no collision
+		return nil
+	}
+	return err
+}
+
+// validates returns nil when the value is invalid for the validator
+func validates(extractFn validator.ExtractFunc[any], value string) error {
+	_, valid := extractFn(value)
+	if valid {
+		return ErrPatternCollision
+	}
 	return nil
 }

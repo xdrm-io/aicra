@@ -2,7 +2,6 @@ package config_test
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -13,22 +12,23 @@ import (
 )
 
 func TestAPI_UnmarshalJSON(t *testing.T) {
-	var jsonErr = errors.New("json error")
-
 	tt := []struct {
 		name string
 		b    []byte
-		err  error
+
+		jsonSyntaxErr bool
+		jsonTypeErr   bool
+		err           error
 	}{
 		{
-			name: "invalid json",
-			b:    []byte(`{`),
-			err:  jsonErr,
+			name:          "invalid json",
+			b:             []byte(`{`),
+			jsonSyntaxErr: true,
 		},
 		{
-			name: "invalid json receiver",
-			b:    []byte(`{"package": 1}`),
-			err:  jsonErr,
+			name:        "invalid json receiver",
+			b:           []byte(`{"package": 1}`),
+			jsonTypeErr: true,
 		},
 		{
 			name: "missing package",
@@ -150,16 +150,21 @@ func TestAPI_UnmarshalJSON(t *testing.T) {
 
 			var api config.API
 			err := json.Unmarshal(tc.b, &api)
+			if tc.jsonSyntaxErr {
+				require.Error(t, err)
+				e := &json.SyntaxError{}
+				require.ErrorAs(t, err, &e, "json syntax error")
+				return
+			}
+			if tc.jsonTypeErr {
+				require.Error(t, err)
+				e := &json.UnmarshalTypeError{}
+				require.ErrorAs(t, err, &e, "json unmarshal type error")
+				return
+			}
+
 			if tc.err != nil {
 				require.Error(t, err)
-				if tc.err == jsonErr {
-					e1 := &json.UnmarshalTypeError{}
-					e2 := &json.SyntaxError{}
-					if !errors.As(err, &e1) && !errors.As(err, &e2) {
-						require.Fail(t, "expected %T or %T, got %T", e1, e2, err)
-					}
-					return
-				}
 				require.ErrorIs(t, err, tc.err)
 				return
 			}
@@ -266,7 +271,7 @@ func TestAPI_Find(t *testing.T) {
 					Pattern:   "/a/{var}/c",
 					Fragments: []string{"a", "{var}", "c"},
 					Input: map[string]*config.Parameter{
-						"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+						"{var}": {ValidatorName: "uint"},
 					},
 					Captures: []*config.BraceCapture{
 						{Index: 1, Name: "var"},
@@ -284,7 +289,7 @@ func TestAPI_Find(t *testing.T) {
 					Pattern:   "/a/{var}/c",
 					Fragments: []string{"a", "{var}", "c"},
 					Input: map[string]*config.Parameter{
-						"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+						"{var}": {ValidatorName: "uint"},
 					},
 					Captures: []*config.BraceCapture{
 						{Index: 1, Name: "var"},
@@ -373,7 +378,7 @@ func TestAPI_Find(t *testing.T) {
 					Pattern:   "/a/{var}/c",
 					Fragments: []string{"a", "{var}", "c"},
 					Input: map[string]*config.Parameter{
-						"{var}": {ValidatorName: "UNKNOWN", ValidatorParams: []string{}},
+						"{var}": {ValidatorName: "UNKNOWN"},
 					},
 					Captures: []*config.BraceCapture{
 						{Index: 1, Name: "var"},
@@ -449,6 +454,40 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 			},
 			err: config.ErrParamTypeUnknown,
 		},
+		{
+			name: "capture not found",
+			a: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input:   map[string]*config.Parameter{},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/b",
+			},
+			err: config.ErrBraceCaptureUndefined,
+		},
+		{
+			name: "invalid validator params",
+			a: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{"unexpected"}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/1",
+			},
+			err: config.ErrParamTypeParamsInvalid,
+		},
 
 		{
 			name: "diff 1-fragment",
@@ -487,7 +526,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "string"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -502,7 +541,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 0, Name: "var"},
@@ -517,7 +556,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}/c",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "string"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -532,7 +571,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}/c",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -577,7 +616,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -592,7 +631,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -606,7 +645,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -616,7 +655,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -630,7 +669,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -640,7 +679,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "string"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -654,7 +693,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}/c",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "uint"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -664,7 +703,7 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 				Method:  "GET",
 				Pattern: "/a/{var}/c",
 				Input: map[string]*config.Parameter{
-					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+					"{var}": {ValidatorName: "string"},
 				},
 				Captures: []*config.BraceCapture{
 					{Index: 1, Name: "var"},
@@ -684,7 +723,12 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 			}
 
 			err := api.RuntimeCheck(validators)
-			require.ErrorIs(t, err, tc.err)
+			if tc.err != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
 		})
 		t.Run(tc.name+` inverted`, func(t *testing.T) {
 			tc := tc
@@ -695,7 +739,12 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 			}
 
 			err := api.RuntimeCheck(validators)
-			require.ErrorIs(t, err, tc.err)
+			if tc.err != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }

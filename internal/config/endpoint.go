@@ -60,7 +60,7 @@ func (e *Endpoint) UnmarshalJSON(b []byte) error {
 	e.Output = r.Output
 
 	if err := e.validate(); err != nil {
-		return fmt.Errorf("%s %s: %w", r.Method, r.Pattern, err)
+		return fmt.Errorf("'%s %s': %w", r.Method, r.Pattern, err)
 	}
 	return nil
 }
