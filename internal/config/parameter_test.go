@@ -10,7 +10,7 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
-func TestParam(t *testing.T) {
+func TestParameter_UnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	tt := []struct {
@@ -124,7 +124,7 @@ func wrapValidator[T any](v validator.Validator[T]) genericValidator {
 	}
 }
 
-func TestParamRuntimeCheck(t *testing.T) {
+func TestParameter_RuntimeCheck(t *testing.T) {
 	t.Parallel()
 
 	validators := config.Validators{
