@@ -12,3 +12,14 @@ func {{ getterName .Validator }}(params []string) builtin.ExtractFunc[{{ .Type }
 	return new({{ $validator.Validator }}).Validate(params)
 }
 {{- end }}
+
+// Validators lists available validators for this API
+{{- if ne (len .Validators) 0 }}
+var Validators = map[string]builtin.Validator[any]{
+	{{- range $name, $validator := .Validators }}
+	"{{ $name }}": builtin.Wrap[{{ $validator.Type }}](new({{ $validator.Validator }})),
+	{{- end }}
+}
+{{- else }}
+var Validators = map[string]builtin.Validator[any]{}
+{{- end }}

@@ -102,7 +102,7 @@ func (m mapper) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		runtime.Respond(w, nil, err)
 		return
 	}
-	InFirstname, err := runtime.ExtractForm[string](form, "firstname", getBuiltinStringValidator(nil))
+	InFirstname, err := runtime.ExtractForm[string](form, "firstname", getBuiltinStringValidator([]string{"1", "30"}))
 	if err != nil && err != runtime.ErrMissingParam {
 		runtime.Respond(w, nil, err)
 		return
@@ -110,7 +110,7 @@ func (m mapper) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		req.Firstname = &InFirstname
 	}
-	InLastname, err := runtime.ExtractForm[string](form, "lastname", getBuiltinStringValidator(nil))
+	InLastname, err := runtime.ExtractForm[string](form, "lastname", getBuiltinStringValidator([]string{"1", "30"}))
 	if err != nil && err != runtime.ErrMissingParam {
 		runtime.Respond(w, nil, err)
 		return
@@ -118,7 +118,7 @@ func (m mapper) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		req.Lastname = &InLastname
 	}
-	InUsername, err := runtime.ExtractForm[string](form, "username", getBuiltinStringValidator(nil))
+	InUsername, err := runtime.ExtractForm[string](form, "username", getBuiltinStringValidator([]string{"1", "30"}))
 	if err != nil && err != runtime.ErrMissingParam {
 		runtime.Respond(w, nil, err)
 		return
