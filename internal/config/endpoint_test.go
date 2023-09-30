@@ -8,7 +8,7 @@ import (
 	"github.com/xdrm-io/aicra/internal/config"
 )
 
-func TestEndpointUnmarshal(t *testing.T) {
+func TestEndpoint_UnmarshalJSON(t *testing.T) {
 	type TC struct {
 		name     string
 		conf     string

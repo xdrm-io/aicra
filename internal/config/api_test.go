@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/validator"
 )
 
 func TestAPI_UnmarshalJSON(t *testing.T) {
@@ -161,6 +162,284 @@ func TestAPI_UnmarshalJSON(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestAPI_RuntimeCheck(t *testing.T) {
+	validators := config.Validators{
+		"string": validator.Wrap[string](new(validator.String)),
+		"uint":   validator.Wrap[uint](new(validator.Uint)),
+	}
+
+	tt := []struct {
+		name string
+		a    config.Endpoint
+		b    config.Endpoint
+		err  error
+	}{
+		{
+			name: "invalid endpoint",
+			a: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/",
+				Input: map[string]*config.Parameter{
+					"param": {ValidatorName: "unknown"},
+				},
+			},
+			b: config.Endpoint{
+				Method:  "PUT",
+				Pattern: "/",
+			},
+			err: config.ErrParamTypeUnknown,
+		},
+
+		{
+			name: "diff 1-fragment",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a"},
+			b:    config.Endpoint{Method: "GET", Pattern: "/b"},
+			err:  nil,
+		},
+		{
+			name: "diff 2-fragment",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/b"},
+			b:    config.Endpoint{Method: "GET", Pattern: "/a/c"},
+			err:  nil,
+		},
+		{
+			name: "diff 1-fragment 2-fragment",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a"},
+			b:    config.Endpoint{Method: "GET", Pattern: "/a/b"},
+			err:  nil,
+		},
+		{
+			name: "collide 1-fragment",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a"},
+			b:    config.Endpoint{Method: "GET", Pattern: "/a"},
+			err:  config.ErrPatternCollision,
+		},
+		{
+			name: "same diff method",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a"},
+			b:    config.Endpoint{Method: "PUT", Pattern: "/a"},
+			err:  nil,
+		},
+		{
+			name: "collide 2nd fragment",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/b"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+		{
+			name: "diff 2nd fragment incompatible type",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/b"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 0, Name: "var"},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "middle path collision",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/b/c"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}/c",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+		{
+			name: "diff middle path collision type",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/b/c"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}/c",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "diff middle path collision with params",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/bbb/c"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}/c",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "string", ValidatorParams: []string{"3"}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+		{
+			name: "diff middle path skip with params",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/bbb/c"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}/c",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "string", ValidatorParams: []string{"2"}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "collide left additional fragment",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/123/c"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "collide uint",
+			a:    config.Endpoint{Method: "GET", Pattern: "/a/123"},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+		{
+			name: "colliding end captures",
+			a: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+		{
+			name: "colliding end captures diff types",
+			a: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+		{
+			name: "colliding middle captures",
+			a: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}/c",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "uint", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			b: config.Endpoint{
+				Method:  "GET",
+				Pattern: "/a/{var}/c",
+				Input: map[string]*config.Parameter{
+					"{var}": {ValidatorName: "string", ValidatorParams: []string{}},
+				},
+				Captures: []*config.BraceCapture{
+					{Index: 1, Name: "var"},
+				},
+			},
+			err: config.ErrPatternCollision,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			api := &config.API{
+				Endpoints: []*config.Endpoint{&tc.a, &tc.b},
+			}
+
+			err := api.RuntimeCheck(validators)
+			require.ErrorIs(t, err, tc.err)
+		})
+		t.Run(tc.name+` inverted`, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			api := &config.API{
+				Endpoints: []*config.Endpoint{&tc.b, &tc.a},
+			}
+
+			err := api.RuntimeCheck(validators)
+			require.ErrorIs(t, err, tc.err)
 		})
 	}
 }
