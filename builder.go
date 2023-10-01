@@ -71,6 +71,9 @@ func (b *Builder) SetBodyLimit(size int64) {
 // the service associated with the request has not been found at this stage.
 // This stage is perfect for logging or generic request management.
 func (b *Builder) With(mw func(http.Handler) http.Handler) {
+	if mw == nil {
+		return
+	}
 	if b.middlewares == nil {
 		b.middlewares = make([]func(http.Handler) http.Handler, 0)
 	}
@@ -85,6 +88,9 @@ func (b *Builder) With(mw func(http.Handler) http.Handler) {
 // data that can be access with api.GetRequest(), api.GetResponseWriter(),
 // api.GetAuth(), etc methods.
 func (b *Builder) WithContext(mw func(http.Handler) http.Handler) {
+	if mw == nil {
+		return
+	}
 	if b.ctxMiddlewares == nil {
 		b.ctxMiddlewares = make([]func(http.Handler) http.Handler, 0)
 	}
@@ -94,19 +100,21 @@ func (b *Builder) WithContext(mw func(http.Handler) http.Handler) {
 // Setup the builder with its api definition file
 // panics if already setup
 func (b *Builder) Setup(r io.Reader) error {
-	if b.conf == nil {
-		b.conf = &config.API{}
+	if b.conf != nil {
+		return ErrAlreadySetup
 	}
-	if b.conf.Endpoints != nil {
-		return errAlreadySetup
-	}
+	b.conf = &config.API{}
 	return json.NewDecoder(r).Decode(b.conf)
 }
 
 // Bind a handler to a REST service (method and pattern)
 func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 	if b.conf == nil || b.conf.Endpoints == nil {
-		return errNotSetup
+		return ErrNotSetup
+	}
+
+	if fn == nil {
+		return fmt.Errorf("'%s %s': %w", method, path, ErrNilHandler)
 	}
 
 	// find associated service from config
@@ -119,11 +127,13 @@ func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 	}
 
 	if service == nil {
-		return fmt.Errorf("'%s %s': %w", method, path, errUnknownService)
+		return fmt.Errorf("'%s %s': %w", method, path, ErrUnknownService)
 	}
 
-	if fn == nil {
-		return fmt.Errorf("'%s %s': %w", method, path, errNilHandler)
+	for _, handler := range b.handlers {
+		if handler.Method == method && handler.Path == path {
+			return fmt.Errorf("'%s %s': %w", method, path, ErrAlreadyBound)
+		}
 	}
 
 	b.handlers = append(b.handlers, &serviceHandler{
@@ -136,6 +146,14 @@ func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 
 // Build a fully-featured HTTP server
 func (b *Builder) Build(validators config.Validators) (http.Handler, error) {
+	if b.conf == nil {
+		return nil, ErrNotSetup
+	}
+	if validators == nil {
+		return nil, ErrNilValidators
+	}
+	b.validators = validators
+
 	if b.uriLimit == 0 {
 		b.uriLimit = DefaultURILimit
 	}
@@ -144,22 +162,17 @@ func (b *Builder) Build(validators config.Validators) (http.Handler, error) {
 	}
 
 	for _, service := range b.conf.Endpoints {
-		var isHandled bool
+		var handled bool
 		for _, handler := range b.handlers {
 			if handler.Method == service.Method && handler.Path == service.Pattern {
-				isHandled = true
+				handled = true
 				break
 			}
 		}
-		if !isHandled {
-			return nil, fmt.Errorf("%s %q: %w", service.Method, service.Pattern, errMissingHandler)
+		if !handled {
+			return nil, fmt.Errorf("%s %q: %w", service.Method, service.Pattern, ErrMissingHandler)
 		}
 	}
-
-	if validators == nil {
-		return nil, errNilValidators
-	}
-	b.validators = validators
 
 	if err := b.conf.RuntimeCheck(b.validators); err != nil {
 		return nil, err
