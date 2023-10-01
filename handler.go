@@ -24,7 +24,6 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var h http.Handler = http.HandlerFunc(s.resolve)
-
 	for _, mw := range s.middlewares {
 		h = mw(h)
 	}
@@ -49,7 +48,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// no handler found
-	if handler == nil {
+	if handler == nil || handler.fn == nil {
 		// should never fail as the builder ensures all services are plugged
 		// properly
 		runtime.Respond(w, nil, api.ErrUncallableService)
