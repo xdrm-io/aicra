@@ -1,34 +1,37 @@
 package aicra
 
-// cerr allows you to create constant "const" error with type boxing.
-type cerr string
+// Err allows you to create constant "const" error with type boxing.
+type Err string
 
-func (err cerr) Error() string {
-	return string(err)
+func (e Err) Error() string {
+	return string(e)
 }
 
 const (
-	// errLateType - cannot add datatype after setting up the definition
-	errLateType = cerr("types cannot be added after Setup")
+	// ErrLateType - cannot add datatype after setting up the definition
+	ErrLateType = Err("types cannot be added after Setup")
 
-	// errNotSetup - not set up yet
-	errNotSetup = cerr("not set up")
+	// ErrNotSetup - not set up yet
+	ErrNotSetup = Err("not set up")
 
-	// errAlreadySetup - already set up
-	errAlreadySetup = cerr("already set up")
+	// ErrAlreadySetup - already set up
+	ErrAlreadySetup = Err("already set up")
 
-	// errUnknownService - no service matching this handler
-	errUnknownService = cerr("unknown service")
+	// ErrUnknownService - no service matching this handler
+	ErrUnknownService = Err("unknown service")
 
-	// errUncallableService - nil handler provided
-	errNilHandler = cerr("nil handler")
+	// ErrAlreadyBound - handler already bound
+	ErrAlreadyBound = Err("already bound")
 
-	// errMissingHandler - missing handler
-	errMissingHandler = cerr("missing handler")
+	// ErrNilHandler - nil handler provided
+	ErrNilHandler = Err("nil handler")
 
-	// errNilValidators - nil validators provided
-	errNilValidators = cerr("nil validators")
+	// ErrMissingHandler - missing handler
+	ErrMissingHandler = Err("missing handler")
 
-	// errNilResponder - nil responder provided
-	errNilResponder = cerr("nil responder")
+	// ErrNilValidators - nil validators provided
+	ErrNilValidators = Err("nil validators")
+
+	// ErrNilResponder - nil responder provided
+	ErrNilResponder = Err("nil responder")
 )
