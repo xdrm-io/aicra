@@ -22,12 +22,12 @@ const baseConf = `` +
 	/*	*/ `"endpoints": []` +
 	/**/ `}`
 
-func TestBuilder_Build(t *testing.T) {
-	validators := config.Validators{
-		"string": validator.Wrap[string](new(validator.String)),
-		"uint":   validator.Wrap[uint](new(validator.Uint)),
-	}
+var baseValidators = config.Validators{
+	"string": validator.Wrap[string](new(validator.String)),
+	"uint":   validator.Wrap[uint](new(validator.Uint)),
+}
 
+func TestBuilder_Build(t *testing.T) {
 	tt := []struct {
 		name       string
 		setup      func(*testing.T, *Builder)
@@ -53,7 +53,7 @@ func TestBuilder_Build(t *testing.T) {
 			setup: func(t *testing.T, b *Builder) {
 				require.NoError(t, b.Setup(strings.NewReader(baseConf)))
 			},
-			validators: validators,
+			validators: baseValidators,
 			err:        nil,
 			want: func(t *testing.T, h Handler) {
 				require.EqualValues(t, DefaultURILimit, h.uriLimit)
@@ -64,7 +64,7 @@ func TestBuilder_Build(t *testing.T) {
 			setup: func(t *testing.T, b *Builder) {
 				require.NoError(t, b.Setup(strings.NewReader(baseConf)))
 			},
-			validators: validators,
+			validators: baseValidators,
 			err:        nil,
 			want: func(t *testing.T, h Handler) {
 				require.EqualValues(t, DefaultBodyLimit, h.bodyLimit)
@@ -76,7 +76,7 @@ func TestBuilder_Build(t *testing.T) {
 				require.NoError(t, b.Setup(strings.NewReader(baseConf)))
 				b.SetURILimit(42)
 			},
-			validators: validators,
+			validators: baseValidators,
 			err:        nil,
 			want: func(t *testing.T, h Handler) {
 				require.EqualValues(t, 42, h.uriLimit)
@@ -88,7 +88,7 @@ func TestBuilder_Build(t *testing.T) {
 				require.NoError(t, b.Setup(strings.NewReader(baseConf)))
 				b.SetBodyLimit(42)
 			},
-			validators: validators,
+			validators: baseValidators,
 			err:        nil,
 			want: func(t *testing.T, h Handler) {
 				require.EqualValues(t, 42, h.bodyLimit)
@@ -103,13 +103,13 @@ func TestBuilder_Build(t *testing.T) {
 					{Method: "GET", Pattern: "/path"},
 				}
 			},
-			validators: validators,
+			validators: baseValidators,
 			err:        ErrMissingHandler,
 		},
 
 		{
 			name:       "path collision",
-			validators: validators,
+			validators: baseValidators,
 			setup: func(t *testing.T, b *Builder) {
 				require.NoError(t, b.Setup(strings.NewReader(baseConf)))
 				b.conf.Endpoints = []*config.Endpoint{
