@@ -51,8 +51,9 @@ func static(b *testing.B) (http.Handler, []route) {
 		builder = createBuilder(b)
 		routes  = createRoutes(b, NRoutes)
 	)
-	for _, route := range routes {
+	for i, route := range routes {
 		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
 			Fragments: config.URIFragments(route.path),
@@ -101,10 +102,11 @@ func uri(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
-	for _, route := range routes {
+	for i, route := range routes {
 		path := route.path + "/{id}"
 		fragments := config.URIFragments(path)
 		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   path,
 			Fragments: fragments,
@@ -157,8 +159,9 @@ func query(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
-	for _, route := range routes {
+	for i, route := range routes {
 		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
 			Fragments: config.URIFragments(route.path),
@@ -207,8 +210,9 @@ func form(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
-	for _, route := range routes {
+	for i, route := range routes {
 		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
 			Fragments: config.URIFragments(route.path),
