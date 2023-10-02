@@ -32,9 +32,9 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeHTTP implements http.Handler and wraps it in middlewares
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
-	// match service from config
-	var service = s.conf.Find(r, s.validators)
-	if service == nil {
+	// match endpoint from config
+	var endpoint = s.conf.Find(r, s.validators)
+	if endpoint == nil {
 		runtime.Respond(w, nil, api.ErrUnknownService)
 		return
 	}
@@ -42,7 +42,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// match handler
 	var handler *serviceHandler
 	for _, h := range s.handlers {
-		if h.Method == service.Method && h.Path == service.Pattern {
+		if h.Method == endpoint.Method && h.Path == endpoint.Pattern {
 			handler = h
 		}
 	}
@@ -58,7 +58,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// add info into context
 	c := context.WithValue(r.Context(), ctx.Key, &api.Context{
 		Auth: &api.Auth{
-			Required: service.Scope,
+			Required: endpoint.Scope,
 			Active:   make([]string, 0),
 		},
 	})
@@ -80,6 +80,12 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		h = mw(h)
 	}
 
+	zeroReq := http.Request{
+		URL:    r.URL,
+		Method: r.Method,
+		Header: r.Header,
+	}
+
 	// serve using the pre-filled context
-	h.ServeHTTP(w, r.WithContext(c))
+	h.ServeHTTP(w, zeroReq.WithContext(c))
 }

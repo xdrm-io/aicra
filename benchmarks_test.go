@@ -1,633 +1,324 @@
-package aicra_test
+package aicra
 
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/xdrm-io/aicra"
+	"github.com/stretchr/testify/require"
 	"github.com/xdrm-io/aicra/internal/config"
-	"github.com/xdrm-io/aicra/runtime"
 )
 
-const staticConfig = `[
-	{
-		"method": "GET",
-		"path": "/users/123",
-		"scope": [],
-		"info": "info",
-		"in": {},
-		"out": {}
-	}
-]`
-const staticOutConfig = `[
-	{
-		"method": "GET",
-		"path": "/users/123",
-		"scope": [],
-		"info": "info",
-		"in": {},
-		"out": {
-			"id": {"info":"info","name":"ID","type":"int"}
-		}
-	}
-]`
-const uriConfig = `[
-	{
-		"method": "GET",
-		"path": "/users/{id}",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"{id}": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	}
-]`
-const getConfig = `[
-	{
-		"method": "GET",
-		"path": "/users",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"GET@id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	}
-]`
-const formConfig = `[
-	{
-		"method": "GET",
-		"path": "/users",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	}
-]`
-const staticMultiConfig = `[
-	{
-		"method": "GET",
-		"path": "/users/123",
-		"scope": [],
-		"info": "info",
-		"in": {},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/users/123",
-		"scope": [],
-		"info": "info",
-		"in": {},
-		"out": {}
-	},
-	{
-		"method": "GET",
-		"path": "/users/456",
-		"scope": [],
-		"info": "info",
-		"in": {},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/users/456",
-		"scope": [],
-		"info": "info",
-		"in": {},
-		"out": {}
-	}
-]`
-const uriMultiConfig = `[
-	{
-		"method": "GET",
-		"path": "/users/{id}",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"{id}": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/users/{id}",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"{id}": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "GET",
-		"path": "/articles/{id}",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"{id}": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/articles/{id}",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"{id}": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	}
-]`
-const getMultiConfig = `[
-	{
-		"method": "GET",
-		"path": "/users",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"GET@id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/users",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"GET@id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "GET",
-		"path": "/articles",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"GET@id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/articles",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"GET@id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	}
-]`
-const formMultiConfig = `[
-	{
-		"method": "GET",
-		"path": "/users",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/users",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "GET",
-		"path": "/articles",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	},
-	{
-		"method": "POST",
-		"path": "/articles",
-		"scope": [],
-		"info": "info",
-		"in": {
-			"id": {"info":"info","name":"ID","type":"int"}
-		},
-		"out": {}
-	}
-]`
-
 func noOpHandler(w http.ResponseWriter, r *http.Request) {}
-func outHandler(w http.ResponseWriter, r *http.Request) {
-	data := map[string]any{
-		"id": 123,
-	}
-	runtime.Respond(w, data, nil)
+
+func createBuilder(b *testing.B) *Builder {
+	b.Helper()
+
+	builder := &Builder{}
+	err := builder.Setup(strings.NewReader(baseConf))
+	require.NoError(b, err)
+	return builder
 }
 
-func Benchmark1StaticRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
-
-	err := builder.Setup(strings.NewReader(staticConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users/123", noOpHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users/123", nil)
-	res := httptest.NewRecorder()
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
-	}
-}
-func Benchmark1StaticOutRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
-
-	err := builder.Setup(strings.NewReader(staticOutConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users/123", outHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users/123", nil)
-	res := httptest.NewRecorder()
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
-	}
+type route struct {
+	method string
+	path   string
 }
 
-func Benchmark1OverNStaticRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
+func createRoutes(b *testing.B, n uint) []route {
+	b.Helper()
 
-	err := builder.Setup(strings.NewReader(staticMultiConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
+	routes := make([]route, n)
+	for i := uint(0); i < n; i += 4 {
+		uri := "/users/n" + strconv.FormatUint(uint64(i), 10)
+		routes[i+0] = route{"GET", uri}
+		routes[i+1] = route{"POST", uri}
+		routes[i+2] = route{"PUT", uri}
+		routes[i+3] = route{"DELETE", uri}
 	}
+	return routes
+}
 
-	routes := [][2]string{
-		{"GET", "/users/123"},
-		{"POST", "/users/123"},
-		{"GET", "/users/456"},
-		{"POST", "/users/456"},
-	}
+// NRoutes defines the number of endpoints on which to run the benchmarks
+const NRoutes = 100
+
+func static(b *testing.B) (http.Handler, []route) {
+	b.Helper()
+
+	var (
+		builder = createBuilder(b)
+		routes  = createRoutes(b, NRoutes)
+	)
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
-			b.Fatalf("cannot bind: %s", err)
-		}
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Method:    route.method,
+			Pattern:   route.path,
+			Fragments: config.URIFragments(route.path),
+		})
+
+		err := builder.Bind(route.method, route.path, noOpHandler)
+		require.NoError(b, err)
 
 	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
 
-	req, _ := http.NewRequest("GET", "/users/123", nil)
-	res := httptest.NewRecorder()
+	return srv, routes
+}
+
+func BenchmarkStaticFirst(b *testing.B) {
+	var (
+		handler, routes = static(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path, nil)
+		res             = httptest.NewRecorder()
+	)
+
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
+func BenchmarkStaticLast(b *testing.B) {
+	var (
+		handler, routes = static(b)
+		last            = routes[len(routes)-1]
+		req, _          = http.NewRequest(last.method, last.path, nil)
+		res             = httptest.NewRecorder()
+	)
 
-func Benchmark1UriRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
-
-	err := builder.Setup(strings.NewReader(uriConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users/{id}", noOpHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users/123", nil)
-	res := httptest.NewRecorder()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
 
-func Benchmark1OverNUriRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
+func uri(b *testing.B) (http.Handler, []route) {
+	builder := createBuilder(b)
 
-	err := builder.Setup(strings.NewReader(uriMultiConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-
-	routes := [][2]string{
-		{"GET", "/users/{id}"},
-		{"POST", "/users/{id}"},
-		{"GET", "/articles/{id}"},
-		{"POST", "/articles/{id}"},
-	}
+	routes := createRoutes(b, NRoutes)
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
-			b.Fatalf("cannot bind: %s", err)
-		}
-
+		path := route.path + "/{id}"
+		fragments := config.URIFragments(path)
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Method:    route.method,
+			Pattern:   path,
+			Fragments: fragments,
+			Input: map[string]*config.Parameter{
+				"{id}": {Rename: "ID", ValidatorName: "uint"},
+			},
+			Captures: []*config.BraceCapture{
+				{Index: len(fragments) - 1, Name: "id"},
+			},
+		})
+		err := builder.Bind(route.method, path, noOpHandler)
+		require.NoError(b, err)
 	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes
+}
 
-	req, _ := http.NewRequest("GET", "/users/123", nil)
-	res := httptest.NewRecorder()
+func BenchmarkURIFirst(b *testing.B) {
+	var (
+		handler, routes = uri(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path+"/123", nil)
+		res             = httptest.NewRecorder()
+	)
+
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
 
-func Benchmark1GetRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
+func BenchmarkURILast(b *testing.B) {
+	var (
+		handler, routes = uri(b)
+		last            = routes[len(routes)-1]
+		req, _          = http.NewRequest(last.method, last.path+"/123", nil)
+		res             = httptest.NewRecorder()
+	)
 
-	err := builder.Setup(strings.NewReader(getConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users", noOpHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users?id=123", nil)
-	res := httptest.NewRecorder()
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
-func Benchmark1OverNGetRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
 
-	err := builder.Setup(strings.NewReader(getMultiConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
+func query(b *testing.B) (http.Handler, []route) {
+	builder := createBuilder(b)
 
-	routes := [][2]string{
-		{"GET", "/users"},
-		{"POST", "/users"},
-		{"GET", "/articles"},
-		{"POST", "/articles"},
-	}
+	routes := createRoutes(b, NRoutes)
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
-			b.Fatalf("cannot bind: %s", err)
-		}
-
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Method:    route.method,
+			Pattern:   route.path,
+			Fragments: config.URIFragments(route.path),
+			Input: map[string]*config.Parameter{
+				"?id": {Rename: "ID", ValidatorName: "uint"},
+			},
+		})
+		err := builder.Bind(route.method, route.path, noOpHandler)
+		require.NoError(b, err)
 	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users?id=123", nil)
-	res := httptest.NewRecorder()
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
-	}
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes
 }
 
-func Benchmark1URLEncodedRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
-
-	err := builder.Setup(strings.NewReader(formConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users", noOpHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users", strings.NewReader("id=123"))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	res := httptest.NewRecorder()
+func BenchmarkQueryFirst(b *testing.B) {
+	var (
+		handler, routes = query(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path+"?id=123", nil)
+		res             = httptest.NewRecorder()
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
-func Benchmark1OverNURLEncodedRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
+func BenchmarkQueryLast(b *testing.B) {
+	var (
+		handler, routes = query(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path+"?id=123", nil)
+		res             = httptest.NewRecorder()
+	)
 
-	err := builder.Setup(strings.NewReader(formMultiConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
 	}
+}
 
-	routes := [][2]string{
-		{"GET", "/users"},
-		{"POST", "/users"},
-		{"GET", "/articles"},
-		{"POST", "/articles"},
-	}
+func form(b *testing.B) (http.Handler, []route) {
+	builder := createBuilder(b)
+
+	routes := createRoutes(b, NRoutes)
 	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
-			b.Fatalf("cannot bind: %s", err)
-		}
-
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Method:    route.method,
+			Pattern:   route.path,
+			Fragments: config.URIFragments(route.path),
+			Input: map[string]*config.Parameter{
+				"id": {Rename: "ID", ValidatorName: "uint"},
+			},
+		})
+		err := builder.Bind(route.method, route.path, noOpHandler)
+		require.NoError(b, err)
 	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes
+}
 
-	req, _ := http.NewRequest("GET", "/users", strings.NewReader("id=123"))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	res := httptest.NewRecorder()
+func BenchmarkURLEncodedFirst(b *testing.B) {
+	var (
+		handler, routes = form(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path, strings.NewReader("id=123"))
+		res             = httptest.NewRecorder()
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
-
-func Benchmark1JsonRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
-
-	err := builder.Setup(strings.NewReader(formConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users", noOpHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users", strings.NewReader(`{"id":123}`))
-	req.Header.Add("Content-Type", "application/json")
-	res := httptest.NewRecorder()
+func BenchmarkURLEncodedLast(b *testing.B) {
+	var (
+		handler, routes = form(b)
+		last            = routes[len(routes)-1]
+		req, _          = http.NewRequest(last.method, last.path, strings.NewReader("id=123"))
+		res             = httptest.NewRecorder()
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
-func Benchmark1OverNJsonRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
 
-	err := builder.Setup(strings.NewReader(formMultiConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-
-	routes := [][2]string{
-		{"GET", "/users"},
-		{"POST", "/users"},
-		{"GET", "/articles"},
-		{"POST", "/articles"},
-	}
-	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
-			b.Fatalf("cannot bind: %s", err)
-		}
-
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users", strings.NewReader(`{"id":123}`))
-	req.Header.Add("Content-Type", "application/json")
-	res := httptest.NewRecorder()
+func BenchmarkJSONFirst(b *testing.B) {
+	var (
+		handler, routes = form(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(`{"id":123}`))
+		res             = httptest.NewRecorder()
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
+	}
+}
+func BenchmarkJSONLast(b *testing.B) {
+	var (
+		handler, routes = form(b)
+		last            = routes[len(routes)-1]
+		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(`{"id":123}`))
+		res             = httptest.NewRecorder()
+	)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
 	}
 }
 
-func Benchmark1MultipartRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
+func BenchmarkMultipartFirst(b *testing.B) {
+	var (
+		handler, routes = form(b)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(`--x
+		Content-Disposition: form-data; name="id"
 
-	err := builder.Setup(strings.NewReader(formConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
-	err = builder.Bind("GET", "/users", noOpHandler)
-	if err != nil {
-		b.Fatalf("cannot bind: %s", err)
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
+		123
+		--x--`))
+		res = httptest.NewRecorder()
+	)
 
-	req, _ := http.NewRequest("GET", "/users", strings.NewReader(`--x
-	Content-Disposition: form-data; name="id"
-
-	123
-	--x--`))
 	req.Header.Add("Content-Type", "multipart/form-data; boundary=x")
-	res := httptest.NewRecorder()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
-func Benchmark1OverNMultipartRouteMatch(b *testing.B) {
-	builder := &aicra.Builder{}
+func BenchmarkMultipartLast(b *testing.B) {
+	var (
+		handler, routes = form(b)
+		last            = routes[len(routes)-1]
+		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(`--x
+		Content-Disposition: form-data; name="id"
 
-	err := builder.Setup(strings.NewReader(formMultiConfig))
-	if err != nil {
-		b.Fatalf("cannot setup: %s", err)
-	}
+		123
+		--x--`))
+		res = httptest.NewRecorder()
+	)
 
-	routes := [][2]string{
-		{"GET", "/users"},
-		{"POST", "/users"},
-		{"GET", "/articles"},
-		{"POST", "/articles"},
-	}
-	for _, route := range routes {
-		if err := builder.Bind(route[0], route[1], noOpHandler); err != nil {
-			b.Fatalf("cannot bind: %s", err)
-		}
-
-	}
-	srv, err := builder.Build(config.Validators{})
-	if err != nil {
-		b.Fatalf("cannot build: %s", err)
-	}
-
-	req, _ := http.NewRequest("GET", "/users", strings.NewReader(`--x
-	Content-Disposition: form-data; name="id"
-
-	123
-	--x--`))
 	req.Header.Add("Content-Type", "multipart/form-data; boundary=x")
-	res := httptest.NewRecorder()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		srv.ServeHTTP(res, req)
+		handler.ServeHTTP(res, req)
 	}
 }
