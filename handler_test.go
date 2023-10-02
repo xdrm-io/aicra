@@ -360,14 +360,13 @@ func TestHandler_NilHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	builder.conf.Endpoints = []*config.Endpoint{
-		{Method: "GET", Pattern: "/path", Fragments: []string{"path"}},
+		{Name: "1", Method: "GET", Pattern: "/path", Fragments: []string{"path"}},
 	}
 
 	// nil handler
-	builder.handlers = append(builder.handlers, &serviceHandler{
-		Method: "GET",
-		Path:   "/path",
-	})
+	builder.handlers = map[string]http.Handler{
+		"1": nil,
+	}
 
 	handler, err := builder.Build(baseValidators)
 	require.NoError(t, err)

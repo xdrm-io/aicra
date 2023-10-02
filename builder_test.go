@@ -113,8 +113,9 @@ func TestBuilder_Build(t *testing.T) {
 			setup: func(t *testing.T, b *Builder) {
 				require.NoError(t, b.Setup(strings.NewReader(baseConf)))
 				b.conf.Endpoints = []*config.Endpoint{
-					{Method: "GET", Pattern: "/path/abc"},
+					{Name: "1", Method: "GET", Pattern: "/path/abc"},
 					{
+						Name:   "2",
 						Method: "GET", Pattern: "/path/{var}",
 						Input: map[string]*config.Parameter{
 							"{var}": {ValidatorName: "string", ValidatorParams: []string{"3"}},
@@ -124,9 +125,9 @@ func TestBuilder_Build(t *testing.T) {
 						},
 					},
 				}
-				b.handlers = []*serviceHandler{
-					{Method: "GET", Path: "/path/abc", fn: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})},
-					{Method: "GET", Path: "/path/{var}", fn: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})},
+				b.handlers = map[string]http.Handler{
+					"1": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+					"2": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
 				}
 			},
 			err: config.ErrPatternCollision,

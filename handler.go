@@ -33,22 +33,15 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ServeHTTP implements http.Handler and wraps it in middlewares
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	// match endpoint from config
-	var endpoint = s.conf.Find(r, s.validators)
+	endpoint := s.conf.Find(r, s.validators)
 	if endpoint == nil {
 		runtime.Respond(w, nil, api.ErrUnknownService)
 		return
 	}
 
 	// match handler
-	var handler *serviceHandler
-	for _, h := range s.handlers {
-		if h.Method == endpoint.Method && h.Path == endpoint.Pattern {
-			handler = h
-		}
-	}
-
-	// no handler found
-	if handler == nil || handler.fn == nil {
+	handler, ok := s.handlers[endpoint.Name]
+	if !ok || handler == nil {
 		// should never fail as the builder ensures all services are plugged
 		// properly
 		runtime.Respond(w, nil, api.ErrUncallableService)
@@ -74,7 +67,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// execute the service handler
-		handler.fn.ServeHTTP(w, r)
+		handler.ServeHTTP(w, r)
 	})
 	for _, mw := range s.ctxMiddlewares {
 		h = mw(h)

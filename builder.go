@@ -24,8 +24,9 @@ const (
 type Builder struct {
 	// the server configuration defining available services
 	conf *config.API
-	// user-defined handlers bound to services from the configuration
-	handlers []*serviceHandler
+	// user-defined handlers bound to endpoints from the configuration
+	// Note: the index is the endpoint name
+	handlers map[string]http.Handler
 	// http middlewares wrapping the entire http connection (e.g. logger)
 	middlewares []func(http.Handler) http.Handler
 	// custom middlewares only wrapping the service handler of a request
@@ -44,13 +45,6 @@ type Builder struct {
 
 	// validators is the list of validators used to validate the configuration
 	validators config.Validators
-}
-
-// serviceHandler links a handler func to a service (method-path combination)
-type serviceHandler struct {
-	Method string
-	Path   string
-	fn     http.Handler
 }
 
 // SetURILimit defines the maximum size of request URIs that is accepted (in
@@ -117,30 +111,27 @@ func (b *Builder) Bind(method, path string, fn http.HandlerFunc) error {
 		return fmt.Errorf("'%s %s': %w", method, path, ErrNilHandler)
 	}
 
-	// find associated service from config
-	var service *config.Endpoint
+	if b.handlers == nil {
+		b.handlers = make(map[string]http.Handler, len(b.conf.Endpoints))
+	}
+
+	// find associated endpoint from config
+	var endpoint *config.Endpoint
 	for _, s := range b.conf.Endpoints {
 		if method == s.Method && path == s.Pattern {
-			service = s
+			endpoint = s
 			break
 		}
 	}
 
-	if service == nil {
+	if endpoint == nil {
 		return fmt.Errorf("'%s %s': %w", method, path, ErrUnknownService)
 	}
 
-	for _, handler := range b.handlers {
-		if handler.Method == method && handler.Path == path {
-			return fmt.Errorf("'%s %s': %w", method, path, ErrAlreadyBound)
-		}
+	if _, ok := b.handlers[endpoint.Name]; ok {
+		return fmt.Errorf("'%s %s': %w", method, path, ErrAlreadyBound)
 	}
-
-	b.handlers = append(b.handlers, &serviceHandler{
-		Path:   path,
-		Method: method,
-		fn:     fn,
-	})
+	b.handlers[endpoint.Name] = fn
 	return nil
 }
 
@@ -162,14 +153,7 @@ func (b *Builder) Build(validators config.Validators) (http.Handler, error) {
 	}
 
 	for _, service := range b.conf.Endpoints {
-		var handled bool
-		for _, handler := range b.handlers {
-			if handler.Method == service.Method && handler.Path == service.Pattern {
-				handled = true
-				break
-			}
-		}
-		if !handled {
+		if _, ok := b.handlers[service.Name]; !ok {
 			return nil, fmt.Errorf("%s %q: %w", service.Method, service.Pattern, ErrMissingHandler)
 		}
 	}
