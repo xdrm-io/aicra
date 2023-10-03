@@ -75,8 +75,10 @@ func (s API) Find(r *http.Request, validators Validators) *Endpoint {
 	if r == nil {
 		return nil
 	}
+
+	method, fragments := r.Method, URIFragments(r.URL.Path)
 	for _, endpoint := range s.Endpoints {
-		if matches := endpoint.Match(r, validators); matches {
+		if matches := endpoint.Match(method, fragments, validators); matches {
 			return endpoint
 		}
 	}
