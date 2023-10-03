@@ -77,6 +77,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		URL:    r.URL,
 		Method: r.Method,
 		Header: r.Header,
+		Body:   r.Body,
 	}
 
 	// serve using the pre-filled context
