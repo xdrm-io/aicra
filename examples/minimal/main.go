@@ -48,11 +48,11 @@ func main() {
 	// add contextual middlewares (authentication)
 	builder.WithContext(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := api.Extract(r.Context())
-			if ctx == nil {
-				panic("ctx is unavailable")
+			auth := api.Extract(r)
+			if auth == nil {
+				panic("auth is unavailable")
 			}
-			ctx.Auth.Active = append(ctx.Auth.Active, r.Header.Get("Authorization"))
+			auth.Active = append(auth.Active, r.Header.Get("Authorization"))
 			next.ServeHTTP(w, r)
 		})
 	})

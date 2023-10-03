@@ -1,28 +1,21 @@
 package api
 
 import (
-	"context"
+	"net/http"
 
 	"github.com/xdrm-io/aicra/internal/ctx"
 )
 
-// Context defines the value stored in the request's context
-type Context struct {
-	Auth *Auth
-}
-
 // Extract the current internal data from a context.Context. Note: it never
 // returns nil but struct fields can be nil
-func Extract(c context.Context) *Context {
+func Extract(r *http.Request) *Auth {
+	c := ctx.Extract(r)
 	if c == nil {
-		return &Context{}
+		return nil
 	}
-	var (
-		raw      = c.Value(ctx.Key)
-		cast, ok = raw.(*Context)
-	)
+	auth, ok := c.(*Auth)
 	if !ok {
-		return &Context{}
+		return nil
 	}
-	return cast
+	return auth
 }
