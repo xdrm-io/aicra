@@ -1,7 +1,6 @@
 package aicra
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/xdrm-io/aicra/api"
@@ -49,19 +48,17 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add info into context
-	c := context.WithValue(r.Context(), ctx.Key, &api.Context{
-		Auth: &api.Auth{
-			Required: endpoint.Scope,
-			Active:   make([]string, 0),
-		},
+	ctx.Register(r, &api.Auth{
+		Required: endpoint.Scope,
+		Active:   make([]string, 0),
 	})
 
 	// run contextual middlewares
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := api.Extract(r.Context())
+		auth := api.Extract(r)
 
 		// reject non granted requests
-		if !ctx.Auth.Granted() {
+		if !auth.Granted() {
 			runtime.Respond(w, nil, api.ErrForbidden)
 			return
 		}
@@ -73,13 +70,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		h = mw(h)
 	}
 
-	zeroReq := http.Request{
-		URL:    r.URL,
-		Method: r.Method,
-		Header: r.Header,
-		Body:   r.Body,
-	}
-
 	// serve using the pre-filled context
-	h.ServeHTTP(w, zeroReq.WithContext(c))
+	h.ServeHTTP(w, r)
+	ctx.Release(r)
 }

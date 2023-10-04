@@ -1,46 +1,42 @@
 package api_test
 
 import (
-	"context"
+	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/internal/ctx"
 )
 
 func TestContextExtract(t *testing.T) {
-	c := context.Background()
-	c = context.WithValue(c, ctx.Key, &api.Context{})
+	r, err := http.NewRequest("GET", "/", nil)
+	require.NoError(t, err)
 
-	// fetch from context
-	fetched := api.Extract(c)
-	if fetched == nil {
-		t.Fatalf("fetched context must not be nil")
-	}
+	ctx.Register(r, &api.Auth{})
+
+	auth := api.Extract(r)
+	require.NotNil(t, auth)
 }
 func TestContextNilExtract(t *testing.T) {
 	fetched := api.Extract(nil)
-	if fetched == nil {
-		t.Fatalf("fetched context must not be nil")
-	}
+	require.Nil(t, fetched)
 }
 func TestContextExtractNil(t *testing.T) {
-	c := context.Background()
-	c = context.WithValue(c, ctx.Key, nil)
+	r, err := http.NewRequest("GET", "/", nil)
+	require.NoError(t, err)
 
-	// fetch from context
-	fetched := api.Extract(c)
-	if fetched == nil {
-		t.Fatalf("fetched context must not be nil")
-	}
+	ctx.Register(r, nil)
+
+	auth := api.Extract(r)
+	require.Nil(t, auth)
 }
 func TestContextExtractInvalidType(t *testing.T) {
-	c := context.Background()
-	c = context.WithValue(c, ctx.Key, 123)
+	r, err := http.NewRequest("GET", "/", nil)
+	require.NoError(t, err)
 
-	// fetch from context
-	fetched := api.Extract(c)
-	if fetched == nil {
-		t.Fatalf("fetched context must not be nil")
-	}
+	ctx.Register(r, 123)
+
+	auth := api.Extract(r)
+	require.Nil(t, auth)
 }
