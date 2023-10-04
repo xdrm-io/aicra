@@ -9,8 +9,8 @@ import (
 	_ "embed"
 
 	"github.com/xdrm-io/aicra"
-	"github.com/xdrm-io/aicra/api"
 	"github.com/xdrm-io/aicra/examples/minimal/generated"
+	"github.com/xdrm-io/aicra/runtime"
 )
 
 //go:embed api.json
@@ -48,7 +48,7 @@ func main() {
 	// add contextual middlewares (authentication)
 	builder.WithContext(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			auth := api.Extract(r)
+			auth := runtime.GetAuth(r)
 			if auth == nil {
 				panic("auth is unavailable")
 			}

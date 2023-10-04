@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/internal/config"
 	"github.com/xdrm-io/aicra/internal/ctx"
 	"github.com/xdrm-io/aicra/runtime"
 )
@@ -31,8 +32,10 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeHTTP implements http.Handler and wraps it in middlewares
 func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
+	fragments := config.URIFragments(r.URL.Path)
+
 	// match endpoint from config
-	endpoint := s.conf.Find(r, s.validators)
+	endpoint := s.conf.Find(r.Method, fragments, s.validators)
 	if endpoint == nil {
 		runtime.Respond(w, nil, api.ErrUnknownService)
 		return
@@ -48,14 +51,17 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add info into context
-	ctx.Register(r, &api.Auth{
-		Required: endpoint.Scope,
-		Active:   make([]string, 0),
+	ctx.Register(r, &runtime.Context{
+		Fragments: fragments,
+		Auth: &api.Auth{
+			Required: endpoint.Scope,
+			Active:   make([]string, 0),
+		},
 	})
 
 	// run contextual middlewares
 	var h http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := api.Extract(r)
+		auth := runtime.GetAuth(r)
 
 		// reject non granted requests
 		if !auth.Granted() {

@@ -179,7 +179,7 @@ func TestHandler_Auth(t *testing.T) {
 			// tester middleware (last executed)
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.Extract(r)
+					a := runtime.GetAuth(r)
 					require.NotNil(t, a, "cannot access api.Auth form request context")
 
 					require.Equal(t, tc.granted, a.Granted(), "auth granted")
@@ -189,7 +189,7 @@ func TestHandler_Auth(t *testing.T) {
 
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.Extract(r)
+					a := runtime.GetAuth(r)
 					require.NotNil(t, a, "cannot access api.Auth form request context")
 
 					a.Active = tc.permissions
@@ -318,7 +318,7 @@ func TestHandler_PermissionError(t *testing.T) {
 			// add active permissions
 			builder.WithContext(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					a := api.Extract(r)
+					a := runtime.GetAuth(r)
 					require.NotNil(t, a, "cannot access api.Auth form request context")
 
 					a.Active = tc.permissions

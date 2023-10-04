@@ -2,8 +2,6 @@ package config_test
 
 import (
 	"encoding/json"
-	"io"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -181,47 +179,24 @@ func TestAPI_Find(t *testing.T) {
 		"uint":   validator.Wrap[uint](new(validator.Uint)),
 	}
 
-	newRequest := func(t *testing.T, method, path string, body io.Reader) *http.Request {
-		t.Helper()
-		r, err := http.NewRequest(method, path, body)
-		require.NoError(t, err)
-		return r
-	}
-
 	tt := []struct {
 		name      string
 		endpoints []config.Endpoint
-		r         *http.Request
+		method    string
+		fragments []string
 		match     bool
 	}{
 		{
-			name: "nil request",
-			r:    nil,
-			endpoints: []config.Endpoint{
-				{Method: "GET", Pattern: "/"},
-			},
-			match: false,
-		},
-
-		{
-			name: "match GET /",
-			r:    newRequest(t, "GET", "/", nil),
+			name:   "match GET /",
+			method: "GET", fragments: []string{},
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/"},
 			},
 			match: true,
 		},
 		{
-			name: "match GET /a",
-			r:    newRequest(t, "GET", "/a", nil),
-			endpoints: []config.Endpoint{
-				{Method: "GET", Pattern: "/a", Fragments: []string{"a"}},
-			},
-			match: true,
-		},
-		{
-			name: "match GET /a trailing slash",
-			r:    newRequest(t, "GET", "/a/", nil),
+			name:   "match GET /a",
+			method: "GET", fragments: []string{"a"},
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a", Fragments: []string{"a"}},
 			},
@@ -229,33 +204,24 @@ func TestAPI_Find(t *testing.T) {
 		},
 
 		{
-			name: "mismatch GET /a/b missing fragment",
-			r:    newRequest(t, "GET", "/a", nil),
+			name:   "mismatch GET /a/b missing fragment",
+			method: "GET", fragments: []string{"a"},
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
 			match: false,
 		},
 		{
-			name: "mismatch GET /a/b additional fragment",
-			r:    newRequest(t, "GET", "/a/b/c", nil),
+			name:   "mismatch GET /a/b additional fragment",
+			method: "GET", fragments: []string{"a", "b", "c"},
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
 			match: false,
 		},
 		{
-			name: "mismatch GET /a/b vs /a/c",
-			r:    newRequest(t, "GET", "/a/c", nil),
-			endpoints: []config.Endpoint{
-				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
-			},
-			match: false,
-		},
-
-		{
-			name: "mismatch GET /a/b vs /a/c",
-			r:    newRequest(t, "GET", "/a/c", nil),
+			name:   "mismatch GET /a/b vs /a/c",
+			method: "GET", fragments: []string{"a", "c"},
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
@@ -263,8 +229,17 @@ func TestAPI_Find(t *testing.T) {
 		},
 
 		{
-			name: "match GET /a/{uint}/c",
-			r:    newRequest(t, "GET", "/a/123/c", nil),
+			name:   "mismatch GET /a/b vs /a/c",
+			method: "GET", fragments: []string{"a", "c"},
+			endpoints: []config.Endpoint{
+				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
+			},
+			match: false,
+		},
+
+		{
+			name:   "match GET /a/{uint}/c",
+			method: "GET", fragments: []string{"a", "123", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -281,8 +256,8 @@ func TestAPI_Find(t *testing.T) {
 			match: true,
 		},
 		{
-			name: "mismatch GET /a/{uint}/c",
-			r:    newRequest(t, "GET", "/a/abc/c", nil),
+			name:   "mismatch GET /a/{uint}/c",
+			method: "GET", fragments: []string{"a", "abc", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -299,8 +274,8 @@ func TestAPI_Find(t *testing.T) {
 			match: false,
 		},
 		{
-			name: "match GET /a/{string:3}/c",
-			r:    newRequest(t, "GET", "/a/abc/c", nil),
+			name:   "match GET /a/{string:3}/c",
+			method: "GET", fragments: []string{"a", "abc", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -317,8 +292,8 @@ func TestAPI_Find(t *testing.T) {
 			match: true,
 		},
 		{
-			name: "mismatch GET /a/{string:2}/c",
-			r:    newRequest(t, "GET", "/a/abc/c", nil),
+			name:   "mismatch GET /a/{string:2}/c",
+			method: "GET", fragments: []string{"a", "abc", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -336,8 +311,8 @@ func TestAPI_Find(t *testing.T) {
 		},
 
 		{
-			name: "err missing param",
-			r:    newRequest(t, "GET", "/a/123/c", nil),
+			name:   "err missing param",
+			method: "GET", fragments: []string{"a", "123", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -352,8 +327,8 @@ func TestAPI_Find(t *testing.T) {
 			match: false,
 		},
 		{
-			name: "err nil param",
-			r:    newRequest(t, "GET", "/a/123/c", nil),
+			name:   "err nil param",
+			method: "GET", fragments: []string{"a", "123", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -370,8 +345,8 @@ func TestAPI_Find(t *testing.T) {
 			match: false,
 		},
 		{
-			name: "err missing validator",
-			r:    newRequest(t, "GET", "/a/123/c", nil),
+			name:   "err missing validator",
+			method: "GET", fragments: []string{"a", "123", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -388,8 +363,8 @@ func TestAPI_Find(t *testing.T) {
 			match: false,
 		},
 		{
-			name: "err nil validator unexpected params",
-			r:    newRequest(t, "GET", "/a/123/c", nil),
+			name:   "err nil validator unexpected params",
+			method: "GET", fragments: []string{"a", "123", "c"},
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -417,7 +392,7 @@ func TestAPI_Find(t *testing.T) {
 				api.Endpoints = append(api.Endpoints, &e)
 			}
 
-			endpoint := api.Find(tc.r, validators)
+			endpoint := api.Find(tc.method, tc.fragments, validators)
 			if tc.match {
 				require.NotNil(t, endpoint)
 				return

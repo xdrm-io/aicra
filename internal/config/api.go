@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -71,12 +70,7 @@ func (s API) validate() error {
 }
 
 // Find a endpoint matching an incoming HTTP request
-func (s API) Find(r *http.Request, validators Validators) *Endpoint {
-	if r == nil {
-		return nil
-	}
-
-	method, fragments := r.Method, URIFragments(r.URL.Path)
+func (s API) Find(method string, fragments []string, validators Validators) *Endpoint {
 	for _, endpoint := range s.Endpoints {
 		if matches := endpoint.Match(method, fragments, validators); matches {
 			return endpoint
