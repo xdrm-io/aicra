@@ -161,6 +161,7 @@ func (b *Builder) Build(validators config.Validators) (http.Handler, error) {
 	if err := b.conf.RuntimeCheck(b.validators); err != nil {
 		return nil, err
 	}
+	b.conf.BuildIndex()
 
 	return Handler(*b), nil
 }

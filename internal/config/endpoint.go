@@ -108,17 +108,8 @@ func (e *Endpoint) validate() error {
 	return nil
 }
 
-// Match returns if this service would handle this HTTP request
-func (e *Endpoint) Match(method string, fragments []string, validators Validators) bool {
-	return method == e.Method && e.matchPattern(fragments, validators)
-}
-
-// checks if an uri matches the service's pattern
-func (e *Endpoint) matchPattern(fragments []string, validators Validators) bool {
-	if len(fragments) != len(e.Fragments) {
-		return false
-	}
-
+// Match checks if an uri matches the service's pattern
+func (e *Endpoint) Match(fragments []string, validators Validators) bool {
 	// root url '/'
 	if len(e.Fragments) == 0 && len(fragments) == 0 {
 		return true

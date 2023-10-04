@@ -15,6 +15,8 @@ type API struct {
 	Imports    map[string]string    `json:"imports"`
 	Validators map[string]Validator `json:"validators"`
 	Endpoints  []*Endpoint          `json:"endpoints"`
+
+	index Index `json:"-"`
 }
 
 // UnmarshalJSON with custom validation
@@ -71,12 +73,12 @@ func (s API) validate() error {
 
 // Find a endpoint matching an incoming HTTP request
 func (s API) Find(method string, fragments []string, validators Validators) *Endpoint {
-	for _, endpoint := range s.Endpoints {
-		if matches := endpoint.Match(method, fragments, validators); matches {
-			return endpoint
-		}
-	}
-	return nil
+	return s.index.Find(method, fragments, validators)
+}
+
+// BuildIndex builds the tree index
+func (s *API) BuildIndex() {
+	s.index = newIndex(s)
 }
 
 // RuntimeCheck fails when the config is invalid with the code-generated

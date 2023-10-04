@@ -391,6 +391,7 @@ func TestAPI_Find(t *testing.T) {
 			for _, e := range tc.endpoints {
 				api.Endpoints = append(api.Endpoints, &e)
 			}
+			api.BuildIndex()
 
 			endpoint := api.Find(tc.method, tc.fragments, validators)
 			if tc.match {
