@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/xdrm-io/aicra/internal/config"
 	"github.com/xdrm-io/aicra/validator"
 )
 
@@ -13,7 +12,7 @@ import (
 func ExtractURI[T any](r *http.Request, i int, extractor validator.ExtractFunc[T]) (T, error) {
 	var zero T
 
-	fragments := config.URIFragments(r.RequestURI)
+	fragments := GetFragments(r)
 	if i >= len(fragments) {
 		return zero, ErrMissingURIParameter
 	}

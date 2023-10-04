@@ -1,9 +1,9 @@
 package generated
 
 import (
-	model "github.com/xdrm-io/aicra/examples/minimal/model"
-	custom "github.com/xdrm-io/aicra/examples/minimal/validator"
 	builtin "github.com/xdrm-io/aicra/validator"
+	custom "github.com/xdrm-io/aicra/examples/minimal/validator"
+	model "github.com/xdrm-io/aicra/examples/minimal/model"
 )
 
 func getBuiltinStringValidator(params []string) builtin.ExtractFunc[string] {
