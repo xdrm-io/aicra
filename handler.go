@@ -55,7 +55,7 @@ func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
 		Fragments: fragments,
 		Auth: &api.Auth{
 			Required: endpoint.Scope,
-			Active:   make([]string, 0),
+			Active:   nil,
 		},
 	})
 
