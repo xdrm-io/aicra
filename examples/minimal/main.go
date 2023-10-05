@@ -1,20 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"net/http"
 	"time"
 
 	_ "embed"
 
-	"github.com/xdrm-io/aicra"
 	"github.com/xdrm-io/aicra/examples/minimal/generated"
 	"github.com/xdrm-io/aicra/runtime"
 )
-
-//go:embed api.json
-var apijson []byte
 
 func main() {
 	var (
@@ -22,18 +17,9 @@ func main() {
 		endpoints = NewEndpoints(db)
 	)
 
-	builder := &aicra.Builder{}
-
-	// load config
-	err := builder.Setup(bytes.NewReader(apijson))
+	builder, err := generated.New(endpoints)
 	if err != nil {
 		log.Fatalf("cannot setup builder: %s", err)
-	}
-
-	// bind endpoints
-	err = generated.Bind(builder, endpoints)
-	if err != nil {
-		log.Fatalf("cannot wire server: %s", err)
 	}
 
 	// add http middlewares (logger)

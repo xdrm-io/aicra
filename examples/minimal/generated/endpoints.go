@@ -1,12 +1,15 @@
 package generated
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/xdrm-io/aicra"
 	model "github.com/xdrm-io/aicra/examples/minimal/model"
+
+	_ "embed"
 )
 
 type Server interface {
@@ -37,14 +40,23 @@ func routes(impl mapper) []route {
 	}
 }
 
-func Bind(b *aicra.Builder, impl Server) error {
+//go:embed api.json
+var config []byte
+
+func New(impl Server) (*aicra.Builder, error) {
+	b := &aicra.Builder{}
+	if err := b.Setup(bytes.NewReader(config)); err != nil {
+		return nil, fmt.Errorf("cannot setup: %w", err)
+	}
+
 	mapped := mapper{impl: impl}
 	for _, r := range routes(mapped) {
 		if err := b.Bind(r.method, r.path, r.fn); err != nil {
-			return fmt.Errorf("cannot bind '%s %s': %s", r.method, r.path, err)
+			return nil, fmt.Errorf("cannot bind '%s %s': %w", r.method, r.path, err)
 		}
 	}
-	return nil
+
+	return b, nil
 }
 
 type GetUsersReq struct {

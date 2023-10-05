@@ -25,14 +25,16 @@ var (
 
 // Generator can generate go code from the configuration
 type Generator struct {
-	Config config.API
+	Config        config.API
+	ConfigRelPath string
 }
 
 // WriteEndpoints writes endpoints go file
 func (g Generator) WriteEndpoints(w io.Writer) error {
 	tmpl := template.New("endpoints.tmpl")
 	tmpl.Funcs(template.FuncMap{
-		"getType": getType,
+		"getType":          getType,
+		"getConfigRelPath": getConfigRelPath(g.ConfigRelPath),
 	})
 	tmpl, err := tmpl.ParseFS(endpointsTmpl, "endpoints.tmpl")
 	if err != nil {
@@ -93,6 +95,14 @@ func validate(src []byte, w io.Writer) error {
 		Tabwidth: 4,
 	}
 	return cfg.Fprint(w, fset, f)
+}
+
+// getConfigRelPath returns the path of the config file relative to the generated
+// endpoints file
+func getConfigRelPath(path string) func() string {
+	return func() string {
+		return path
+	}
 }
 
 // getType returns the GO type associated to a parameter according to the

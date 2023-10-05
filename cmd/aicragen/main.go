@@ -34,12 +34,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	var gen = codegen.Generator{Config: cnf}
 	var (
 		vPath = filepath.Join(args.GenFolderPath, "validators.go")
 		ePath = filepath.Join(args.GenFolderPath, "endpoints.go")
 		mPath = filepath.Join(args.GenFolderPath, "mappers.go")
 	)
+
+	// relative path of config from the generated code
+	configRelPath, err := filepath.Rel(args.GenFolderPath, args.ConfigPath)
+	if err != nil {
+		clifmt.Fprintf(os.Stderr, "${config path}(red) | %s\n", err)
+		os.Exit(1)
+	}
+
+	var gen = codegen.Generator{Config: cnf, ConfigRelPath: configRelPath}
 
 	f, err := os.OpenFile(vPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
 	if err != nil {

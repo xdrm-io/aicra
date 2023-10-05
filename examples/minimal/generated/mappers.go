@@ -2,7 +2,6 @@ package generated
 
 import (
 	"net/http"
-
 	"github.com/xdrm-io/aicra/runtime"
 )
 
