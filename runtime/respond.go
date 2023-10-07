@@ -13,7 +13,12 @@ func Respond(w http.ResponseWriter, data map[string]any, err error) {
 	w.WriteHeader(api.GetErrorStatus(err))
 
 	if data == nil {
-		data = make(map[string]interface{}, 1)
+		if err == nil {
+			w.Write([]byte(`{"status":"all right"}`))
+			return
+		}
+		w.Write([]byte(`{"status":"` + err.Error() + `"}`))
+		return
 	}
 
 	data["status"] = "all right"
