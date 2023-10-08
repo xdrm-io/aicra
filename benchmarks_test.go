@@ -367,15 +367,9 @@ func BenchmarkURI100ParamsFirst(b *testing.B) {
 	var (
 		handler, routes = uriMulti(b, 100)
 		first           = routes[0]
-		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(`--x
-		Content-Disposition: form-data; name="id"
-
-		123
-		--x--`))
-		res = httptest.NewRecorder()
+		req, _          = http.NewRequest(first.method, first.path, nil)
+		res             = httptest.NewRecorder()
 	)
-
-	req.Header.Add("Content-Type", "multipart/form-data; boundary=x")
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -387,7 +381,63 @@ func BenchmarkURI100ParamsLast(b *testing.B) {
 	var (
 		handler, routes = uriMulti(b, 100)
 		last            = routes[len(routes)-1]
-		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(`--x
+		req, _          = http.NewRequest(last.method, last.path, nil)
+		res             = httptest.NewRecorder()
+	)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+
+func queryMulti(b *testing.B, nVars int) (http.Handler, []route) {
+	builder := createBuilder(b)
+	builder.SetURILimit(1e6)
+
+	routes := createRoutes(b, NRoutes)
+	var vars strings.Builder
+	for i, route := range routes {
+		vars.Reset()
+		var (
+			path  = route.path
+			input = make(map[string]*config.Parameter, nVars)
+		)
+		for v := 0; v < nVars; v++ {
+			if v == 0 {
+				vars.WriteString(`?a` + strconv.Itoa(v) + `=` + strconv.Itoa(v))
+			} else {
+				vars.WriteString(`&a` + strconv.Itoa(v) + `=` + strconv.Itoa(v))
+			}
+			input[`?a`+strconv.Itoa(v)] = &config.Parameter{Rename: "A" + strconv.Itoa(v), ValidatorName: "uint", Kind: config.KindQuery}
+		}
+		uri := path + vars.String()
+
+		fragments := config.URIFragments(path)
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
+			Method:    route.method,
+			Pattern:   path,
+			Fragments: fragments,
+			Input:     input,
+		})
+		err := builder.Bind(route.method, path, noOpHandler)
+		require.NoError(b, err)
+
+		// return the full uri
+		routes[i].path = uri
+	}
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes
+}
+
+func BenchmarkQuery100ParamsFirst(b *testing.B) {
+	var (
+		handler, routes = queryMulti(b, 100)
+		first           = routes[0]
+		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(`--x
 		Content-Disposition: form-data; name="id"
 
 		123
@@ -395,7 +445,23 @@ func BenchmarkURI100ParamsLast(b *testing.B) {
 		res = httptest.NewRecorder()
 	)
 
-	req.Header.Add("Content-Type", "multipart/form-data; boundary=x")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+func BenchmarkQuery100ParamsLast(b *testing.B) {
+	var (
+		handler, routes = queryMulti(b, 100)
+		last            = routes[len(routes)-1]
+		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(`--x
+		Content-Disposition: form-data; name="id"
+
+		123
+		--x--`))
+		res = httptest.NewRecorder()
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
