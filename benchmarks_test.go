@@ -17,12 +17,8 @@ import (
 
 func noOpHandler(w http.ResponseWriter, r *http.Request) {}
 
-func formHandler(b *testing.B) http.HandlerFunc {
-	b.Helper()
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := runtime.ParseForm(r)
-		require.NoError(b, err)
-	}
+func formHandler(w http.ResponseWriter, r *http.Request) {
+	runtime.ParseForm(r)
 }
 
 func createBuilder(b *testing.B) *Builder {
@@ -63,17 +59,17 @@ func static(b *testing.B) (http.Handler, []route) {
 		builder = createBuilder(b)
 		routes  = createRoutes(b, NRoutes)
 	)
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
 			Fragments: config.URIFragments(route.path),
-		})
+		}
 
 		err := builder.Bind(route.method, route.path, noOpHandler)
 		require.NoError(b, err)
-
 	}
 	srv, err := builder.Build(baseValidators)
 	require.NoError(b, err)
@@ -114,10 +110,11 @@ func uri(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
 		path := route.path + "/{id}"
 		fragments := config.URIFragments(path)
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   path,
@@ -128,7 +125,7 @@ func uri(b *testing.B) (http.Handler, []route) {
 			Captures: []*config.BraceCapture{
 				{Index: len(fragments) - 1, Name: "id"},
 			},
-		})
+		}
 		err := builder.Bind(route.method, path, noOpHandler)
 		require.NoError(b, err)
 	}
@@ -171,8 +168,9 @@ func query(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
@@ -180,7 +178,7 @@ func query(b *testing.B) (http.Handler, []route) {
 			Input: map[string]*config.Parameter{
 				"?id": {Rename: "ID", ValidatorName: "uint"},
 			},
-		})
+		}
 		err := builder.Bind(route.method, route.path, noOpHandler)
 		require.NoError(b, err)
 	}
@@ -222,8 +220,9 @@ func form(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
@@ -231,7 +230,7 @@ func form(b *testing.B) (http.Handler, []route) {
 			Input: map[string]*config.Parameter{
 				"id": {Rename: "ID", ValidatorName: "uint"},
 			},
-		})
+		}
 		err := builder.Bind(route.method, route.path, noOpHandler)
 		require.NoError(b, err)
 	}
@@ -344,10 +343,10 @@ func uriMulti(b *testing.B, nVars int) (http.Handler, []route) {
 	builder.SetURILimit(1e6)
 
 	routes := createRoutes(b, NRoutes)
-	var vars strings.Builder
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
-		vars.Reset()
 		var (
+			vars     strings.Builder
 			input    = make(map[string]*config.Parameter, nVars)
 			captures = make([]*config.BraceCapture, nVars)
 		)
@@ -359,14 +358,14 @@ func uriMulti(b *testing.B, nVars int) (http.Handler, []route) {
 
 		path := route.path + vars.String()
 		fragments := config.URIFragments(path)
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   path,
 			Fragments: fragments,
 			Input:     input,
 			Captures:  captures,
-		})
+		}
 		err := builder.Bind(route.method, path, noOpHandler)
 		require.NoError(b, err)
 	}
@@ -409,10 +408,10 @@ func queryMulti(b *testing.B, nVars int) (http.Handler, []route) {
 	builder.SetURILimit(1e6)
 
 	routes := createRoutes(b, NRoutes)
-	var vars strings.Builder
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
-		vars.Reset()
 		var (
+			vars  strings.Builder
 			path  = route.path
 			input = make(map[string]*config.Parameter, nVars)
 		)
@@ -427,13 +426,13 @@ func queryMulti(b *testing.B, nVars int) (http.Handler, []route) {
 		uri := path + vars.String()
 
 		fragments := config.URIFragments(path)
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   path,
 			Fragments: fragments,
 			Input:     input,
-		})
+		}
 		err := builder.Bind(route.method, path, noOpHandler)
 		require.NoError(b, err)
 
@@ -486,22 +485,21 @@ func urlencodedMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes)
-	var vars strings.Builder
+	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
-		vars.Reset()
 		input := make(map[string]*config.Parameter, nVars)
 		for v := 0; v < nVars; v++ {
 			input[`a`+strconv.Itoa(v)] = &config.Parameter{Rename: "A" + strconv.Itoa(v), ValidatorName: "uint", Kind: config.KindForm}
 		}
 
-		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+		builder.conf.Endpoints[i] = &config.Endpoint{
 			Name:      strconv.Itoa(i),
 			Method:    route.method,
 			Pattern:   route.path,
 			Fragments: config.URIFragments(route.path),
 			Input:     input,
-		})
-		err := builder.Bind(route.method, route.path, formHandler(b))
+		}
+		err := builder.Bind(route.method, route.path, formHandler)
 		require.NoError(b, err)
 	}
 
@@ -567,7 +565,7 @@ func jsonMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 			Fragments: config.URIFragments(route.path),
 			Input:     input,
 		})
-		err := builder.Bind(route.method, route.path, formHandler(b))
+		err := builder.Bind(route.method, route.path, formHandler)
 		require.NoError(b, err)
 	}
 
