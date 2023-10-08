@@ -1,14 +1,17 @@
 package aicra
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/xdrm-io/aicra/internal/config"
+	"github.com/xdrm-io/aicra/runtime"
 )
 
 func noOpHandler(w http.ResponseWriter, r *http.Request) {}
@@ -462,6 +465,78 @@ func BenchmarkQuery100ParamsLast(b *testing.B) {
 		--x--`))
 		res = httptest.NewRecorder()
 	)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+
+func urlencodedMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
+	builder := createBuilder(b)
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		b.Helper()
+		_, err := runtime.ParseForm(r)
+		require.NoError(b, err)
+	}
+
+	routes := createRoutes(b, NRoutes)
+	var vars strings.Builder
+	for i, route := range routes {
+		vars.Reset()
+		input := make(map[string]*config.Parameter, nVars)
+		for v := 0; v < nVars; v++ {
+			input[`a`+strconv.Itoa(v)] = &config.Parameter{Rename: "A" + strconv.Itoa(v), ValidatorName: "uint", Kind: config.KindForm}
+		}
+
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
+			Method:    route.method,
+			Pattern:   route.path,
+			Fragments: config.URIFragments(route.path),
+			Input:     input,
+		})
+		err := builder.Bind(route.method, route.path, handler)
+		require.NoError(b, err)
+	}
+
+	// build body
+	query := make(url.Values, nVars)
+	for v := 0; v < nVars; v++ {
+		query.Add(`a`+strconv.Itoa(v), strconv.Itoa(v))
+	}
+	body := []byte(query.Encode())
+
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes, body
+}
+
+func BenchmarkURLEncoded100ParamsFirst(b *testing.B) {
+	var (
+		handler, routes, body = urlencodedMulti(b, 100)
+		first                 = routes[0]
+		req, _                = http.NewRequest(first.method, first.path, bytes.NewReader(body))
+		res                   = httptest.NewRecorder()
+	)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+func BenchmarkURLEncoded100ParamsLast(b *testing.B) {
+	var (
+		handler, routes, body = urlencodedMulti(b, 100)
+		last                  = routes[len(routes)-1]
+		req, _                = http.NewRequest(last.method, last.path, bytes.NewReader(body))
+		res                   = httptest.NewRecorder()
+	)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	b.ReportAllocs()
 	b.ResetTimer()

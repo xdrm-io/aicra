@@ -88,7 +88,7 @@ func parseUrlencoded(reader io.Reader) (Form, error) {
 
 	form := Form{
 		typ:    URLEncoded,
-		values: make(map[string]any),
+		values: make(map[string]any, len(query)),
 	}
 	for name, values := range query {
 		form.values[name] = values
