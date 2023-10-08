@@ -14,7 +14,12 @@ type Handler Builder
 
 // ServeHTTP implements http.Handler and wraps it in middlewares (adapters)
 func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.uriLimit > 0 && len(r.URL.RequestURI()) > s.uriLimit {
+	uriSize := len(r.URL.Path)
+	if r.URL.RawQuery != "" {
+		uriSize += 1 + len(r.URL.RawQuery)
+	}
+
+	if s.uriLimit > 0 && uriSize > s.uriLimit {
 		runtime.Respond(w, nil, api.ErrURITooLong)
 		return
 	}
