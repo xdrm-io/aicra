@@ -2,6 +2,7 @@ package aicra
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,6 +16,14 @@ import (
 )
 
 func noOpHandler(w http.ResponseWriter, r *http.Request) {}
+
+func formHandler(b *testing.B) http.HandlerFunc {
+	b.Helper()
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := runtime.ParseForm(r)
+		require.NoError(b, err)
+	}
+}
 
 func createBuilder(b *testing.B) *Builder {
 	b.Helper()
@@ -32,14 +41,14 @@ type route struct {
 
 func createRoutes(b *testing.B, n uint) []route {
 	b.Helper()
+	methods := []string{"GET", "POST", "PUT", "DELETE"}
 
 	routes := make([]route, n)
-	for i := uint(0); i < n; i += 4 {
+	methodi := uint8(0)
+	for i := uint(0); i < n; i++ {
 		uri := "/users/n" + strconv.FormatUint(uint64(i), 10)
-		routes[i+0] = route{"GET", uri}
-		routes[i+1] = route{"POST", uri}
-		routes[i+2] = route{"PUT", uri}
-		routes[i+3] = route{"DELETE", uri}
+		routes[i] = route{methods[methodi], uri}
+		methodi = (methodi + 1) % uint8(len(methods))
 	}
 	return routes
 }
@@ -476,12 +485,6 @@ func BenchmarkQuery100ParamsLast(b *testing.B) {
 func urlencodedMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 	builder := createBuilder(b)
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		b.Helper()
-		_, err := runtime.ParseForm(r)
-		require.NoError(b, err)
-	}
-
 	routes := createRoutes(b, NRoutes)
 	var vars strings.Builder
 	for i, route := range routes {
@@ -498,7 +501,7 @@ func urlencodedMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 			Fragments: config.URIFragments(route.path),
 			Input:     input,
 		})
-		err := builder.Bind(route.method, route.path, handler)
+		err := builder.Bind(route.method, route.path, formHandler(b))
 		require.NoError(b, err)
 	}
 
@@ -537,6 +540,73 @@ func BenchmarkURLEncoded100ParamsLast(b *testing.B) {
 		res                   = httptest.NewRecorder()
 	)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+
+func jsonMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
+	builder := createBuilder(b)
+
+	routes := createRoutes(b, NRoutes)
+	var vars strings.Builder
+	for i, route := range routes {
+		vars.Reset()
+		input := make(map[string]*config.Parameter, nVars)
+		for v := 0; v < nVars; v++ {
+			input[`a`+strconv.Itoa(v)] = &config.Parameter{Rename: "A" + strconv.Itoa(v), ValidatorName: "uint", Kind: config.KindForm}
+		}
+
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
+			Method:    route.method,
+			Pattern:   route.path,
+			Fragments: config.URIFragments(route.path),
+			Input:     input,
+		})
+		err := builder.Bind(route.method, route.path, formHandler(b))
+		require.NoError(b, err)
+	}
+
+	// build body
+	form := make(map[string]int, nVars)
+	for i, l := 0, len(form); i < l; i++ {
+		form[`a`+strconv.Itoa(i)] = i
+	}
+	body, err := json.Marshal(form)
+	require.NoError(b, err)
+
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes, body
+}
+
+func BenchmarkJSON100ParamsFirst(b *testing.B) {
+	var (
+		handler, routes, body = jsonMulti(b, 100)
+		first                 = routes[0]
+		req, _                = http.NewRequest(first.method, first.path, bytes.NewReader(body))
+		res                   = httptest.NewRecorder()
+	)
+	req.Header.Add("Content-Type", "application/json")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+func BenchmarkJSON100ParamsLast(b *testing.B) {
+	var (
+		handler, routes, body = jsonMulti(b, 100)
+		last                  = routes[len(routes)-1]
+		req, _                = http.NewRequest(last.method, last.path, bytes.NewReader(body))
+		res                   = httptest.NewRecorder()
+	)
+	req.Header.Add("Content-Type", "application/json")
 
 	b.ReportAllocs()
 	b.ResetTimer()
