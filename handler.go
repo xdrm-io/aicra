@@ -28,15 +28,27 @@ func (s Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var h http.Handler = http.HandlerFunc(s.resolve)
+	var h http.Handler = &resolver{
+		handlers:       s.handlers,
+		conf:           s.conf,
+		validators:     s.validators,
+		ctxMiddlewares: s.ctxMiddlewares,
+	}
 	for _, mw := range s.middlewares {
 		h = mw(h)
 	}
 	h.ServeHTTP(w, r)
 }
 
+type resolver struct {
+	handlers       map[string]http.Handler
+	conf           *config.API
+	validators     config.Validators
+	ctxMiddlewares []func(http.Handler) http.Handler
+}
+
 // ServeHTTP implements http.Handler and wraps it in middlewares
-func (s Handler) resolve(w http.ResponseWriter, r *http.Request) {
+func (s *resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fragments := config.URIFragments(r.URL.Path)
 
 	// match endpoint from config
