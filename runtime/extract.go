@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -28,9 +29,13 @@ func ExtractURI[T any](r *http.Request, i int, extractor validator.ExtractFunc[T
 func ExtractQuery[T any](r *http.Request, name string, extractor validator.ExtractFunc[T]) (T, error) {
 	var zero T
 
+	if r == nil {
+		return zero, ErrMissingParam
+	}
+
 	query, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
-		return zero, err
+		return zero, fmt.Errorf("%w: %w", ErrMissingParam, err)
 	}
 
 	values, ok := query[name]
@@ -54,7 +59,7 @@ func ExtractForm[T any](form Form, name string, extractor validator.ExtractFunc[
 	var zero T
 
 	switch form.typ {
-	case JSON:
+	case JSON, Multipart:
 		value, ok := form.values[name]
 		if !ok {
 			return zero, ErrMissingParam
@@ -77,17 +82,6 @@ func ExtractForm[T any](form Form, name string, extractor validator.ExtractFunc[
 		value, err := extractFromStringList[T](values)
 		if err != nil {
 			return zero, err
-		}
-		v, ok := extractor(value)
-		if !ok {
-			return zero, ErrInvalidType
-		}
-		return v, nil
-
-	case Multipart:
-		value, ok := form.values[name]
-		if !ok {
-			return zero, ErrMissingParam
 		}
 		v, ok := extractor(value)
 		if !ok {
