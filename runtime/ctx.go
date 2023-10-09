@@ -34,8 +34,8 @@ func GetFragments(r *http.Request) []string {
 	if raw == nil {
 		return nil
 	}
-	c, ok := raw.(*Context)
-	if !ok {
+	c := raw.(*Context)
+	if c == nil {
 		return nil
 	}
 	return c.Fragments
