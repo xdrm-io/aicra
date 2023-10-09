@@ -17,6 +17,8 @@ const (
 
 	// ErrInvalidJSON is returned when json parse failed
 	ErrInvalidJSON = Err("invalid json")
+	// ErrInvalidURLEncoded is returned when urlencoded parse failed
+	ErrInvalidURLEncoded = Err("invalid url encoded")
 
 	// ErrMissingParam - param is missing
 	ErrMissingParam = Err("missing param")

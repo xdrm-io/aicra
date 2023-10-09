@@ -15,6 +15,26 @@ import (
 	"github.com/xdrm-io/aicra/validator"
 )
 
+type uintSliceValidator struct{}
+
+func (uintSliceValidator) Validate(params []string) validator.ExtractFunc[[]uint] {
+	return func(value any) ([]uint, bool) {
+		str, ok := value.([]string)
+		if !ok {
+			return []uint{}, false
+		}
+		cast := make([]uint, len(str))
+		for i, v := range str {
+			u, err := strconv.ParseUint(v, 10, 64)
+			if err != nil {
+				return []uint{}, false
+			}
+			cast[i] = uint(u)
+		}
+		return cast, true
+	}
+}
+
 func TestExtractURI(t *testing.T) {
 	tt := []struct {
 		name      string
@@ -84,26 +104,6 @@ func TestExtractURI(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.extracted, v)
 		})
-	}
-}
-
-type uintSliceValidator struct{}
-
-func (uintSliceValidator) Validate(params []string) validator.ExtractFunc[[]uint] {
-	return func(value any) ([]uint, bool) {
-		str, ok := value.([]string)
-		if !ok {
-			return []uint{}, false
-		}
-		cast := make([]uint, len(str))
-		for i, v := range str {
-			u, err := strconv.ParseUint(v, 10, 64)
-			if err != nil {
-				return []uint{}, false
-			}
-			cast[i] = uint(u)
-		}
-		return cast, true
 	}
 }
 

@@ -78,12 +78,12 @@ func parseJSON(reader io.Reader) (Form, error) {
 func parseUrlencoded(reader io.Reader) (Form, error) {
 	body, err := io.ReadAll(reader)
 	if err != nil {
-		return Form{}, err
+		return Form{}, fmt.Errorf("%w: %w", ErrInvalidURLEncoded, err)
 	}
 
 	query, err := url.ParseQuery(string(body))
 	if err != nil {
-		return Form{}, err
+		return Form{}, fmt.Errorf("%w: %w", ErrInvalidURLEncoded, err)
 	}
 
 	form := Form{
