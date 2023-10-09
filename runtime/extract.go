@@ -65,9 +65,6 @@ func ExtractForm[T any](form Form, name string, extractor validator.ExtractFunc[
 			return zero, ErrMissingParam
 		}
 		values, ok := raw.([]string)
-		if !ok {
-			return zero, ErrInvalidURLEncoded
-		}
 		value, err := extractFromStringList[T](values)
 		if err != nil {
 			return zero, err

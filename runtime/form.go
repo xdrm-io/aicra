@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -114,7 +113,7 @@ func parseMultipart(r io.Reader, boundary string) (Form, error) {
 			return Form{}, fmt.Errorf("%w: %w", ErrInvalidMultipart, err)
 		}
 
-		data, err := ioutil.ReadAll(p)
+		data, err := io.ReadAll(p)
 		if err != nil {
 			return Form{}, fmt.Errorf("%w: %s: %w", ErrInvalidMultipart, p.FormName(), err)
 		}

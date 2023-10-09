@@ -39,6 +39,15 @@ func TestParseForm_InvalidContentType(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, runtime.ErrUnhandledContentType)
 }
+func TestParseForm_InvalidMultipartContentType(t *testing.T) {
+	req, err := http.NewRequest("POST", "", nil)
+	require.NoError(t, err, "cannot create request")
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=inv;alid")
+
+	_, err = runtime.ParseForm(req)
+	require.Error(t, err)
+	require.ErrorIs(t, err, runtime.ErrUnhandledContentType)
+}
 
 type Param struct {
 	name      string
@@ -166,6 +175,89 @@ func TestParseForm_URLEncoded(t *testing.T) {
 			req, err := http.NewRequest("POST", "", tc.body)
 			require.NoError(t, err, "cannot create request")
 			req.Header.Set("Content-Type", string(runtime.URLEncoded))
+
+			form, err := runtime.ParseForm(req)
+			if tc.err != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
+			if tc.checkParams != nil {
+				tc.checkParams(t, form)
+			}
+		})
+	}
+}
+
+func TestParseForm_Multipart(t *testing.T) {
+	const boundary = "--boundary"
+
+	tt := []struct {
+		name string
+		body io.Reader
+
+		err         error
+		checkParams func(t *testing.T, form runtime.Form)
+	}{
+		{
+			name: "invalid reader",
+			body: failReader{},
+			err:  runtime.ErrInvalidMultipart,
+		},
+		{
+			name: "invalid multipart",
+			body: strings.NewReader(`
+--` + boundary + `
+Content-Disposition: form-data; name="inv;alid"
+--` + boundary + `--`),
+			err: runtime.ErrInvalidMultipart,
+		},
+		{
+			name: "empty multipart",
+			body: strings.NewReader("\r\n--" + boundary + "--\r\n\r\n"),
+			err:  nil,
+		},
+		{
+			name: "nominal",
+			body: strings.NewReader(`
+--` + boundary + `
+Content-Disposition: form-data; name="a"
+
+string
+--` + boundary + `
+Content-Disposition: form-data; name="b"
+
+1.2
+--` + boundary + `
+Content-Disposition: form-data; name="c"
+
+2, 3
+--` + boundary + `--`),
+			err: nil,
+			checkParams: func(t *testing.T, form runtime.Form) {
+				a, err := runtime.ExtractForm[string](form, "a", validator.String{}.Validate(nil))
+				require.NoError(t, err, "param 'a' is not in the form: %v", form)
+				require.EqualValues(t, "string", a, "unexpected value")
+
+				b, err := runtime.ExtractForm[float64](form, "b", validator.Float{}.Validate(nil))
+				require.NoError(t, err, "param 'b' is not in the form: %v", form)
+				require.EqualValues(t, float64(1.2), b, "unexpected value")
+
+				_, err = runtime.ExtractForm[any](form, "c", validator.Any{}.Validate(nil))
+				require.False(t, err == runtime.ErrMissingParam, "param 'c' is not in the form: %v", form)
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			req, err := http.NewRequest("POST", "", tc.body)
+			require.NoError(t, err, "cannot create request")
+			req.Header.Set("Content-Type", string(runtime.Multipart)+"; boundary="+boundary)
 
 			form, err := runtime.ParseForm(req)
 			if tc.err != nil {
