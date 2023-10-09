@@ -22,7 +22,7 @@ func GetAuth(r *http.Request) *api.Auth {
 		return nil
 	}
 	c, ok := raw.(*Context)
-	if !ok {
+	if !ok || c == nil {
 		return nil
 	}
 	return c.Auth
@@ -34,8 +34,8 @@ func GetFragments(r *http.Request) []string {
 	if raw == nil {
 		return nil
 	}
-	c := raw.(*Context)
-	if c == nil {
+	c, ok := raw.(*Context)
+	if !ok || c == nil {
 		return nil
 	}
 	return c.Fragments
