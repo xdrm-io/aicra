@@ -103,7 +103,7 @@ func extractFromStringList[T any](values []string) (any, error) {
 		return values, nil
 	}
 	if len(values) != 1 {
-		return zero, ErrParseParameter
+		return zero, ErrInvalidType
 	}
 	return values[0], nil
 }

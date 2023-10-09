@@ -1,9 +1,12 @@
 package runtime_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -147,7 +150,7 @@ func TestExtractQuery(t *testing.T) {
 				},
 			},
 			paramName: "a",
-			err:       runtime.ErrParseParameter,
+			err:       runtime.ErrInvalidType,
 		},
 		{
 			name: "invalid type",
@@ -230,6 +233,189 @@ func TestExtractQuerySlice(t *testing.T) {
 			t.Parallel()
 
 			v, err := runtime.ExtractQuery(tc.req, tc.paramName, tc.extractor)
+			if tc.err != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.extracted, v)
+		})
+	}
+}
+
+func TestExtractForm_JSON_Multipart(t *testing.T) {
+	tt := []struct {
+		name      string
+		form      map[string]any
+		paramName string
+		extractor validator.ExtractFunc[uint]
+
+		err       error
+		extracted any
+	}{
+		{
+			name: "nil form",
+			form: nil,
+			err:  runtime.ErrMissingParam,
+		},
+		{
+			name: "missing param",
+			form: map[string]any{
+				"a": 1,
+			},
+			paramName: "b",
+			err:       runtime.ErrMissingParam,
+		},
+		{
+			name: "invalid param",
+			form: map[string]any{
+				"a": "abc",
+			},
+			paramName: "a",
+			extractor: validator.Uint{}.Validate(nil),
+			err:       runtime.ErrInvalidType,
+		},
+		{
+			name: "ok",
+			form: map[string]any{
+				"a": uint(123),
+			},
+			paramName: "a",
+			extractor: validator.Uint{}.Validate(nil),
+			extracted: uint(123),
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			body, err := json.Marshal(tc.form)
+			require.NoError(t, err)
+
+			req, err := http.NewRequest("POST", "", bytes.NewReader(body))
+			require.NoError(t, err, "cannot create request")
+			req.Header.Set("Content-Type", "application/json")
+
+			form, err := runtime.ParseForm(req)
+			require.NoError(t, err, "cannot parse form")
+
+			v, err := runtime.ExtractForm(form, tc.paramName, tc.extractor)
+			if tc.err != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.extracted, v)
+		})
+	}
+}
+
+func TestExtractForm_URLEncoded(t *testing.T) {
+	tt := []struct {
+		name      string
+		body      string
+		paramName string
+		extractor validator.ExtractFunc[uint]
+
+		err       error
+		extracted any
+	}{
+		{
+			name:      "missing param",
+			body:      "a=1",
+			paramName: "b",
+			err:       runtime.ErrMissingParam,
+		},
+		{
+			name:      "unexpected slice",
+			body:      "a=1&a=2",
+			paramName: "a",
+			extractor: validator.Uint{}.Validate(nil),
+			err:       runtime.ErrInvalidType,
+		},
+		{
+			name:      "invalid param",
+			body:      "a=abc",
+			paramName: "a",
+			extractor: validator.Uint{}.Validate(nil),
+			err:       runtime.ErrInvalidType,
+		},
+		{
+			name:      "ok",
+			body:      "a=123",
+			paramName: "a",
+			extractor: validator.Uint{}.Validate(nil),
+			extracted: uint(123),
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			req, err := http.NewRequest("POST", "", strings.NewReader(tc.body))
+			require.NoError(t, err, "cannot create request")
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			form, err := runtime.ParseForm(req)
+			require.NoError(t, err, "cannot parse form")
+
+			v, err := runtime.ExtractForm(form, tc.paramName, tc.extractor)
+			if tc.err != nil {
+				require.Error(t, err)
+				require.ErrorIs(t, err, tc.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.extracted, v)
+		})
+	}
+}
+
+func TestExtractForm_URLEncodedSlice(t *testing.T) {
+	tt := []struct {
+		name      string
+		body      string
+		paramName string
+		extractor validator.ExtractFunc[[]uint]
+
+		err       error
+		extracted any
+	}{
+		{
+			name:      "slice 1",
+			body:      "a=1",
+			paramName: "a",
+			extractor: uintSliceValidator{}.Validate(nil),
+			extracted: []uint{1},
+		},
+		{
+			name:      "slice 4",
+			body:      "a=1&a=2&a=3&a=4",
+			paramName: "a",
+			extractor: uintSliceValidator{}.Validate(nil),
+			extracted: []uint{1, 2, 3, 4},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			req, err := http.NewRequest("POST", "", strings.NewReader(tc.body))
+			require.NoError(t, err, "cannot create request")
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			form, err := runtime.ParseForm(req)
+			require.NoError(t, err, "cannot parse form")
+
+			v, err := runtime.ExtractForm(form, tc.paramName, tc.extractor)
 			if tc.err != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.err)
