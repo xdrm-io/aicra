@@ -59,26 +59,12 @@ func ExtractForm[T any](form Form, name string, extractor validator.ExtractFunc[
 	var zero T
 
 	switch form.typ {
-	case JSON, Multipart:
-		value, ok := form.values[name]
-		if !ok {
-			return zero, ErrMissingParam
-		}
-		v, ok := extractor(value)
-		if !ok {
-			return zero, ErrInvalidType
-		}
-		return v, nil
-
 	case URLEncoded:
 		raw, ok := form.values[name]
 		if !ok {
 			return zero, ErrMissingParam
 		}
-		values, ok := raw.([]string)
-		if !ok {
-			return zero, ErrParseParameter
-		}
+		values := raw.([]string)
 		value, err := extractFromStringList[T](values)
 		if err != nil {
 			return zero, err
@@ -89,8 +75,17 @@ func ExtractForm[T any](form Form, name string, extractor validator.ExtractFunc[
 		}
 		return v, nil
 
+	default: // JSON, Multipart
+		value, ok := form.values[name]
+		if !ok {
+			return zero, ErrMissingParam
+		}
+		v, ok := extractor(value)
+		if !ok {
+			return zero, ErrInvalidType
+		}
+		return v, nil
 	}
-	return zero, ErrUnhandledContentType
 }
 
 // extractFromStringList extracts values from a string list. If the expected

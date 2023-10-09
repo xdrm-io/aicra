@@ -68,7 +68,7 @@ func parseJSON(reader io.Reader) (Form, error) {
 		return Form{}, nil
 	}
 	if err != nil {
-		return Form{}, fmt.Errorf("%s: %w", err, ErrInvalidJSON)
+		return Form{}, fmt.Errorf("%w: %w", ErrInvalidJSON, err)
 	}
 	return form, nil
 }

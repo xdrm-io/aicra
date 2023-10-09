@@ -125,6 +125,7 @@ func TestExtractQuery(t *testing.T) {
 		{
 			name: "invalid query",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a;b=1",
 				},
@@ -135,6 +136,7 @@ func TestExtractQuery(t *testing.T) {
 		{
 			name: "missing param",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a=1",
 				},
@@ -145,6 +147,7 @@ func TestExtractQuery(t *testing.T) {
 		{
 			name: "unexpected slice",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a=1&a=2",
 				},
@@ -155,6 +158,7 @@ func TestExtractQuery(t *testing.T) {
 		{
 			name: "invalid type",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a=abc",
 				},
@@ -166,6 +170,7 @@ func TestExtractQuery(t *testing.T) {
 		{
 			name: "ok",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a=123",
 				},
@@ -206,6 +211,7 @@ func TestExtractQuerySlice(t *testing.T) {
 		{
 			name: "slice 1",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a=1",
 				},
@@ -217,6 +223,7 @@ func TestExtractQuerySlice(t *testing.T) {
 		{
 			name: "slice 4",
 			req: &http.Request{
+				Method: "POST",
 				URL: &url.URL{
 					RawQuery: "a=1&a=2&a=3&a=4",
 				},
@@ -244,7 +251,7 @@ func TestExtractQuerySlice(t *testing.T) {
 	}
 }
 
-func TestExtractForm_JSON_Multipart(t *testing.T) {
+func TestExtractForm_Default(t *testing.T) {
 	tt := []struct {
 		name      string
 		form      map[string]any
@@ -297,7 +304,7 @@ func TestExtractForm_JSON_Multipart(t *testing.T) {
 
 			req, err := http.NewRequest("POST", "", bytes.NewReader(body))
 			require.NoError(t, err, "cannot create request")
-			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", string(runtime.JSON))
 
 			form, err := runtime.ParseForm(req)
 			require.NoError(t, err, "cannot parse form")
@@ -360,7 +367,7 @@ func TestExtractForm_URLEncoded(t *testing.T) {
 
 			req, err := http.NewRequest("POST", "", strings.NewReader(tc.body))
 			require.NoError(t, err, "cannot create request")
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Content-Type", string(runtime.URLEncoded))
 
 			form, err := runtime.ParseForm(req)
 			require.NoError(t, err, "cannot parse form")
@@ -410,7 +417,7 @@ func TestExtractForm_URLEncodedSlice(t *testing.T) {
 
 			req, err := http.NewRequest("POST", "", strings.NewReader(tc.body))
 			require.NoError(t, err, "cannot create request")
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Content-Type", string(runtime.URLEncoded))
 
 			form, err := runtime.ParseForm(req)
 			require.NoError(t, err, "cannot parse form")
