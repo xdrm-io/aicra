@@ -8,6 +8,7 @@ import (
 	"go/printer"
 	"go/token"
 	"io"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -35,6 +36,7 @@ func (g Generator) WriteEndpoints(w io.Writer) error {
 	tmpl.Funcs(template.FuncMap{
 		"getType":          getType,
 		"getConfigRelPath": getConfigRelPath(g.ConfigRelPath),
+		"isEndpointAlias":  isEndpointAlias(g.Config),
 	})
 	tmpl, err := tmpl.ParseFS(endpointsTmpl, "endpoints.tmpl")
 	if err != nil {
@@ -83,6 +85,20 @@ func (g Generator) WriteMappers(w io.Writer) error {
 	return validate(buf.Bytes(), w)
 }
 
+// isEndpointAlias returns whether the given alias is required for the
+// endpoints definition
+func isEndpointAlias(cnf config.API) func(string) bool {
+	return func(alias string) bool {
+		reg := regexp.MustCompile(`[^a-zA-Z0-9]` + alias + `\.`)
+		for _, v := range cnf.Validators {
+			if reg.MatchString(v.Type) {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 // validates go codes using go parser and printer
 func validate(src []byte, w io.Writer) error {
 	fset := token.NewFileSet()
@@ -95,6 +111,13 @@ func validate(src []byte, w io.Writer) error {
 		Tabwidth: 4,
 	}
 	return cfg.Fprint(w, fset, f)
+}
+
+// imports returns the list of import aliases required for the current file
+func imports(aliases []string) func() []string {
+	return func() []string {
+		return aliases
+	}
 }
 
 // getConfigRelPath returns the path of the config file relative to the generated

@@ -2,10 +2,9 @@ package generated
 
 import (
 	"bytes"
-	"context"
 	"fmt"
+	"context"
 	"net/http"
-
 	"github.com/xdrm-io/aicra"
 	model "github.com/xdrm-io/aicra/examples/minimal/model"
 
@@ -59,16 +58,13 @@ func New(impl Server) (*aicra.Builder, error) {
 	return b, nil
 }
 
-type GetUsersReq struct {
-}
-
+type GetUsersReq struct{}
 type GetUsersRes struct {
 	Users []model.User
 }
 type GetUserReq struct {
 	ID string
 }
-
 type GetUserRes struct {
 	Firstname string
 	Lastname  string
@@ -79,7 +75,6 @@ type CreateUserReq struct {
 	Lastname  string
 	Username  string
 }
-
 type CreateUserRes struct {
 	Firstname string
 	ID        string
@@ -92,7 +87,6 @@ type UpdateUserReq struct {
 	Username  *string
 	ID        string
 }
-
 type UpdateUserRes struct {
 	Firstname string
 	ID        string
@@ -102,6 +96,4 @@ type UpdateUserRes struct {
 type DeleteUserReq struct {
 	ID string
 }
-
-type DeleteUserRes struct {
-}
+type DeleteUserRes struct{}
