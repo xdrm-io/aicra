@@ -95,14 +95,17 @@ func (s API) RuntimeCheck(avail Validators) error {
 
 // URIFragments splits an uri into fragments with removing empty sets
 func URIFragments(uri string) []string {
-	if len(uri) == 0 || uri == "/" {
+	if uri == "" || uri == "/" {
 		return []string{}
 	}
-	if len(uri) > 0 && uri[0] == '/' {
+	if uri != "" && uri[0] == '/' {
 		uri = uri[1:]
 	}
-	for len(uri) > 0 && uri[len(uri)-1] == '/' {
+	for uri != "" && uri[len(uri)-1] == '/' {
 		uri = uri[:len(uri)-1]
+	}
+	if uri == "" {
+		return []string{}
 	}
 	return strings.Split(uri, "/")
 }

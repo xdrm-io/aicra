@@ -723,3 +723,62 @@ func TestAPI_RuntimeCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestURIFragments(t *testing.T) {
+	tt := []struct {
+		name      string
+		raw       string
+		fragments []string
+	}{
+		{
+			name:      "empty",
+			raw:       "",
+			fragments: []string{},
+		},
+		{
+			name:      "root",
+			raw:       "/",
+			fragments: []string{},
+		},
+		{
+			name:      "root trailing /",
+			raw:       "/////",
+			fragments: []string{},
+		},
+		{
+			name:      "nominal",
+			raw:       "/a/b/c",
+			fragments: []string{"a", "b", "c"},
+		},
+		{
+			name:      "missing leading slash",
+			raw:       "a/b/c",
+			fragments: []string{"a", "b", "c"},
+		},
+		{
+			name:      "trailing slash",
+			raw:       "a/b/c/",
+			fragments: []string{"a", "b", "c"},
+		},
+		{
+			name:      "trailing slashes",
+			raw:       "a/b/c///",
+			fragments: []string{"a", "b", "c"},
+		},
+		{
+			name:      "empty fragment",
+			raw:       "a//c/",
+			fragments: []string{"a", "", "c"},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			fragments := config.URIFragments(tc.raw)
+			require.Equal(t, tc.fragments, fragments)
+		})
+	}
+}
