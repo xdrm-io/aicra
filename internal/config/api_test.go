@@ -180,15 +180,14 @@ func TestAPI_Find(t *testing.T) {
 	}
 
 	tt := []struct {
-		name      string
-		endpoints []config.Endpoint
-		method    string
-		fragments []string
-		match     bool
+		name        string
+		endpoints   []config.Endpoint
+		method, uri string
+		match       bool
 	}{
 		{
 			name:   "match GET /",
-			method: "GET", fragments: []string{},
+			method: "GET", uri: "/",
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/"},
 			},
@@ -196,7 +195,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "match GET /a",
-			method: "GET", fragments: []string{"a"},
+			method: "GET", uri: "/a",
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a", Fragments: []string{"a"}},
 			},
@@ -205,7 +204,7 @@ func TestAPI_Find(t *testing.T) {
 
 		{
 			name:   "mismatch GET /a/b missing fragment",
-			method: "GET", fragments: []string{"a"},
+			method: "GET", uri: "/a",
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
@@ -213,7 +212,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "mismatch GET /a/b additional fragment",
-			method: "GET", fragments: []string{"a", "b", "c"},
+			method: "GET", uri: "/a/b/c",
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
@@ -221,7 +220,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "mismatch GET /a/b vs /a/c",
-			method: "GET", fragments: []string{"a", "c"},
+			method: "GET", uri: "/a/c",
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
@@ -230,7 +229,7 @@ func TestAPI_Find(t *testing.T) {
 
 		{
 			name:   "mismatch GET /a/b vs /a/c",
-			method: "GET", fragments: []string{"a", "c"},
+			method: "GET", uri: "/a/c",
 			endpoints: []config.Endpoint{
 				{Method: "GET", Pattern: "/a/b", Fragments: []string{"a", "b"}},
 			},
@@ -239,7 +238,7 @@ func TestAPI_Find(t *testing.T) {
 
 		{
 			name:   "match GET /a/{uint}/c",
-			method: "GET", fragments: []string{"a", "123", "c"},
+			method: "GET", uri: "/a/123/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -257,7 +256,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "mismatch GET /a/{uint}/c",
-			method: "GET", fragments: []string{"a", "abc", "c"},
+			method: "GET", uri: "/a/abc/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -275,7 +274,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "match GET /a/{string:3}/c",
-			method: "GET", fragments: []string{"a", "abc", "c"},
+			method: "GET", uri: "/a/abc/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -293,7 +292,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "mismatch GET /a/{string:2}/c",
-			method: "GET", fragments: []string{"a", "abc", "c"},
+			method: "GET", uri: "/a/abc/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -312,7 +311,7 @@ func TestAPI_Find(t *testing.T) {
 
 		{
 			name:   "err missing param",
-			method: "GET", fragments: []string{"a", "123", "c"},
+			method: "GET", uri: "/a/123/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -328,7 +327,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "err nil param",
-			method: "GET", fragments: []string{"a", "123", "c"},
+			method: "GET", uri: "/a/123/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -346,7 +345,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "err missing validator",
-			method: "GET", fragments: []string{"a", "123", "c"},
+			method: "GET", uri: "/a/123/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -364,7 +363,7 @@ func TestAPI_Find(t *testing.T) {
 		},
 		{
 			name:   "err nil validator unexpected params",
-			method: "GET", fragments: []string{"a", "123", "c"},
+			method: "GET", uri: "/a/123/c",
 			endpoints: []config.Endpoint{
 				{
 					Method:    "GET",
@@ -393,7 +392,7 @@ func TestAPI_Find(t *testing.T) {
 			}
 			api.BuildIndex()
 
-			endpoint := api.Find(tc.method, tc.fragments, validators)
+			endpoint := api.Find(tc.method, tc.uri, validators)
 			if tc.match {
 				require.NotNil(t, endpoint)
 				return

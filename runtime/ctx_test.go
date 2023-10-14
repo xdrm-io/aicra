@@ -43,37 +43,3 @@ func TestGetAuthExtractInvalidType(t *testing.T) {
 	auth := runtime.GetAuth(r)
 	require.Nil(t, auth)
 }
-
-func TestGetFragmentsExtract(t *testing.T) {
-	r, err := http.NewRequest("GET", "/", nil)
-	require.NoError(t, err)
-
-	ctx.Register(r, &runtime.Context{
-		Fragments: []string{"a", "b", "c"},
-	})
-
-	fragments := runtime.GetFragments(r)
-	require.NotNil(t, fragments)
-}
-func TestGetFragmentsNilExtract(t *testing.T) {
-	fetched := runtime.GetFragments(nil)
-	require.Nil(t, fetched)
-}
-func TestGetFragmentsExtractNil(t *testing.T) {
-	r, err := http.NewRequest("GET", "/", nil)
-	require.NoError(t, err)
-
-	ctx.Register(r, nil)
-
-	fragments := runtime.GetFragments(r)
-	require.Nil(t, fragments)
-}
-func TestGetFragmentsExtractInvalidType(t *testing.T) {
-	r, err := http.NewRequest("GET", "/", nil)
-	require.NoError(t, err)
-
-	ctx.Register(r, 123)
-
-	fragments := runtime.GetFragments(r)
-	require.Nil(t, fragments)
-}

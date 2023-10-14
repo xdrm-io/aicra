@@ -49,10 +49,8 @@ type resolver struct {
 
 // ServeHTTP implements http.Handler and wraps it in middlewares
 func (s *resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fragments := config.URIFragments(r.URL.Path)
-
 	// match endpoint from config
-	endpoint := s.conf.Find(r.Method, fragments, s.validators)
+	endpoint := s.conf.Find(r.Method, r.URL.Path, s.validators)
 	if endpoint == nil {
 		runtime.Respond(w, nil, api.ErrUnknownService)
 		return
@@ -69,7 +67,6 @@ func (s *resolver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// add info into context
 	ctx.Register(r, &runtime.Context{
-		Fragments: fragments,
 		Auth: &api.Auth{
 			Required: endpoint.Scope,
 			Active:   nil,

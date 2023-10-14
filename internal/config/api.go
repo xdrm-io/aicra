@@ -72,8 +72,8 @@ func (s API) validate() error {
 }
 
 // Find a endpoint matching an incoming HTTP request
-func (s API) Find(method string, fragments []string, validators Validators) *Endpoint {
-	return s.index.Find(method, fragments, validators)
+func (s API) Find(method string, uri string, validators Validators) *Endpoint {
+	return s.index.Find(method, URIFragments(uri), validators)
 }
 
 // BuildIndex builds the tree index
