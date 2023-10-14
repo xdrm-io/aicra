@@ -35,9 +35,12 @@ type route struct {
 	path   string
 }
 
-func createRoutes(b *testing.B, n uint) []route {
+func createRoutes(b *testing.B, n uint, methods ...string) []route {
 	b.Helper()
-	methods := []string{"GET", "POST", "PUT", "DELETE"}
+
+	if len(methods) == 0 {
+		methods = []string{"GET", "POST", "PUT", "DELETE"}
+	}
 
 	routes := make([]route, n)
 	methodi := uint8(0)
@@ -484,7 +487,7 @@ func BenchmarkQuery100ParamsLast(b *testing.B) {
 func urlencodedMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 	builder := createBuilder(b)
 
-	routes := createRoutes(b, NRoutes)
+	routes := createRoutes(b, NRoutes, `POST`, `PUT`, `DELETE`)
 	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
 		input := make(map[string]*config.Parameter, nVars)
@@ -549,7 +552,7 @@ func BenchmarkURLEncoded100ParamsLast(b *testing.B) {
 func jsonMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 	builder := createBuilder(b)
 
-	routes := createRoutes(b, NRoutes)
+	routes := createRoutes(b, NRoutes, `POST`, `PUT`, `DELETE`)
 	var vars strings.Builder
 	for i, route := range routes {
 		vars.Reset()
