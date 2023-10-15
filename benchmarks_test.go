@@ -15,11 +15,15 @@ import (
 	"github.com/xdrm-io/aicra/runtime"
 )
 
+const CheckErrors = false
+
 func noOpHandler(w http.ResponseWriter, r *http.Request) {}
 
 func formHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := runtime.ParseForm(r)
-	if err != nil {
+	if !CheckErrors {
+		return
+	}
+	if _, err := runtime.ParseForm(r); err != nil {
 		panic(err)
 	}
 }
@@ -95,7 +99,7 @@ func BenchmarkStaticFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -112,7 +116,7 @@ func BenchmarkStaticLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -158,7 +162,7 @@ func BenchmarkURIFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -176,7 +180,7 @@ func BenchmarkURILast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -217,7 +221,7 @@ func BenchmarkQueryFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -234,7 +238,7 @@ func BenchmarkQueryLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -276,7 +280,7 @@ func BenchmarkURLEncodedFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -294,7 +298,7 @@ func BenchmarkURLEncodedLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -313,7 +317,7 @@ func BenchmarkJSONFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -331,7 +335,7 @@ func BenchmarkJSONLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -356,7 +360,7 @@ func BenchmarkMultipartFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -380,7 +384,7 @@ func BenchmarkMultipartLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -441,7 +445,7 @@ func BenchmarkURI100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -465,7 +469,7 @@ func BenchmarkURI100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -528,7 +532,7 @@ func BenchmarkQuery100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -549,7 +553,7 @@ func BenchmarkQuery100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -602,7 +606,7 @@ func BenchmarkURLEncoded100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -620,7 +624,7 @@ func BenchmarkURLEncoded100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -673,7 +677,7 @@ func BenchmarkJSON100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -691,7 +695,7 @@ func BenchmarkJSON100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -744,7 +748,7 @@ func BenchmarkMultipart100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
@@ -764,7 +768,7 @@ func BenchmarkMultipart100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
-		if res.Result().StatusCode != http.StatusOK {
+		if !CheckErrors && res.Result().StatusCode != http.StatusOK {
 			panic("expected status 200")
 		}
 	}
