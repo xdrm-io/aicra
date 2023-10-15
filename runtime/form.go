@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -63,7 +64,7 @@ func parseJSON(reader io.Reader) (Form, error) {
 		values: make(map[string]any),
 	}
 	err := json.NewDecoder(reader).Decode(&form.values)
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return Form{}, nil
 	}
 	if err != nil {
@@ -106,7 +107,7 @@ func parseMultipart(r io.Reader, boundary string) (Form, error) {
 	}
 	for {
 		p, err := mr.NextPart()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
