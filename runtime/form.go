@@ -53,7 +53,7 @@ func ParseForm(r *http.Request) (Form, error) {
 		}
 		return parseMultipart(r.Body, params["boundary"])
 	}
-	return Form{}, ErrUnhandledContentType
+	return Form{}, fmt.Errorf("%w: %q", ErrUnhandledContentType, ct)
 }
 
 // parseJSON parses JSON from the request body inside 'Form'

@@ -18,7 +18,10 @@ import (
 func noOpHandler(w http.ResponseWriter, r *http.Request) {}
 
 func formHandler(w http.ResponseWriter, r *http.Request) {
-	runtime.ParseForm(r)
+	_, err := runtime.ParseForm(r)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func createBuilder(b *testing.B) *Builder {
@@ -92,6 +95,9 @@ func BenchmarkStaticFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkStaticLast(b *testing.B) {
@@ -106,6 +112,9 @@ func BenchmarkStaticLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -149,6 +158,9 @@ func BenchmarkURIFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -164,6 +176,9 @@ func BenchmarkURILast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -202,6 +217,9 @@ func BenchmarkQueryFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkQueryLast(b *testing.B) {
@@ -216,13 +234,16 @@ func BenchmarkQueryLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
 func form(b *testing.B) (http.Handler, []route) {
 	builder := createBuilder(b)
 
-	routes := createRoutes(b, NRoutes)
+	routes := createRoutes(b, NRoutes, `POST`, `PUT`, `DELETE`)
 	builder.conf.Endpoints = make([]*config.Endpoint, len(routes))
 	for i, route := range routes {
 		builder.conf.Endpoints[i] = &config.Endpoint{
@@ -234,7 +255,7 @@ func form(b *testing.B) (http.Handler, []route) {
 				"id": {Rename: "ID", ValidatorName: "uint"},
 			},
 		}
-		err := builder.Bind(route.method, route.path, noOpHandler)
+		err := builder.Bind(route.method, route.path, formHandler)
 		require.NoError(b, err)
 	}
 	srv, err := builder.Build(baseValidators)
@@ -249,11 +270,15 @@ func BenchmarkURLEncodedFirst(b *testing.B) {
 		req, _          = http.NewRequest(first.method, first.path, strings.NewReader("id=123"))
 		res             = httptest.NewRecorder()
 	)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkURLEncodedLast(b *testing.B) {
@@ -263,11 +288,15 @@ func BenchmarkURLEncodedLast(b *testing.B) {
 		req, _          = http.NewRequest(last.method, last.path, strings.NewReader("id=123"))
 		res             = httptest.NewRecorder()
 	)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -278,11 +307,15 @@ func BenchmarkJSONFirst(b *testing.B) {
 		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(`{"id":123}`))
 		res             = httptest.NewRecorder()
 	)
+	req.Header.Add("Content-Type", "application/json")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkJSONLast(b *testing.B) {
@@ -292,52 +325,64 @@ func BenchmarkJSONLast(b *testing.B) {
 		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(`{"id":123}`))
 		res             = httptest.NewRecorder()
 	)
+	req.Header.Add("Content-Type", "application/json")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
 func BenchmarkMultipartFirst(b *testing.B) {
+	var body strings.Builder
+	body.WriteString("--x\n")
+	body.WriteString(`Content-Disposition: form-data; name="id"` + "\n\n")
+	body.WriteString("123\n")
+	body.WriteString("--x--")
+
 	var (
 		handler, routes = form(b)
 		first           = routes[0]
-		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(`--x
-		Content-Disposition: form-data; name="id"
-
-		123
-		--x--`))
-		res = httptest.NewRecorder()
+		req, _          = http.NewRequest(first.method, first.path, strings.NewReader(body.String()))
+		res             = httptest.NewRecorder()
 	)
-
 	req.Header.Add("Content-Type", "multipart/form-data; boundary=x")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkMultipartLast(b *testing.B) {
+	var body strings.Builder
+	body.WriteString("--x\n")
+	body.WriteString(`Content-Disposition: form-data; name="id"` + "\n\n")
+	body.WriteString("123\n")
+	body.WriteString("--x--")
+
 	var (
 		handler, routes = form(b)
 		last            = routes[len(routes)-1]
-		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(`--x
-		Content-Disposition: form-data; name="id"
-
-		123
-		--x--`))
-		res = httptest.NewRecorder()
+		req, _          = http.NewRequest(last.method, last.path, strings.NewReader(body.String()))
+		res             = httptest.NewRecorder()
 	)
-
 	req.Header.Add("Content-Type", "multipart/form-data; boundary=x")
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -381,28 +426,48 @@ func BenchmarkURI100ParamsFirst(b *testing.B) {
 	var (
 		handler, routes = uriMulti(b, 100)
 		first           = routes[0]
-		req, _          = http.NewRequest(first.method, first.path, nil)
-		res             = httptest.NewRecorder()
+		uri             strings.Builder
+	)
+	uri.WriteString(first.path)
+	for i := 0; i < 100; i++ {
+		uri.WriteString(`/123`)
+	}
+	var (
+		req, _ = http.NewRequest(first.method, uri.String(), nil)
+		res    = httptest.NewRecorder()
 	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkURI100ParamsLast(b *testing.B) {
 	var (
 		handler, routes = uriMulti(b, 100)
 		last            = routes[len(routes)-1]
-		req, _          = http.NewRequest(last.method, last.path, nil)
-		res             = httptest.NewRecorder()
+		uri             strings.Builder
+	)
+	uri.WriteString(last.path)
+	for i := 0; i < 100; i++ {
+		uri.WriteString(`/123`)
+	}
+	var (
+		req, _ = http.NewRequest(last.method, uri.String(), nil)
+		res    = httptest.NewRecorder()
 	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -463,6 +528,9 @@ func BenchmarkQuery100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkQuery100ParamsLast(b *testing.B) {
@@ -481,6 +549,9 @@ func BenchmarkQuery100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -531,6 +602,9 @@ func BenchmarkURLEncoded100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkURLEncoded100ParamsLast(b *testing.B) {
@@ -546,6 +620,9 @@ func BenchmarkURLEncoded100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -596,6 +673,9 @@ func BenchmarkJSON100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkJSON100ParamsLast(b *testing.B) {
@@ -611,6 +691,9 @@ func BenchmarkJSON100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 
@@ -661,6 +744,9 @@ func BenchmarkMultipart100ParamsFirst(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
 func BenchmarkMultipart100ParamsLast(b *testing.B) {
@@ -678,5 +764,8 @@ func BenchmarkMultipart100ParamsLast(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(res, req)
+		if res.Result().StatusCode != http.StatusOK {
+			panic("expected status 200")
+		}
 	}
 }
