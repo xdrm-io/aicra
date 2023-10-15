@@ -553,9 +553,7 @@ func jsonMulti(b *testing.B, nVars int) (http.Handler, []route, []byte) {
 	builder := createBuilder(b)
 
 	routes := createRoutes(b, NRoutes, `POST`, `PUT`, `DELETE`)
-	var vars strings.Builder
 	for i, route := range routes {
-		vars.Reset()
 		input := make(map[string]*config.Parameter, nVars)
 		for v := 0; v < nVars; v++ {
 			input[`a`+strconv.Itoa(v)] = &config.Parameter{Rename: "A" + strconv.Itoa(v), ValidatorName: "uint", Kind: config.KindForm}
@@ -608,6 +606,73 @@ func BenchmarkJSON100ParamsLast(b *testing.B) {
 		res                   = httptest.NewRecorder()
 	)
 	req.Header.Add("Content-Type", "application/json")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+
+func multipartMulti(b *testing.B, nVars int, boundary string) (http.Handler, []route, []byte) {
+	builder := createBuilder(b)
+
+	routes := createRoutes(b, NRoutes, `POST`, `PUT`, `DELETE`)
+	var form strings.Builder
+	form.WriteString(`--` + boundary + "\n")
+	for i, route := range routes {
+		input := make(map[string]*config.Parameter, nVars)
+		for v := 0; v < nVars; v++ {
+			input[`a`+strconv.Itoa(v)] = &config.Parameter{Rename: "A" + strconv.Itoa(v), ValidatorName: "uint", Kind: config.KindForm}
+			form.WriteString(`Content-Disposition: form-data; name="a` + strconv.Itoa(v) + "\n")
+			form.WriteString("\n")
+			form.WriteString(strconv.Itoa(v) + "\n")
+		}
+
+		builder.conf.Endpoints = append(builder.conf.Endpoints, &config.Endpoint{
+			Name:      strconv.Itoa(i),
+			Method:    route.method,
+			Pattern:   route.path,
+			Fragments: config.URIFragments(route.path),
+			Input:     input,
+		})
+		err := builder.Bind(route.method, route.path, formHandler)
+		require.NoError(b, err)
+	}
+	form.WriteString(`--` + boundary + "--")
+
+	srv, err := builder.Build(baseValidators)
+	require.NoError(b, err)
+	return srv, routes, []byte(form.String())
+}
+
+func BenchmarkMultipart100ParamsFirst(b *testing.B) {
+	const boundary = "xxx-boundary-xxx"
+
+	var (
+		handler, routes, body = multipartMulti(b, 100, boundary)
+		first                 = routes[0]
+		req, _                = http.NewRequest(first.method, first.path, bytes.NewReader(body))
+		res                   = httptest.NewRecorder()
+	)
+	req.Header.Add("Content-Type", "multipart/form-data; boundary="+boundary)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		handler.ServeHTTP(res, req)
+	}
+}
+func BenchmarkMultipart100ParamsLast(b *testing.B) {
+	const boundary = "xxx-boundary-xxx"
+
+	var (
+		handler, routes, body = multipartMulti(b, 100, boundary)
+		last                  = routes[len(routes)-1]
+		req, _                = http.NewRequest(last.method, last.path, bytes.NewReader(body))
+		res                   = httptest.NewRecorder()
+	)
+	req.Header.Add("Content-Type", "multipart/form-data; boundary="+boundary)
 
 	b.ReportAllocs()
 	b.ResetTimer()
