@@ -1,39 +1,24 @@
 package validator
 
-import (
-	"reflect"
-)
+// Bool considers valid
+// * booleans
+// * strings or []byte strictly equal to "true" or "false"
+type Bool struct{}
 
-// BoolType makes the "bool" type available in the aicra configuration
-// It considers valid:
-// - booleans
-// - strings containing "true" or "false"
-// - []byte containing "true" or "false"
-type BoolType struct{}
-
-// GoType returns the `bool` type
-func (BoolType) GoType() reflect.Type {
-	return reflect.TypeOf(true)
-}
-
-// Validator for bool values
-func (BoolType) Validator(typename string, avail ...Type) ValidateFunc {
-	if typename != "bool" {
+// Validate implements Validator
+func (Bool) Validate(params []string) ExtractFunc[bool] {
+	if len(params) != 0 {
 		return nil
 	}
-
-	return func(value interface{}) (interface{}, bool) {
+	return func(value interface{}) (bool, bool) {
 		switch cast := value.(type) {
 		case bool:
 			return cast, true
-
 		case string:
 			return cast == "true", cast == "true" || cast == "false"
-
 		case []byte:
-			strVal := string(cast)
-			return strVal == "true", strVal == "true" || strVal == "false"
-
+			str := string(cast)
+			return str == "true", str == "true" || str == "false"
 		default:
 			return false, false
 		}

@@ -1,127 +1,61 @@
 package validator_test
 
 import (
-	"fmt"
 	"math"
-	"reflect"
 	"testing"
 
 	"github.com/xdrm-io/aicra/validator"
 )
 
-func TestFloat64_ReflectType(t *testing.T) {
+func TestFloat(t *testing.T) {
 	t.Parallel()
 
-	var (
-		dt       = validator.FloatType{}
-		expected = reflect.TypeOf(float64(0.0))
-	)
-	if dt.GoType() != expected {
-		t.Fatalf("invalid GoType() %v ; expected %v", dt.GoType(), expected)
-	}
-}
+	testValidator[float64](t, validator.Float{}, []testCase[float64]{
+		{name: "2 params fail", params: make([]string, 2), match: false},
+		{name: "1 param fail", params: make([]string, 1), match: false},
+		{name: "no param ok", match: true, valid: false},
 
-func TestFloat64_AvailableTypes(t *testing.T) {
-	t.Parallel()
+		{name: "float32 ok", value: float32(1.5), match: true, valid: true, extracted: 1.5},
+		{name: "float64 ok", value: float64(1.5), match: true, valid: true, extracted: 1.5},
 
-	dt := validator.FloatType{}
+		{name: "float32 min ok", value: float32(-math.MaxFloat32), match: true, valid: true, extracted: -math.MaxFloat32},
+		{name: "float32 max ok", value: float32(math.MaxFloat32), match: true, valid: true, extracted: math.MaxFloat32},
 
-	tests := []struct {
-		Type    string
-		Handled bool
-	}{
-		{"float", true},
-		{"float64", true},
-		{"Float", false},
-		{"Float64", false},
-		{"FLOAT", false},
-		{"FLOAT64", false},
-		{" float", false},
-		{"float ", false},
-		{" float ", false},
-		{" float64", false},
-		{"float64 ", false},
-		{" float64 ", false},
-	}
+		{name: "int 0 ok", value: int(0), match: true, valid: true, extracted: 0},
+		{name: "int8 0 ok", value: int8(0), match: true, valid: true, extracted: 0},
+		{name: "int16 0 ok", value: int16(0), match: true, valid: true, extracted: 0},
+		{name: "int32 0 ok", value: int32(0), match: true, valid: true, extracted: 0},
+		{name: "int64 0 ok", value: int64(0), match: true, valid: true, extracted: 0},
 
-	for _, test := range tests {
-		t.Run(test.Type, func(t *testing.T) {
-			validator := dt.Validator(test.Type)
-			if validator == nil {
-				if test.Handled {
-					t.Errorf("expect %q to be handled", test.Type)
-					t.Fail()
-				}
-				return
-			}
+		{name: "int min overflow", value: int(math.MinInt), match: true, valid: true, extracted: math.MinInt},
+		{name: "int8 min ok", value: int8(math.MinInt8), match: true, valid: true, extracted: math.MinInt8},
+		{name: "int16 min ok", value: int16(math.MinInt16), match: true, valid: true, extracted: math.MinInt16},
+		{name: "int32 min ok", value: int32(math.MinInt32), match: true, valid: true, extracted: math.MinInt32},
+		{name: "int64 min overflow", value: int64(math.MinInt64), match: true, valid: true, extracted: math.MinInt64},
 
-			if !test.Handled {
-				t.Errorf("expect %q NOT to be handled", test.Type)
-				t.Fail()
-			}
-		})
-	}
+		{name: "int max overflow", value: int(math.MaxInt), match: true, valid: false},
+		{name: "int8 max ok", value: int8(math.MaxInt8), match: true, valid: true, extracted: math.MaxInt8},
+		{name: "int16 max ok", value: int16(math.MaxInt16), match: true, valid: true, extracted: math.MaxInt16},
+		{name: "int32 max ok", value: int32(math.MaxInt32), match: true, valid: true, extracted: math.MaxInt32},
+		{name: "int64 max overflow", value: int64(math.MaxInt64), match: true, valid: false},
 
-}
+		{name: "uint 0 ok", value: uint(0), match: true, valid: true, extracted: 0},
+		{name: "uint8 0 ok", value: uint8(0), match: true, valid: true, extracted: 0},
+		{name: "uint16 0 ok", value: uint16(0), match: true, valid: true, extracted: 0},
+		{name: "uint32 0 ok", value: uint32(0), match: true, valid: true, extracted: 0},
+		{name: "uint64 0 ok", value: uint64(0), match: true, valid: true, extracted: 0},
 
-func TestFloat64_Values(t *testing.T) {
-	t.Parallel()
+		{name: "uint max overflow", value: uint(math.MaxUint), match: true, valid: false},
+		{name: "uint8 max ok", value: uint8(math.MaxUint8), match: true, valid: true, extracted: math.MaxUint8},
+		{name: "uint16 max ok", value: uint16(math.MaxUint16), match: true, valid: true, extracted: math.MaxUint16},
+		{name: "uint32 max ok", value: uint32(math.MaxUint32), match: true, valid: true, extracted: math.MaxUint32},
+		{name: "uint64 max overflow", value: uint64(math.MaxUint64), match: true, valid: false},
 
-	const typeName = "float"
+		{name: "string ok", value: "-1.5", match: true, valid: true, extracted: -1.5},
+		{name: "bytes ok", value: []byte("-1.5"), match: true, valid: true, extracted: -1.5},
 
-	validator := validator.FloatType{}.Validator(typeName)
-	if validator == nil {
-		t.Errorf("expect %q to be handled", typeName)
-		t.Fail()
-	}
-
-	tests := []struct {
-		Value interface{}
-		Valid bool
-	}{
-		{uint(0), true},
-		{uint(math.MaxInt64), true},
-		{uint(math.MaxUint64), true},
-		{-1, true},
-		{-math.MaxInt64, true},
-
-		{float64(math.MinInt64), true},
-		{float64(0), true},
-		{float64(math.MaxInt64), true},
-		// we cannot just compare because of how precision works
-		{float64(math.MaxUint64 - 1024), true},
-		{float64(math.MaxUint64 + 1), true},
-
-		// json number
-		{fmt.Sprintf("%f", -math.MaxFloat64), true},
-		{"-1", true},
-		{"0", true},
-		{"1", true},
-		{fmt.Sprintf("%d", math.MaxInt64), true},
-		{fmt.Sprintf("%d", uint(math.MaxUint64)), true},
-		{fmt.Sprintf("%f", float64(math.MaxFloat64)), true},
-
-		{"string", false},
-		{[]byte("bytes"), false},
-		{-0.1, true},
-		{0.1, true},
-		{nil, false},
-	}
-
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			if _, isValid := validator(test.Value); isValid {
-				if !test.Valid {
-					t.Errorf("expect value to be invalid")
-					t.Fail()
-				}
-				return
-			}
-			if test.Valid {
-				t.Errorf("expect value to be valid")
-				t.Fail()
-			}
-		})
-	}
-
+		{name: "bool invalid", value: true, match: true, valid: false},
+		{name: "nil invalid", value: nil, match: true, valid: false},
+		{name: "struct invalid", value: struct{}{}, match: true, valid: false},
+	})
 }

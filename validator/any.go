@@ -1,24 +1,14 @@
 package validator
 
-import (
-	"reflect"
-)
+// Any considers valid any value
+type Any struct{}
 
-// AnyType makes the "any" type available in the aicra configuration
-// It considers valid any value
-type AnyType struct{}
-
-// GoType returns the interface{} type
-func (AnyType) GoType() reflect.Type {
-	return reflect.TypeOf(interface{}(nil))
-}
-
-// Validator that considers any value valid
-func (AnyType) Validator(typename string, avail ...Type) ValidateFunc {
-	if typename != "any" {
+// Validate implements Validator
+func (Any) Validate(params []string) ExtractFunc[any] {
+	if len(params) != 0 {
 		return nil
 	}
-	return func(value interface{}) (interface{}, bool) {
+	return func(value interface{}) (any, bool) {
 		return value, true
 	}
 }

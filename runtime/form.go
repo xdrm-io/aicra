@@ -1,0 +1,124 @@
+package runtime
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"mime"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"strings"
+)
+
+type contentType string
+
+// supported content types
+const (
+	JSON       = contentType("application/json")
+	URLEncoded = contentType("application/x-www-form-urlencoded")
+	Multipart  = contentType("multipart/form-data")
+)
+
+// Form represents a form extracted from an http request.
+type Form struct {
+	typ    contentType
+	values map[string]any
+}
+
+// ParseForm parses the body to be ready for parameter extraction
+//
+// Content-Type header
+// - 'multipart/form-data'
+// - 'x-www-form-urlencoded'
+// - 'application/json'
+func ParseForm(r *http.Request) (Form, error) {
+	if r.Method == http.MethodGet {
+		return Form{}, nil
+	}
+	ct := r.Header.Get("Content-Type")
+
+	switch {
+	case strings.HasPrefix(ct, string(JSON)):
+		return parseJSON(r.Body)
+
+	case strings.HasPrefix(ct, string(URLEncoded)):
+		return parseUrlencoded(r.Body)
+
+	case strings.HasPrefix(ct, string(Multipart)):
+		_, params, err := mime.ParseMediaType(ct)
+		if err != nil {
+			break
+		}
+		return parseMultipart(r.Body, params["boundary"])
+	}
+	return Form{}, fmt.Errorf("%w: %q", ErrUnhandledContentType, ct)
+}
+
+// parseJSON parses JSON from the request body inside 'Form'
+// and 'Set'
+func parseJSON(reader io.Reader) (Form, error) {
+	form := Form{
+		typ:    JSON,
+		values: make(map[string]any),
+	}
+	err := json.NewDecoder(reader).Decode(&form.values)
+	if errors.Is(err, io.EOF) {
+		return Form{}, nil
+	}
+	if err != nil {
+		return Form{}, fmt.Errorf("%w: %w", ErrInvalidJSON, err)
+	}
+	return form, nil
+}
+
+// parseUrlencoded parses urlencoded from the request body inside 'Form'
+// and 'Set'
+func parseUrlencoded(reader io.Reader) (Form, error) {
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		return Form{}, fmt.Errorf("%w: %w", ErrInvalidURLEncoded, err)
+	}
+
+	query, err := url.ParseQuery(string(body))
+	if err != nil {
+		return Form{}, fmt.Errorf("%w: %w", ErrInvalidURLEncoded, err)
+	}
+
+	form := Form{
+		typ:    URLEncoded,
+		values: make(map[string]any, len(query)),
+	}
+	for name, values := range query {
+		form.values[name] = values
+	}
+	return form, nil
+}
+
+// parseMultipart parses multi-part from the request body inside 'Form'
+// and 'Set'
+func parseMultipart(r io.Reader, boundary string) (Form, error) {
+	var mr = multipart.NewReader(r, boundary)
+
+	form := Form{
+		typ:    Multipart,
+		values: make(map[string]any),
+	}
+	for {
+		p, err := mr.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return Form{}, fmt.Errorf("%w: %w", ErrInvalidMultipart, err)
+		}
+
+		data, err := io.ReadAll(p)
+		if err != nil {
+			return Form{}, fmt.Errorf("%w: %s: %w", ErrInvalidMultipart, p.FormName(), err)
+		}
+		form.values[p.FormName()] = data
+	}
+	return form, nil
+}

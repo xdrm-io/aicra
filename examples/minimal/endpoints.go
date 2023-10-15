@@ -3,86 +3,106 @@ package main
 import (
 	"context"
 
-	"github.com/xdrm-io/aicra/api"
+	"github.com/xdrm-io/aicra/examples/minimal/generated"
+	"github.com/xdrm-io/aicra/examples/minimal/model"
 )
 
-// Endpoints implements endpoints defined in the configuration
-// It also wraps the database shared among endpoints
+// Endpoints implements generated.Server
 type Endpoints struct {
 	db *DB
 }
 
-// matches the endpoint definition `in`
-type updateUserReq struct {
-	ID uint
-	// optional parameters are pointer, nil when not provided
-	DryRun    *bool
-	Username  *string
-	Firstname *string
-	Lastname  *string
+// NewEndpoints creates a new Endpoints
+func NewEndpoints(db *DB) *Endpoints {
+	return &Endpoints{db: db}
 }
 
-// matches the endpoint definition `out`
-type updateUserRes struct {
-	Username  string
-	Firstname string
-	Lastname  string
-}
-
-// updateUser endpoint definition
-func (e *Endpoints) updateUser(ctx context.Context, req updateUserReq) (*updateUserRes, error) {
-	// if permissions are not met, there is an automatic response with api.ErrForbidden
-	// this function is only called when permissions and the request are valid
-	dryRun := (req.DryRun != nil && *req.DryRun)
-
-	// unknown id
-	user, err := e.db.FetchUser(uint32(req.ID))
+// GetUsers implements generated.Server
+func (e *Endpoints) GetUsers(ctx context.Context, req generated.GetUsersReq) (*generated.GetUsersRes, error) {
+	users, err := e.db.FetchAll()
 	if err != nil {
-		return nil, api.ErrNotFound
+		return nil, err
+	}
+	res := make(model.Users, 0, len(users))
+	for id, user := range users {
+		user.ID = id
+		res = append(res, user)
 	}
 
-	if dryRun {
-		if req.Username != nil {
-			user.Username = *req.Username
-		}
-		if req.Firstname != nil {
-			user.Firstname = *req.Firstname
-		}
-		if req.Lastname != nil {
-			user.Lastname = *req.Lastname
-		}
-		return &updateUserRes{
-			Username:  user.Username,
-			Firstname: user.Firstname,
-			Lastname:  user.Lastname,
-		}, nil
+	return &generated.GetUsersRes{
+		Users: res,
+	}, nil
+}
+
+// GetUser implements generated.Server
+func (e *Endpoints) GetUser(ctx context.Context, req generated.GetUserReq) (*generated.GetUserRes, error) {
+	users, err := e.db.FetchUser(req.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &generated.GetUserRes{
+		Username:  users.Username,
+		Firstname: users.Firstname,
+		Lastname:  users.Lastname,
+	}, nil
+}
+
+// CreateUser implements generated.Server
+func (e *Endpoints) CreateUser(ctx context.Context, req generated.CreateUserReq) (*generated.CreateUserRes, error) {
+	id, err := e.db.CreateUser(req.Username, req.Firstname, req.Lastname)
+	if err != nil {
+		return nil, err
+	}
+	return &generated.CreateUserRes{
+		ID:        id,
+		Username:  req.Username,
+		Firstname: req.Firstname,
+		Lastname:  req.Lastname,
+	}, nil
+}
+
+// UpdateUser implements generated.Server
+func (e *Endpoints) UpdateUser(ctx context.Context, req generated.UpdateUserReq) (*generated.UpdateUserRes, error) {
+	_, err := e.db.FetchUser(req.ID)
+	if err != nil {
+		return nil, err
 	}
 
 	if req.Username != nil {
-		if err := e.db.UpdateUsername(uint32(req.ID), *req.Username); err != nil {
-			return nil, api.ErrUpdate
+		if err := e.db.UpdateUsername(req.ID, *req.Username); err != nil {
+			return nil, err
 		}
 	}
 	if req.Firstname != nil {
-		if err := e.db.UpdateFirstname(uint32(req.ID), *req.Firstname); err != nil {
-			return nil, api.ErrUpdate
-		}
-	}
-	if req.Lastname != nil {
-		if err := e.db.UpdateLastname(uint32(req.ID), *req.Lastname); err != nil {
-			return nil, api.ErrUpdate
+		if err := e.db.UpdateFirstname(req.ID, *req.Firstname); err != nil {
+			return nil, err
 		}
 	}
 
-	// fetch updated user info
-	user, err = e.db.FetchUser(uint32(req.ID))
-	if err != nil {
-		return nil, api.ErrFailure
+	if req.Lastname != nil {
+		if err := e.db.UpdateLastname(req.ID, *req.Lastname); err != nil {
+			return nil, err
+		}
 	}
-	return &updateUserRes{
+
+	user, err := e.db.FetchUser(req.ID)
+	if err != nil {
+		return nil, err
+	}
+	user.ID = req.ID
+
+	return &generated.UpdateUserRes{
+		ID:        req.ID,
 		Username:  user.Username,
 		Firstname: user.Firstname,
 		Lastname:  user.Lastname,
 	}, nil
+}
 
+// DeleteUser implements generated.Server
+func (e *Endpoints) DeleteUser(ctx context.Context, req generated.DeleteUserReq) (*generated.DeleteUserRes, error) {
+	if err := e.db.DeleteUser(req.ID); err != nil {
+		return nil, err
+	}
+	return &generated.DeleteUserRes{}, nil
 }

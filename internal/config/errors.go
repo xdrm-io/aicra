@@ -8,53 +8,92 @@ func (err Err) Error() string {
 }
 
 const (
-	// ErrRead - read error
-	ErrRead = Err("cannot read config")
+	// ErrPackageMissing - package is empty
+	ErrPackageMissing = Err("missing 'package'")
 
-	// ErrUnknownMethod - unknown http method
-	ErrUnknownMethod = Err("unknown HTTP method")
+	// ErrValidatorsMissing - validators is empty
+	ErrValidatorsMissing = Err("missing 'validators'")
 
-	// ErrFormat - invalid format
-	ErrFormat = Err("invalid config format")
+	// ErrEndpointsMissing - endpoints is empty
+	ErrEndpointsMissing = Err("missing 'endpoints'")
 
-	// ErrPatternCollision - collision between 2 services' patterns
+	// ErrImportAliasCharset - import alias uses invalid characters
+	ErrImportAliasCharset = Err("invalid import name charset")
+
+	// ErrImportPathCharset - import path uses invalid characters
+	ErrImportPathCharset = Err("invalid import path charset")
+
+	// ErrImportTwice - import path used twice
+	ErrImportTwice = Err("import path cannot appear twice")
+
+	// ErrImportReserved - import name already used internally
+	ErrImportReserved = Err("import name is reserved")
+
+	// ErrMethodUnknown - unknown http method
+	ErrMethodUnknown = Err("unknown HTTP method")
+
+	// ErrPatternCollision - collision between 2 endpoints' patterns
 	ErrPatternCollision = Err("pattern collision")
 
-	// ErrInvalidPattern - malformed service pattern
-	ErrInvalidPattern = Err("malformed service path: must begin with a '/' and not end with")
+	// ErrPatternInvalid - malformed endpoint pattern
+	ErrPatternInvalid = Err("malformed endpoint path: must begin with a '/' and not end with")
 
-	// ErrInvalidPatternBraceCapture - invalid brace capture
-	ErrInvalidPatternBraceCapture = Err("invalid uri parameter")
+	// ErrPatternInvalidBraceCapture - invalid brace capture
+	ErrPatternInvalidBraceCapture = Err("invalid uri parameter")
 
-	// ErrUnspecifiedBraceCapture - missing path brace capture
-	ErrUnspecifiedBraceCapture = Err("missing uri parameter")
+	// ErrBraceCaptureUnspecified - missing path brace capture
+	ErrBraceCaptureUnspecified = Err("missing uri parameter")
 
-	// ErrUndefinedBraceCapture - missing capturing brace definition
-	ErrUndefinedBraceCapture = Err("missing uri parameter definition")
+	// ErrBraceCaptureUndefined - missing capturing brace definition
+	ErrBraceCaptureUndefined = Err("missing uri parameter definition")
 
-	// ErrMandatoryRename - capture/query parameters must be renamed
-	ErrMandatoryRename = Err("uri and query parameters must be renamed")
+	// ErrRenameMandatory - capture/query parameters must be renamed
+	ErrRenameMandatory = Err("uri and query parameters must be renamed")
 
-	// ErrMissingDescription - a service is missing its description
-	ErrMissingDescription = Err("missing description")
+	// ErrRenameUnexported - form parameters must be renamed when unexported
+	ErrRenameUnexported = Err("form parameters must be renamed when unexported (starting with lowercase)")
 
-	// ErrIllegalOptionalURIParam - uri parameter cannot optional
-	ErrIllegalOptionalURIParam = Err("uri parameter cannot be optional")
+	// ErrNameMissing - a endpoint is missing its name
+	ErrNameMissing = Err("missing name")
 
-	// ErrOptionalOption - cannot have optional output
-	ErrOptionalOption = Err("output cannot be optional")
+	// ErrNameUnexported - an endpoint name is unexported
+	ErrNameUnexported = Err("name is unexported, must start with uppercase")
 
-	// ErrMissingParamDesc - missing parameter description
-	ErrMissingParamDesc = Err("missing parameter description")
+	// ErrNameInvalid - an endpoint name contains invalid characters
+	ErrNameInvalid = Err("name contains illegal characters")
 
-	// ErrUnknownParamType - unknown parameter type
-	ErrUnknownParamType = Err("unknown parameter datatype")
+	// ErrDescMissing - a endpoint is missing its description
+	ErrDescMissing = Err("missing description")
 
-	// ErrIllegalParamName - illegal parameter name
-	ErrIllegalParamName = Err("illegal parameter name")
+	// ErrParamOptionalIllegalURI - uri parameter cannot optional
+	ErrParamOptionalIllegalURI = Err("uri parameter cannot be optional")
 
-	// ErrMissingParamType - missing parameter type
-	ErrMissingParamType = Err("missing parameter type")
+	// ErrOutputOptional - cannot have optional output
+	ErrOutputOptional = Err("output cannot be optional")
+
+	// ErrOutputURIForbidden - cannot have URI output
+	ErrOutputURIForbidden = Err("output cannot be an uri parameter")
+
+	// ErrOutputQueryForbidden - cannot have Query output
+	ErrOutputQueryForbidden = Err("output cannot be an query parameter")
+
+	// ErrParamTypeUnknown - unknown parameter type
+	ErrParamTypeUnknown = Err("unknown parameter datatype")
+
+	// ErrParamNameIllegal - illegal parameter name
+	ErrParamNameIllegal = Err("illegal parameter name")
+
+	// ErrParamTypeMissing - missing parameter type
+	ErrParamTypeMissing = Err("missing parameter type")
+
+	// ErrParamRenameInvalid - invalid or unexported parameter rename
+	ErrParamRenameInvalid = Err("name is unexported, must start with uppercase")
+
+	// ErrParamTypeInvalid - parameter type syntax is invalid
+	ErrParamTypeInvalid = Err("invalid parameter type syntax")
+
+	// ErrParamTypeParamsInvalid - invalid validator params
+	ErrParamTypeParamsInvalid = Err("invalid parameter validator params")
 
 	// ErrParamNameConflict - name/rename conflict
 	ErrParamNameConflict = Err("parameter name conflict")
